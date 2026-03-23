@@ -94,18 +94,25 @@ export const THEMES: Theme[] = [
 
 export const applyTheme = (theme: Theme) => {
   const root = document.documentElement;
-  // Apply CSS vars (colors + passport)
+  // Apply all CSS color vars
   Object.entries(theme.vars).forEach(([k, v]) => {
     if (!k.startsWith("--passport")) {
       root.style.setProperty(k, v);
     }
   });
-  // Apply background gradient
+  // Also sync --neon-lime with --primary so neon-text-lime changes color
+  root.style.setProperty("--neon-lime", theme.vars["--primary"] || "84 81% 44%");
+  root.style.setProperty("--neon-green", theme.vars["--secondary"] || "142 71% 45%");
+
+  // Apply animated background
   document.body.style.backgroundImage = theme.bgGradient;
-  // Apply passport vars as data attributes for use in Profile
+  document.body.style.transition = "background-image 0.5s ease";
+
+  // Passport theme data
   root.setAttribute("data-passport-bg", theme.vars["--passport-bg"] || "");
   root.setAttribute("data-passport-border", theme.vars["--passport-border"] || "");
   root.setAttribute("data-theme-id", theme.id);
+
   localStorage.setItem("crp_theme", theme.id);
 };
 
