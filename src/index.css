@@ -157,3 +157,90 @@
 .animate-slide-up { animation: slide-up 0.4s ease forwards; opacity: 0; }
 .animate-pulse-ring { animation: pulse-ring 2s ease-in-out infinite; }
 .animate-glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
+
+/* ========== THEME ANIMATIONS ========== */
+
+/* Fire theme (cyber_red) */
+@keyframes fire-flicker {
+  0%,100% { opacity:0.7; transform: scaleY(1) translateY(0); }
+  25% { opacity:0.9; transform: scaleY(1.05) translateY(-4px); }
+  50% { opacity:0.6; transform: scaleY(0.97) translateY(2px); }
+  75% { opacity:0.85; transform: scaleY(1.03) translateY(-2px); }
+}
+@keyframes fire-rise {
+  0% { transform: translateY(100%) scaleX(0.8); opacity:0; }
+  50% { opacity:0.6; }
+  100% { transform: translateY(-120%) scaleX(1.2); opacity:0; }
+}
+@keyframes ember-float {
+  0% { transform: translate(0,0) rotate(0deg); opacity:0.8; }
+  100% { transform: translate(var(--dx,20px), -200px) rotate(360deg); opacity:0; }
+}
+
+/* Jungle theme (lime/matrix) */
+@keyframes vine-grow {
+  0% { stroke-dashoffset: 1000; opacity:0; }
+  30% { opacity:0.6; }
+  100% { stroke-dashoffset: 0; opacity:0.4; }
+}
+@keyframes leaf-sway {
+  0%,100% { transform: rotate(-3deg) scale(1); }
+  50% { transform: rotate(3deg) scale(1.05); }
+}
+@keyframes jungle-pulse {
+  0%,100% { opacity:0.15; transform:scale(1); }
+  50% { opacity:0.3; transform:scale(1.02); }
+}
+
+/* Matrix theme */
+@keyframes matrix-fall {
+  0% { transform: translateY(-100%); opacity:1; }
+  90% { opacity:0.5; }
+  100% { transform: translateY(100vh); opacity:0; }
+}
+
+/* Gold theme */
+@keyframes gold-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes gold-particle {
+  0% { transform: translateY(0) scale(1); opacity:0.9; }
+  100% { transform: translateY(-300px) scale(0.3); opacity:0; }
+}
+
+/* Purple theme */
+@keyframes purple-wave {
+  0%,100% { d: path("M0,50 Q250,0 500,50 Q750,100 1000,50"); }
+  50% { d: path("M0,50 Q250,100 500,50 Q750,0 1000,50"); }
+}
+@keyframes star-twinkle {
+  0%,100% { opacity:0.2; transform:scale(1); }
+  50% { opacity:1; transform:scale(1.5); }
+}
+
+/* Arctic theme */
+@keyframes snow-fall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity:0.8; }
+  100% { transform: translateY(100vh) rotate(360deg); opacity:0.2; }
+}
+
+/* Button glow pulse */
+@keyframes btn-glow-pulse {
+  0%,100% { box-shadow: 0 0 20px hsl(var(--primary)/0.5), 0 0 40px hsl(var(--primary)/0.2); }
+  50% { box-shadow: 0 0 35px hsl(var(--primary)/0.8), 0 0 70px hsl(var(--primary)/0.35), 0 0 100px hsl(var(--primary)/0.1); }
+}
+.theme-play-btn {
+  animation: btn-glow-pulse 2s ease-in-out infinite !important;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary))) !important;
+  box-shadow: 0 0 20px hsl(var(--primary)/0.5) !important;
+}
+
+/* ID card glow */
+@keyframes id-card-glow {
+  0%,100% { box-shadow: 0 0 20px hsl(var(--primary)/0.2), 0 0 40px hsl(var(--primary)/0.08), inset 0 0 30px hsl(var(--primary)/0.04); }
+  50% { box-shadow: 0 0 40px hsl(var(--primary)/0.4), 0 0 80px hsl(var(--primary)/0.15), inset 0 0 50px hsl(var(--primary)/0.08); }
+}
+.id-card-animated {
+  animation: id-card-glow 3s ease-in-out infinite;
+}
