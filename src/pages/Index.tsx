@@ -136,8 +136,8 @@ const Index = () => {
       {/* Play + code */}
       <div className="flex items-center gap-3 mb-5">
         <a href={ROBLOX_URL} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm text-white transition-all active:scale-95"
-          style={{ background: "linear-gradient(135deg, hsl(142,71%,42%), hsl(142,71%,22%))", boxShadow: "0 0 20px hsl(142 71% 45% / 0.35)" }}>
+          className="theme-play-btn flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm text-white transition-all active:scale-95"
+          style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)))", boxShadow: "0 0 20px hsl(var(--primary) / 0.5)" }}>
           <Gamepad2 className="w-5 h-5" /> ГРАТИ
         </a>
         <div className="flex-1 liquid-glass rounded-2xl px-4 py-3 flex items-center justify-between">
