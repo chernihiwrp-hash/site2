@@ -40,7 +40,7 @@ const getTelegramUser = (): TgUser | null => {
 };
 
 // Пароль сервера — зміни тут
-const SERVER_PASSWORD = "chernihiv2025";
+
 
 // Захист від брутфорсу
 const getAttempts = () => parseInt(localStorage.getItem("crp_reg_attempts") || "0");
@@ -63,10 +63,98 @@ const isBlocked = () => {
   return false;
 };
 
+// Login modal — для вже зареєстрованих
+const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone: () => void; onReset: () => void }) => {
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async () => {
+    if (!password) return;
+    setLoading(true);
+    setError("");
+    const { data } = await supabase.from("users").select("password").ilike("username", savedNick).maybeSingle();
+    if (!data?.password) {
+      // Старий акаунт без пароля — пускаємо без пароля
+      onDone();
+      return;
+    }
+    if (data.password !== password) {
+      setError("Невірний пароль!");
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
+    onDone();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black">
+      <Particles />
+      <div className="relative w-full max-w-sm animate-fade-in" style={{ zIndex: 1 }}>
+        <div className="rounded-2xl p-6"
+          style={{ background: "linear-gradient(145deg, hsl(0 0% 8%), hsl(0 0% 5%))", border: "1px solid hsl(84 81% 44% / 0.2)", boxShadow: "0 0 40px hsl(84 81% 44% / 0.1)" }}>
+          <div className="text-center mb-6">
+            <h1 className="font-display text-2xl font-bold tracking-wider neon-text-lime mb-1">CHERNIHIV RP</h1>
+            <p className="text-xs text-muted-foreground">Вхід в акаунт</p>
+          </div>
+
+          <div className="flex items-center justify-center mb-5">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: "hsl(84 81% 44% / 0.1)", border: "2px solid hsl(84 81% 44% / 0.3)", boxShadow: "0 0 20px hsl(84 81% 44% / 0.3)" }}>
+              <User className="w-8 h-8 text-primary" />
+            </div>
+          </div>
+
+          <p className="text-center text-sm font-bold text-foreground mb-1">{savedNick}</p>
+          <p className="text-center text-xs text-primary/60 mb-5">Введи свій пароль</p>
+
+          <div className="mb-4">
+            <div className="relative">
+              <input
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Твій пароль..."
+                type={showPass ? "text" : "password"}
+                className="w-full liquid-glass rounded-xl px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent text-center font-semibold"
+                onKeyDown={e => e.key === "Enter" && handleLogin()}
+                autoFocus
+              />
+              <button type="button" onClick={() => setShowPass(!showPass)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-3"
+              style={{ background: "hsl(0 70% 50% / 0.1)", border: "1px solid hsl(0 70% 50% / 0.25)" }}>
+              <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
+              <p className="text-xs text-destructive">{error}</p>
+            </div>
+          )}
+
+          <GradientButton variant="green" className="w-full" onClick={handleLogin} disabled={loading || !password}>
+            {loading ? "Перевіряю..." : "Увійти"}
+          </GradientButton>
+
+          <button onClick={onReset}
+            className="w-full mt-3 text-xs text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors py-1">
+            Це не я — вийти з акаунту
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Registration modal
 const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
   const [nick, setNick] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -88,9 +176,12 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
     }
 
     // Перевірка пароля
-    if (password !== SERVER_PASSWORD) {
-      addAttempt();
-      setError(`Невірний пароль сервера! Спроб залишилось: ${Math.max(0, 5 - getAttempts())}`);
+    if (password.length < 6) {
+      setError("Пароль мінімум 6 символів");
+      return;
+    }
+    if (password !== confirmPass) {
+      setError("Паролі не співпадають!");
       return;
     }
 
@@ -137,13 +228,14 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
       return;
     }
 
-    // Зберігаємо в Supabase
+    // Зберігаємо в Supabase з паролем
     const { error: dbError } = await supabase.from("users").upsert({
       username: nick.trim(),
       telegram_id: tgUser ? String(tgUser.id) : null,
       avatar_url: tgUser?.photo_url || null,
       role: "player",
       balance: 0,
+      password: password,
     }, { onConflict: "username" });
 
     if (!dbError) {
@@ -225,28 +317,39 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
             <p className="text-[10px] text-muted-foreground/50 text-center mt-1.5">Мінімум 2 символи</p>
           </div>
 
-          {/* Server password */}
-          <div className="mb-4">
+          {/* Personal password */}
+          <div className="mb-3">
             <label className="text-xs text-muted-foreground mb-2 block uppercase tracking-wider flex items-center gap-1.5">
-              <Shield className="w-3 h-3" /> Пароль сервера
+              <Shield className="w-3 h-3" /> Придумай пароль
             </label>
             <div className="relative">
               <input
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Введіть пароль..."
+                placeholder="Мінімум 6 символів"
                 type={showPass ? "text" : "password"}
                 className="w-full liquid-glass rounded-xl px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent text-center font-semibold"
-                onKeyDown={e => e.key === "Enter" && handleRegister()}
               />
-              <button
-                type="button"
-                onClick={() => setShowPass(!showPass)}
+              <button type="button" onClick={() => setShowPass(!showPass)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                 {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground/50 text-center mt-1.5">Дізнайся пароль у адміністратора</p>
+          </div>
+
+          <div className="mb-4">
+            <label className="text-xs text-muted-foreground mb-2 block uppercase tracking-wider flex items-center gap-1.5">
+              <Shield className="w-3 h-3" /> Підтвердження пароля
+            </label>
+            <input
+              value={confirmPass}
+              onChange={e => setConfirmPass(e.target.value)}
+              placeholder="Повтори пароль"
+              type="password"
+              className="w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent text-center font-semibold"
+              onKeyDown={e => e.key === "Enter" && handleRegister()}
+            />
+            <p className="text-[10px] text-muted-foreground/50 text-center mt-1.5">Запам'ятай пароль — він потрібен для входу</p>
           </div>
 
           {/* Error */}
@@ -262,7 +365,7 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
             variant="green"
             className="w-full"
             onClick={handleRegister}
-            disabled={loading || nick.trim().length < 2 || !password || blocked}>
+            disabled={loading || nick.trim().length < 2 || password.length < 6 || !confirmPass || blocked}>
             {loading ? "Реєструю..." : "Розпочати гру"}
           </GradientButton>
         </div>
@@ -513,7 +616,28 @@ const App = () => {
     </div>
   );
 
+  const savedNick = localStorage.getItem("crp_nick") || "";
+
   if (!registered) {
+    // Якщо нік є в localStorage — показуємо логін, інакше реєстрацію
+    if (savedNick) {
+      return (
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Sonner />
+            <LoginModal
+              savedNick={savedNick}
+              onDone={() => setRegistered(true)}
+              onReset={() => {
+                localStorage.removeItem("crp_registered");
+                localStorage.removeItem("crp_nick");
+                window.location.reload();
+              }}
+            />
+          </TooltipProvider>
+        </QueryClientProvider>
+      );
+    }
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
