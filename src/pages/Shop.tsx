@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { getBalance, addBalance, setBalance as syncBalance, supabase } from "../lib/store";
 
 // ─── THEME SYSTEM (exported for Casino.tsx) ───────────────────────────────────
-export type ThemeId = "lime" | "neon_blue" | "cyber_red" | "gold_vip" | "purple_haze" | "arctic";
+export type ThemeId = "lime" | "neon_blue" | "cyber_red" | "gold_vip" | "purple_haze" | "arctic" | "matrix" | "sunset";
 
 export interface Theme {
   id: ThemeId;
@@ -23,8 +23,8 @@ export const THEMES: Theme[] = [
     name: "Lime (default)",
     price: 0,
     preview: "linear-gradient(135deg, hsl(84,81%,44%), hsl(142,71%,45%))",
-    vars: { "--primary": "84 81% 44%", "--secondary": "142 71% 45%", "--accent": "84 81% 44%", "--ring": "84 81% 44%", "--neon-lime": "84 81% 44%" },
-    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(142 71% 45% / 0.15) 0%, transparent 65%), radial-gradient(ellipse 70% 35% at 50% 100%, hsl(84 81% 44% / 0.1) 0%, transparent 55%)",
+    vars: { "--primary": "84 81% 44%", "--secondary": "142 71% 45%", "--accent": "84 81% 44%", "--ring": "84 81% 44%", "--neon-lime": "84 81% 44%", "--passport-bg": "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(84 40% 8% / 0.9))", "--passport-border": "hsl(84 81% 44% / 0.25)" },
+    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(142 71% 45% / 0.18) 0%, transparent 65%), radial-gradient(ellipse 70% 35% at 50% 100%, hsl(84 81% 44% / 0.12) 0%, transparent 55%)",
     description: "Класичний неоновий лайм",
   },
   {
@@ -32,8 +32,8 @@ export const THEMES: Theme[] = [
     name: "Neon Blue",
     price: 300,
     preview: "linear-gradient(135deg, hsl(210,100%,55%), hsl(200,90%,45%))",
-    vars: { "--primary": "210 100% 55%", "--secondary": "200 90% 45%", "--accent": "210 100% 55%", "--ring": "210 100% 55%", "--neon-lime": "210 100% 55%" },
-    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(210 100% 55% / 0.15) 0%, transparent 65%), radial-gradient(ellipse 70% 35% at 50% 100%, hsl(200 90% 45% / 0.1) 0%, transparent 55%)",
+    vars: { "--primary": "210 100% 55%", "--secondary": "200 90% 45%", "--accent": "210 100% 55%", "--ring": "210 100% 55%", "--neon-lime": "210 100% 55%", "--passport-bg": "linear-gradient(145deg, hsl(220 30% 6% / 0.97), hsl(210 50% 10% / 0.92))", "--passport-border": "hsl(210 100% 55% / 0.3)" },
+    bgGradient: "radial-gradient(ellipse 120% 60% at 50% 110%, hsl(210 100% 55% / 0.2) 0%, transparent 60%), radial-gradient(ellipse 80% 40% at 20% 80%, hsl(200 90% 45% / 0.12) 0%, transparent 50%), radial-gradient(ellipse 60% 30% at 80% 20%, hsl(210 100% 55% / 0.06) 0%, transparent 50%)",
     description: "Електричний синій неон",
   },
   {
@@ -41,8 +41,8 @@ export const THEMES: Theme[] = [
     name: "Cyber Red",
     price: 300,
     preview: "linear-gradient(135deg, hsl(0,85%,55%), hsl(15,80%,45%))",
-    vars: { "--primary": "0 85% 55%", "--secondary": "15 80% 45%", "--accent": "0 85% 55%", "--ring": "0 85% 55%", "--neon-lime": "0 85% 55%" },
-    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(0 85% 55% / 0.15) 0%, transparent 65%), radial-gradient(ellipse 70% 35% at 50% 100%, hsl(15 80% 45% / 0.1) 0%, transparent 55%)",
+    vars: { "--primary": "0 85% 55%", "--secondary": "15 80% 45%", "--accent": "0 85% 55%", "--ring": "0 85% 55%", "--neon-lime": "0 85% 55%", "--passport-bg": "linear-gradient(145deg, hsl(0 20% 5% / 0.97), hsl(15 30% 8% / 0.93))", "--passport-border": "hsl(0 85% 55% / 0.3)" },
+    bgGradient: "radial-gradient(ellipse 100% 50% at 30% 100%, hsl(0 85% 55% / 0.18) 0%, transparent 60%), radial-gradient(ellipse 80% 40% at 70% 90%, hsl(15 80% 45% / 0.12) 0%, transparent 55%), radial-gradient(ellipse 50% 25% at 50% 0%, hsl(0 85% 55% / 0.05) 0%, transparent 50%)",
     description: "Кіберпанк у червоному",
   },
   {
@@ -50,8 +50,8 @@ export const THEMES: Theme[] = [
     name: "Gold VIP",
     price: 750,
     preview: "linear-gradient(135deg, hsl(45,100%,55%), hsl(38,90%,45%))",
-    vars: { "--primary": "45 100% 55%", "--secondary": "38 90% 45%", "--accent": "45 100% 55%", "--ring": "45 100% 55%", "--neon-lime": "45 100% 55%" },
-    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(45 100% 55% / 0.15) 0%, transparent 65%), radial-gradient(ellipse 70% 35% at 50% 100%, hsl(38 90% 45% / 0.1) 0%, transparent 55%)",
+    vars: { "--primary": "45 100% 55%", "--secondary": "38 90% 45%", "--accent": "45 100% 55%", "--ring": "45 100% 55%", "--neon-lime": "45 100% 55%", "--passport-bg": "linear-gradient(145deg, hsl(40 20% 6% / 0.97), hsl(45 30% 9% / 0.93))", "--passport-border": "hsl(45 100% 55% / 0.4)" },
+    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(45 100% 55% / 0.2) 0%, transparent 60%), radial-gradient(ellipse 60% 30% at 80% 60%, hsl(38 90% 45% / 0.1) 0%, transparent 50%), radial-gradient(ellipse 40% 20% at 20% 40%, hsl(45 100% 55% / 0.08) 0%, transparent 50%)",
     description: "VIP золото для обраних",
   },
   {
@@ -59,8 +59,8 @@ export const THEMES: Theme[] = [
     name: "Purple Haze",
     price: 500,
     preview: "linear-gradient(135deg, hsl(275,80%,60%), hsl(290,70%,50%))",
-    vars: { "--primary": "275 80% 60%", "--secondary": "290 70% 50%", "--accent": "275 80% 60%", "--ring": "275 80% 60%", "--neon-lime": "275 80% 60%" },
-    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(275 80% 60% / 0.15) 0%, transparent 65%), radial-gradient(ellipse 70% 35% at 50% 100%, hsl(290 70% 50% / 0.1) 0%, transparent 55%)",
+    vars: { "--primary": "275 80% 60%", "--secondary": "290 70% 50%", "--accent": "275 80% 60%", "--ring": "275 80% 60%", "--neon-lime": "275 80% 60%", "--passport-bg": "linear-gradient(145deg, hsl(270 25% 6% / 0.97), hsl(290 20% 8% / 0.93))", "--passport-border": "hsl(275 80% 60% / 0.35)" },
+    bgGradient: "radial-gradient(ellipse 110% 55% at 40% 100%, hsl(275 80% 60% / 0.18) 0%, transparent 60%), radial-gradient(ellipse 70% 35% at 70% 80%, hsl(290 70% 50% / 0.12) 0%, transparent 55%), radial-gradient(ellipse 50% 25% at 30% 20%, hsl(275 80% 60% / 0.07) 0%, transparent 50%)",
     description: "Містичний фіолетовий",
   },
   {
@@ -68,16 +68,44 @@ export const THEMES: Theme[] = [
     name: "Arctic White",
     price: 400,
     preview: "linear-gradient(135deg, hsl(195,80%,70%), hsl(185,60%,55%))",
-    vars: { "--primary": "195 80% 70%", "--secondary": "185 60% 55%", "--accent": "195 80% 70%", "--ring": "195 80% 70%", "--neon-lime": "195 80% 70%" },
-    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(195 80% 70% / 0.15) 0%, transparent 65%), radial-gradient(ellipse 70% 35% at 50% 100%, hsl(185 60% 55% / 0.1) 0%, transparent 55%)",
+    vars: { "--primary": "195 80% 70%", "--secondary": "185 60% 55%", "--accent": "195 80% 70%", "--ring": "195 80% 70%", "--neon-lime": "195 80% 70%", "--passport-bg": "linear-gradient(145deg, hsl(200 25% 6% / 0.97), hsl(185 20% 8% / 0.93))", "--passport-border": "hsl(195 80% 70% / 0.3)" },
+    bgGradient: "radial-gradient(ellipse 100% 50% at 60% 100%, hsl(195 80% 70% / 0.15) 0%, transparent 60%), radial-gradient(ellipse 70% 35% at 30% 80%, hsl(185 60% 55% / 0.1) 0%, transparent 55%), radial-gradient(ellipse 80% 40% at 50% 0%, hsl(195 80% 70% / 0.05) 0%, transparent 50%)",
     description: "Холодний арктичний лід",
+  },
+  {
+    id: "matrix",
+    name: "Matrix Green",
+    price: 600,
+    preview: "linear-gradient(135deg, hsl(120,100%,40%), hsl(140,90%,30%))",
+    vars: { "--primary": "120 100% 40%", "--secondary": "140 90% 30%", "--accent": "120 100% 40%", "--ring": "120 100% 40%", "--neon-lime": "120 100% 40%", "--passport-bg": "linear-gradient(145deg, hsl(130 30% 4% / 0.98), hsl(120 20% 7% / 0.93))", "--passport-border": "hsl(120 100% 40% / 0.4)" },
+    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(120 100% 40% / 0.2) 0%, transparent 60%), radial-gradient(ellipse 60% 30% at 20% 70%, hsl(140 90% 30% / 0.12) 0%, transparent 50%), radial-gradient(ellipse 40% 20% at 80% 30%, hsl(120 100% 40% / 0.08) 0%, transparent 50%)",
+    description: "Матриця хакера",
+  },
+  {
+    id: "sunset",
+    name: "Sunset Orange",
+    price: 450,
+    preview: "linear-gradient(135deg, hsl(25,100%,55%), hsl(350,90%,55%))",
+    vars: { "--primary": "25 100% 55%", "--secondary": "350 90% 55%", "--accent": "25 100% 55%", "--ring": "25 100% 55%", "--neon-lime": "25 100% 55%", "--passport-bg": "linear-gradient(145deg, hsl(20 25% 6% / 0.97), hsl(350 20% 7% / 0.93))", "--passport-border": "hsl(25 100% 55% / 0.35)" },
+    bgGradient: "radial-gradient(ellipse 110% 55% at 30% 100%, hsl(25 100% 55% / 0.18) 0%, transparent 60%), radial-gradient(ellipse 80% 40% at 70% 90%, hsl(350 90% 55% / 0.14) 0%, transparent 55%), radial-gradient(ellipse 50% 25% at 60% 10%, hsl(25 100% 55% / 0.06) 0%, transparent 50%)",
+    description: "Захід сонця",
   },
 ];
 
 export const applyTheme = (theme: Theme) => {
   const root = document.documentElement;
-  Object.entries(theme.vars).forEach(([k, v]) => root.style.setProperty(k, v));
+  // Apply CSS vars (colors + passport)
+  Object.entries(theme.vars).forEach(([k, v]) => {
+    if (!k.startsWith("--passport")) {
+      root.style.setProperty(k, v);
+    }
+  });
+  // Apply background gradient
   document.body.style.backgroundImage = theme.bgGradient;
+  // Apply passport vars as data attributes for use in Profile
+  root.setAttribute("data-passport-bg", theme.vars["--passport-bg"] || "");
+  root.setAttribute("data-passport-border", theme.vars["--passport-border"] || "");
+  root.setAttribute("data-theme-id", theme.id);
   localStorage.setItem("crp_theme", theme.id);
 };
 
