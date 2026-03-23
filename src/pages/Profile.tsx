@@ -153,7 +153,11 @@ const Profile = () => {
 
       {/* Not Telegram */}
       {!isTg && (
-        <div className="mb-4 rounded-2xl p-4 border border-primary/15 liquid-glass animate-fade-in">
+        <div className="mb-4 rounded-2xl p-4 liquid-glass animate-fade-in" style={{
+          border: `1px solid ${document.documentElement.getAttribute("data-passport-border") || "hsl(var(--primary) / 0.15)"}`,
+          boxShadow: `0 0 30px ${document.documentElement.getAttribute("data-passport-border") || "hsl(var(--primary) / 0.08)"}`,
+          transition: "border 0.5s ease, box-shadow 0.5s ease"
+        }}>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center shrink-0"><LogIn className="w-4 h-4 text-primary" /></div>
             <div>
@@ -181,7 +185,10 @@ const Profile = () => {
               style={{ opacity: 0.18 }}
               onError={e => { e.currentTarget.style.display = "none"; }}
             />
-            <div className="absolute inset-0" style={{ background: "linear-gradient(145deg, hsl(240 15% 8% / 0.95) 0%, hsl(240 10% 5% / 0.92) 100%)" }} />
+            <div className="absolute inset-0" style={{
+              background: document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95) 0%, hsl(240 10% 5% / 0.92) 100%)",
+              transition: "background 0.5s ease"
+            }} />
           </div>
 
           {/* Trident watermark */}
@@ -337,29 +344,36 @@ const Profile = () => {
           <div className="px-4 py-3">
             {profileData.houses.length > 0 ? (
               <div className="space-y-2">
-                {profileData.houses.map(h => (
-                  <div key={h.id} className="flex items-center gap-3 rounded-xl p-2"
-                    style={{ background: "hsl(142 71% 45% / 0.06)", border: "1px solid hsl(142 71% 45% / 0.15)" }}>
-                    {/* House photo or icon */}
-                    {h.image || (h.photos && h.photos.filter((p: string) => p.startsWith("http")).length > 0) ? (
-                      <img
-                        src={h.photos?.find((p: string) => p.startsWith("http")) || h.image || ""}
-                        alt={h.name}
-                        className="w-12 h-12 rounded-lg object-cover shrink-0"
-                        style={{ border: "1px solid hsl(142 71% 45% / 0.2)" }}
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-lg shrink-0 flex items-center justify-center"
-                        style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
-                        <Home className="w-6 h-6" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-foreground truncate">{h.name}</p>
-                      <p className="text-[10px] text-yellow-400 font-bold">{h.price.toLocaleString()}€</p>
+                {profileData.houses.map(h => {
+                  const photo = h.photos?.find((p: string) => p.startsWith("http")) || h.image;
+                  return (
+                    <div key={h.id} className="rounded-xl overflow-hidden"
+                      style={{ background: "hsl(142 71% 45% / 0.05)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
+                      {photo && (
+                        <div className="relative h-28 overflow-hidden">
+                          <img src={photo} alt={h.name} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                          <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
+                            <p className="text-sm font-black text-white drop-shadow">{h.name}</p>
+                            <span className="text-[10px] font-bold text-yellow-400">{h.price.toLocaleString()}€</span>
+                          </div>
+                        </div>
+                      )}
+                      {!photo && (
+                        <div className="flex items-center gap-3 p-3">
+                          <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
+                            style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
+                            <Home className="w-5 h-5" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-foreground">{h.name}</p>
+                            <p className="text-[10px] text-yellow-400 font-bold">{h.price.toLocaleString()}€</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="relative overflow-hidden rounded-xl p-4 flex items-center gap-4"
@@ -426,6 +440,49 @@ const Profile = () => {
       </div>
 
 
+
+      {/* Номери авто */}
+      {(() => {
+        const cars = profileData.licenses.filter((l: { plate_number: string | null; status: string }) => l.plate_number && l.status === "approved");
+        if (cars.length === 0) return null;
+        return (
+          <div className="mb-2">
+            <div className="liquid-glass-card rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: "hsl(45 100% 55% / 0.1)", border: "1px solid hsl(45 100% 55% / 0.2)" }}>
+                    <Car className="w-4 h-4 text-yellow-400" />
+                  </div>
+                  <p className="text-sm font-medium">Мої автомобілі</p>
+                </div>
+                <button onClick={() => navigate("/car-registration")} className="text-[10px] text-primary flex items-center gap-0.5">
+                  Управління <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="px-4 py-3 space-y-2.5">
+                {cars.map((c: { id: number; license_type: string; plate_number: string | null }) => (
+                  <div key={c.id} className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground truncate flex-1">{c.license_type?.split("|")[0]?.trim() || "Авто"}</span>
+                    <div style={{ display: "inline-flex", alignItems: "stretch", borderRadius: 6, border: "2px solid #333", background: "#fff", overflow: "hidden", height: 26, boxShadow: "0 1px 5px rgba(0,0,0,0.4)", flexShrink: 0 }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 16, borderRight: "1.5px solid #333", background: "#fff", gap: 1 }}>
+                        <div style={{ width: 11, height: 7, overflow: "hidden", borderRadius: 1, border: "0.5px solid #ccc" }}>
+                          <div style={{ width: "100%", height: "50%", background: "#005BBB" }} />
+                          <div style={{ width: "100%", height: "50%", background: "#FFD500" }} />
+                        </div>
+                        <span style={{ fontSize: 4.5, fontWeight: 900, color: "#111", fontFamily: "Arial", lineHeight: 1 }}>UA</span>
+                      </div>
+                      <span style={{ fontFamily: "'Arial Black', Arial, sans-serif", fontWeight: 900, fontSize: 10, color: "#111", letterSpacing: "0.08em", padding: "0 6px", display: "flex", alignItems: "center", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                        {c.plate_number}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Кнопка адмін панелі — тільки для прийнятих адмінів */}
       {isApprovedAdmin && (
