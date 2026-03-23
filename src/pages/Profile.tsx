@@ -100,6 +100,16 @@ const Profile = () => {
       });
   }, [nick]);
 
+  // Theme reactive state for passport
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    const observer = new MutationObserver(() => forceUpdate(n => n + 1));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme-id"] });
+    return () => observer.disconnect();
+  }, []);
+  const passportBg = document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))";
+  const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
+
   const handleAdmin = () => {
     if (adminCode === "5319son") { navigate("/admin-panel"); toast.success("Доступ відкрито"); }
     else toast.error("Невірний код");
@@ -154,9 +164,9 @@ const Profile = () => {
       {/* Not Telegram */}
       {!isTg && (
         <div className="mb-4 rounded-2xl p-4 liquid-glass animate-fade-in" style={{
-          border: `1px solid ${document.documentElement.getAttribute("data-passport-border") || "hsl(var(--primary) / 0.15)"}`,
-          boxShadow: `0 0 30px ${document.documentElement.getAttribute("data-passport-border") || "hsl(var(--primary) / 0.08)"}`,
-          transition: "border 0.5s ease, box-shadow 0.5s ease"
+          border: `1px solid ${passportBorder}`,
+          boxShadow: `0 0 40px ${passportBorder.replace("/ 0.", "/ 0.0").replace("0.0", "0.")}`,
+          transition: "border 0.6s ease, box-shadow 0.6s ease"
         }}>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center shrink-0"><LogIn className="w-4 h-4 text-primary" /></div>
@@ -186,8 +196,8 @@ const Profile = () => {
               onError={e => { e.currentTarget.style.display = "none"; }}
             />
             <div className="absolute inset-0" style={{
-              background: document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95) 0%, hsl(240 10% 5% / 0.92) 100%)",
-              transition: "background 0.5s ease"
+              background: passportBg,
+              transition: "background 0.6s ease"
             }} />
           </div>
 
