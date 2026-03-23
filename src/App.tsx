@@ -583,11 +583,15 @@ const App = () => {
 
       if (tgId || nick) {
         // Перевіряємо бан по telegram_id або username
-        const { data: bans } = await supabase
-          .from("bans")
-          .select("reason, expires_at, is_permanent")
-          .or(tgId ? `identifier.eq.${tgId},identifier.ilike.${nick}` : `identifier.ilike.${nick}`)
-          .limit(1);
+        let banQuery = supabase.from("bans").select("reason, expires_at, is_permanent");
+        if (tgId && nick) {
+          banQuery = banQuery.or(`identifier.eq.${tgId},identifier.ilike.${nick}`);
+        } else if (tgId) {
+          banQuery = banQuery.eq("identifier", tgId);
+        } else {
+          banQuery = banQuery.ilike("identifier", nick);
+        }
+        const { data: bans } = await banQuery.limit(1);
 
         if (bans && bans.length > 0) {
           const ban = bans[0] as { reason: string; expires_at: string | null; is_permanent: boolean };
