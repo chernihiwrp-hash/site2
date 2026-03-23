@@ -9,7 +9,7 @@ import {
   Link, Image, Type, Radio, UserCheck, Building2, Car, FileText, Gavel,
   MessageSquare, Wallet, ShieldCheck, Zap, RefreshCw, Crown, Lock, Eye,
   EyeOff, Settings, UserCog, Search, Star, Palette,
-  Skull, Flame, Target, BookOpen, Scale
+  Skull, Flame, Target, BookOpen, Scale, Clock
 } from "lucide-react";
 import { toast } from "sonner";
 import { store, supabase, getBalance, addBalance, subtractBalance } from "../lib/store";
@@ -291,6 +291,61 @@ const AdminPanel = () => {
   );
 };
 
+// ─── PASSWORD SETTINGS ────────────────────────────────────────────────────────
+const PasswordSettingsBlock = () => {
+  const [current, setCurrent] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    supabase.from("server_settings").select("value").eq("key", "registration_password").maybeSingle()
+      .then(({ data }) => { if (data?.value) setCurrent(data.value); });
+  }, []);
+
+  const save = async () => {
+    if (!newPass.trim()) return toast.error("Введіть новий пароль");
+    if (newPass !== confirm) return toast.error("Паролі не співпадають");
+    if (newPass.length < 6) return toast.error("Мінімум 6 символів");
+    setSaving(true);
+    await supabase.from("server_settings").upsert({ key: "registration_password", value: newPass }, { onConflict: "key" });
+    setCurrent(newPass);
+    setNewPass(""); setConfirm("");
+    toast.success("Пароль реєстрації змінено!");
+    setSaving(false);
+  };
+
+  return (
+    <NeonCard glowColor="lime">
+      <div className="flex items-center gap-2 mb-3">
+        <Lock className="w-4 h-4 text-primary" />
+        <span className="text-xs font-bold text-foreground">Пароль реєстрації</span>
+      </div>
+      <div className="flex items-center gap-2 px-3 py-2.5 liquid-glass rounded-xl mb-3">
+        <span className="text-xs text-muted-foreground">Поточний:</span>
+        <span className="text-sm font-mono font-bold text-primary flex-1">{show ? current : "•".repeat(current.length)}</span>
+        <button onClick={() => setShow(!show)} className="text-muted-foreground active:scale-90">
+          {show ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+      <div className="space-y-2">
+        <input value={newPass} onChange={e => setNewPass(e.target.value)}
+          placeholder="Новий пароль (мін. 6 символів)"
+          type="password"
+          className="w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent" />
+        <input value={confirm} onChange={e => setConfirm(e.target.value)}
+          placeholder="Підтвердити пароль"
+          type="password"
+          className="w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent" />
+        <GradientButton variant="green" className="w-full text-xs py-2.5" onClick={save} disabled={saving}>
+          {saving ? "Зберігаю..." : "Змінити пароль"}
+        </GradientButton>
+      </div>
+    </NeonCard>
+  );
+};
+
 // ─── SUPER ADMIN TAB ──────────────────────────────────────────────────────────
 const SuperAdminTab = () => {
   const [admins, setAdmins] = useState<{ nick: string; perms: Record<TabId, boolean> }[]>([]);
@@ -371,6 +426,8 @@ const SuperAdminTab = () => {
 
   return (
     <div className="space-y-4 animate-fade-in">
+      {/* Password settings at top */}
+      <PasswordSettingsBlock />
       <p className="text-xs text-muted-foreground">Керуй доступом кожного адміністратора до розділів панелі.</p>
       <div className="liquid-glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
         <Search className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -2277,9 +2334,19 @@ const BansTab = () => {
     if (!searchUser.trim()) return;
     setSearching(true);
     setFoundUser(null);
-    const { data } = await supabase.from("users").select("username, telegram_id").ilike("username", searchUser.trim()).maybeSingle();
-    if (data) { setFoundUser(data as { telegram_id: string; username: string }); setBanNick(data.username); }
-    else toast.error("Гравця не знайдено");
+    // Шукаємо по ніку
+    const { data } = await supabase
+      .from("users")
+      .select("username, telegram_id")
+      .ilike("username", searchUser.trim())
+      .maybeSingle();
+    if (data) {
+      setFoundUser(data as { telegram_id: string; username: string });
+      setBanNick(data.username);
+    } else {
+      // Якщо не знайдено — можна ввести вручну нік або TG ID
+      toast.error("Гравця не знайдено в базі — введи нік вручну нижче");
+    }
     setSearching(false);
   };
 
@@ -2291,7 +2358,9 @@ const BansTab = () => {
     const expiresAt = permanent ? null : new Date(Date.now() + (selectedDur?.ms || 0)).toISOString();
     const adminNick = localStorage.getItem("crp_nick") || "admin";
 
-    await supabase.from("bans").insert({
+    // Якщо є foundUser — баним по telegram_id (надійніше)
+    // Якщо ні — баним по ніку
+    const { error } = await supabase.from("bans").insert({
       identifier: foundUser?.telegram_id || banNick.trim(),
       type: foundUser?.telegram_id ? "telegram_id" : "username",
       reason: banReason,
@@ -2300,10 +2369,14 @@ const BansTab = () => {
       is_permanent: permanent,
     });
 
-    // Notify player
-    await store.addNotification(banNick.trim(),
-      `⛔ Ви отримали бан${permanent ? " назавжди" : ` на ${selectedDur?.label}`}. Причина: ${banReason}`
-    );
+    if (error) { toast.error("Помилка: " + error.message); setSaving(false); return; }
+
+    // Повідомлення гравцю якщо є в базі
+    try {
+      await store.addNotification(banNick.trim(),
+        `⛔ Ви отримали бан${permanent ? " назавжди" : ` на ${selectedDur?.label}`}. Причина: ${banReason}`
+      );
+    } catch { /* ignore if user not found */ }
 
     toast.success(`${banNick} заблоковано!`);
     setBanNick(""); setBanReason(""); setBanDuration("7d");
