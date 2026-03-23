@@ -163,9 +163,8 @@ const Profile = () => {
 
       {/* Not Telegram */}
       {!isTg && (
-        <div className="mb-4 rounded-2xl p-4 liquid-glass animate-fade-in" style={{
+        <div className="mb-4 rounded-2xl p-4 liquid-glass animate-fade-in id-card-animated" style={{
           border: `1px solid ${passportBorder}`,
-          boxShadow: `0 0 40px ${passportBorder.replace("/ 0.", "/ 0.0").replace("0.0", "0.")}`,
           transition: "border 0.6s ease, box-shadow 0.6s ease"
         }}>
           <div className="flex items-center gap-3">
@@ -196,7 +195,12 @@ const Profile = () => {
               onError={e => { e.currentTarget.style.display = "none"; }}
             />
             <div className="absolute inset-0" style={{
-              background: passportBg,
+              background: passportBg || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))",
+              transition: "background 0.6s ease"
+            }} />
+            {/* Theme color accent overlay */}
+            <div className="absolute inset-0 rounded-2xl" style={{
+              background: `radial-gradient(ellipse 80% 50% at 50% 100%, hsl(var(--primary) / 0.08) 0%, transparent 70%)`,
               transition: "background 0.6s ease"
             }} />
           </div>
