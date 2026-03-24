@@ -24,7 +24,7 @@ const menuSections = [
       { icon: Newspaper,  label: "Новини",      desc: "Останні події",    path: "/news",            badgeKey: "news" },
       { icon: Vote,       label: "Вибори мера", desc: "Голосування",      path: "/mayor-election" },
       { icon: Megaphone,  label: "Голос міста", desc: "Скарги та ідеї",   path: "/city-voice",      badgeKey: "voice", clearKey: "crp_voice_seen" },
-      { icon: ScrollText, label: "Документи",   desc: "Офіційні папери",  path: "/documents" },
+      { icon: ScrollText, label: "Правила",   desc: "Офіційні папери",  path: "/documents" },
     ],
   },
   {
