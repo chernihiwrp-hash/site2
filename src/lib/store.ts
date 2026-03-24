@@ -1,31 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = "https://qwpzmioxhbkmxrwwevsv.supabase.co";
-// Этот ключ оставляем, он нужен Supabase клиенту для структуры, 
-// но записывать мы будем через прокси-сервер.
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3cHptaW94aGJrbXhyd3dldnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTM3NTksImV4cCI6MjA4OTUyOTc1OX0.CrPDm1vWaEruGVQpfBYKYwYO4DG9WlibhVzLHaBMGh8"; 
+// ВСТАВЬ СЮДА СВОЙ SERVICE_ROLE (SECRET) KEY
+// Найти его: Settings -> API -> service_role (secret)
+const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3cHptaW94aGJrbXhyd3dldnN2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzk1Mzc1OSwiZXhwIjoyMDg5NTI5NzU5fQ.8_fGPNsPAVu4s1z1LYOno7LQ3sVL6Z2P8HyhX0Dpnf0"; 
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Создаем клиент с правами админа
+export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-// --- СЕКРЕТНЫЙ МОСТ (Вместо прямого обращения к базе) ---
+// --- Вспомогательная функция для записи ---
 const dbWrite = async (table: string, method: 'INSERT' | 'UPDATE' | 'DELETE', data: any, filter?: { col: string, val: any }) => {
-  const response = await fetch('/api/db', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      table, 
-      method, 
-      data, 
-      filter, 
-      password: 'CH-RP_Secure-Gate_2026_!v3' // Твой секретный пароль
-    })
-  });
+  let query: any = supabase.from(table);
+  
+  if (method === 'INSERT') query = query.insert(data);
+  if (method === 'UPDATE') query = query.update(data).ilike(filter!.col, filter!.val);
+  if (method === 'DELETE') query = query.delete().eq(filter!.col, filter!.val);
 
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.error || 'Ошибка прокси-сервера');
+  const { data: res, error } = await query.select();
+  if (error) {
+    console.error(`Ошибка БД (${table}):`, error.message);
+    throw error;
   }
-  return result;
+  return res;
 };
 
 // --- TYPES ---
@@ -69,7 +65,6 @@ export const subtractBalance = async (nick: string, amount: number): Promise<boo
 
 // --- STORE ---
 export const store = {
-  // NEWS
   getNews: async (): Promise<NewsItem[]> => {
     const { data } = await supabase.from("news").select("*").order("created_at", { ascending: false });
     return data ? data.map((r: any) => ({ id: r.id, title: r.title, text: r.content, date: new Date(r.created_at).toLocaleDateString("uk-UA"), image: r.image_url || undefined, type: r.type || "news", button_data: r.button_data || undefined })) : [];
@@ -79,7 +74,6 @@ export const store = {
   },
   deleteNews: async (id: number) => { await dbWrite("news", 'DELETE', null, { col: 'id', val: id }); },
 
-  // HOUSES
   getHouses: async (): Promise<HouseItem[]> => {
     const { data } = await supabase.from("houses").select("*").order("created_at", { ascending: false });
     return data ? data.map((r: any) => ({ id: r.id, name: r.name, price: r.price, desc: r.description || "", category: r.category || "Люкс", owner: r.owner_username || null, image: r.image_url || undefined, photos: r.image_url ? [r.image_url] : [] })) : [];
@@ -95,7 +89,6 @@ export const store = {
     await dbWrite("houses", 'UPDATE', { owner_username: owner, is_for_sale: !owner }, { col: 'id', val: id });
   },
 
-  // HOUSE PURCHASE
   submitHousePurchase: async (houseId: number, username: string, rentalDays?: number): Promise<boolean> => {
     try { await dbWrite("house_purchase_requests", 'INSERT', { house_id: houseId, username, status: "pending", rental_days: rentalDays || 7 }); return true; } catch { return false; }
   },
@@ -115,7 +108,6 @@ export const store = {
     }
   },
 
-  // WANTED
   getWanted: async (): Promise<WantedPerson[]> => {
     const { data } = await supabase.from("wanted").select("*").eq("status", "active").order("created_at", { ascending: false });
     return data ? data.map((r: any) => ({ id: r.id, name: r.target_username, reason: r.reason, stars: r.stars })) : [];
@@ -125,7 +117,6 @@ export const store = {
   },
   removeWanted: async (id: number) => { await dbWrite("wanted", 'UPDATE', { status: "resolved" }, { col: 'id', val: id }); },
 
-  // FACTIONS
   getFactionsFromDB: async (): Promise<FactionDB[]> => {
     const { data } = await supabase.from("factions").select("*").order("created_at", { ascending: true });
     return (data || []) as FactionDB[];
@@ -139,7 +130,6 @@ export const store = {
     return (data as any)?.faction_name || null;
   },
 
-  // FACTION APPLICATIONS
   getFactionApps: async (): Promise<FactionApplication[]> => {
     const { data } = await supabase.from("faction_applications").select("*").order("created_at", { ascending: false });
     return data ? data.map((r: any) => ({ id: r.id, factionId: r.faction_id || "", factionName: r.faction_name || "", nick: r.form_data?.nick || r.username || "", username: r.username || "", roblox: r.form_data?.roblox || "", age: r.form_data?.age || "", telegram: r.form_data?.telegram || "", experience: r.form_data?.experience || "", message: r.form_data?.message || "", status: r.status === "pending" ? "review" : r.status, date: new Date(r.created_at).toLocaleDateString("uk-UA") })) : [];
@@ -153,7 +143,6 @@ export const store = {
     await dbWrite("faction_applications", 'UPDATE', { status }, { col: 'id', val: id });
   },
 
-  // ADMIN APPLICATIONS
   getAdminApps: async (): Promise<AdminApplication[]> => {
     const { data } = await supabase.from("admin_applications").select("*").order("created_at", { ascending: false });
     return data ? data.map((r: any) => ({ id: r.id, nick: r.form_data?.nick || r.username || "", status: r.status === "pending" ? "review" : r.status, date: new Date(r.created_at).toLocaleDateString("uk-UA"), roblox: r.form_data?.roblox || "", age: r.form_data?.age || "", country: r.form_data?.country || "", telegram: r.form_data?.telegram || "", timePerDay: r.form_data?.timePerDay || "", playTime: r.form_data?.playTime || "", hasMic: !!r.form_data?.hasMic, adminExp: r.form_data?.adminExp || "", rpTime: r.form_data?.rpTime || "", rpKnowledge: r.form_data?.rpKnowledge || 0, q1: r.form_data?.q1 || "", q2: r.form_data?.q2 || "", q3: r.form_data?.q3 || "", q4: r.form_data?.q4 || "", rulesRead: !!r.form_data?.rulesRead, daysOff: r.form_data?.daysOff || "" })) : [];
@@ -166,7 +155,6 @@ export const store = {
     await dbWrite("admin_applications", 'UPDATE', { status }, { col: 'id', val: id });
   },
 
-  // CITY VOICE
   getCityVoice: async (): Promise<CityVoiceItem[]> => {
     const { data } = await supabase.from("city_voice").select("*").order("created_at", { ascending: false });
     return data ? data.map((r: any) => ({ id: r.id, author: r.username, text: r.message, type: r.type || "idea", likes: r.likes || 0, dislikes: r.dislikes || 0, status: r.status === "pending" ? "active" : r.status })) : [];
@@ -179,7 +167,6 @@ export const store = {
   },
   deleteCityVoice: async (id: number) => { await dbWrite("city_voice", 'DELETE', null, { col: 'id', val: id }); },
 
-  // MAYOR ELECTION
   getCandidates: async (): Promise<MayorCandidate[]> => {
     const { data } = await supabase.from("mayor_election").select("*").order("votes", { ascending: false });
     return data ? data.map((r: any) => ({ id: r.id, name: r.candidate_username, program: r.description, bio: r.bio || "", votes: r.votes || 0 })) : [];
@@ -193,7 +180,6 @@ export const store = {
     await dbWrite("mayor_election", 'UPDATE', { votes: (data?.votes || 0) + 1 }, { col: 'id', val: id });
   },
 
-  // DOCUMENTS
   getDocs: async (): Promise<DocumentItem[]> => {
     const { data } = await supabase.from("documents").select("*").order("id", { ascending: true });
     return (data as DocumentItem[]) || [];
@@ -202,7 +188,6 @@ export const store = {
   updateDoc: async (id: number, title: string, content: string) => { await dbWrite("documents", 'UPDATE', { title, content }, { col: 'id', val: id }); },
   deleteDoc: async (id: number) => { await dbWrite("documents", 'DELETE', null, { col: 'id', val: id }); },
 
-  // CARS / LICENSES
   getCars: async (): Promise<CarRecord[]> => {
     const { data } = await supabase.from("license_applications").select("*").eq("status", "approved").not("plate_number", "is", null);
     return data ? data.map((r: any) => ({ plate: r.plate_number, model: r.license_type || "Авто", owner: r.username })) : [];
@@ -218,7 +203,6 @@ export const store = {
     await dbWrite("license_applications", 'UPDATE', { status }, { col: 'id', val: id });
   },
 
-  // SOS
   getSos: async (): Promise<SosMessage[]> => {
     const { data } = await supabase.from("sos_signals").select("*").eq("status", "active").order("created_at", { ascending: false });
     return data ? data.map((r: any) => ({ id: r.id, reason: r.type, description: r.message, date: new Date(r.created_at).toLocaleDateString("uk-UA"), type: r.type })) : [];
@@ -228,7 +212,6 @@ export const store = {
   },
   resolveSos: async (id: number) => { await dbWrite("sos_signals", 'UPDATE', { status: "resolved" }, { col: 'id', val: id }); },
 
-  // TOKENS / BALANCE (GIVE/TAKE)
   giveTokens: async (nick: string, amount: number): Promise<boolean> => {
     const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
     const newBalance = ((user?.balance as number) || 0) + amount;
@@ -246,7 +229,6 @@ export const store = {
     return true;
   },
 
-  // NOTIFICATIONS
   getNotifications: async (username: string): Promise<Notification[]> => {
     const { data } = await supabase.from("notifications").select("*").ilike("username", username).order("created_at", { ascending: false }).limit(50);
     return data ? data.map((r: any) => ({ id: r.id, text: r.text, date: new Date(r.created_at).toLocaleDateString("uk-UA"), read: r.read })) : [];
@@ -258,7 +240,6 @@ export const store = {
     await dbWrite("notifications", 'INSERT', { username, text, read: false });
   },
 
-  // PULSE CITY
   getPulse: async () => {
     const [u, h, f] = await Promise.all([
       supabase.from("users").select("id", { count: "exact", head: true }),
@@ -268,7 +249,6 @@ export const store = {
     return { citizens: u.count || 0, houses: h.count || 0, factions: f.count || 0 };
   },
 
-  // PROFILE
   getPlayerProfile: async (nick: string) => {
     const [houseRes, factionRes, licRes] = await Promise.all([
       supabase.from("houses").select("id, name, price").eq("owner_username", nick),
@@ -282,6 +262,5 @@ export const store = {
     };
   },
 
-  // REALTIME (Работает даже через анон)
   onNewSos: (cb: any) => supabase.channel("sos_live").on("postgres_changes", { event: "INSERT", schema: "public", table: "sos_signals" }, (p: any) => cb({ id: p.new.id, reason: p.new.type, description: p.new.message, date: new Date(p.new.created_at).toLocaleDateString("uk-UA"), type: p.new.type })).subscribe(),
 };
