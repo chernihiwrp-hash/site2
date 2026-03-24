@@ -1,17 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = "https://qwpzmioxhbkmxrwwevsv.supabase.co";
+const SUPABASE_URL = "https://kafivvwxqulxmkpyqinz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthZml2dnd4cXVseG1rcHlxaW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTgyNDIsImV4cCI6MjA4OTg3NDI0Mn0.HD_Gxn5UIVxov0-7U4aVhtYXhGvYTsVqLlycE5ctBpg";
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// СЮДА ВСТАВЬ КЛЮЧ "service_role" ИЗ НАСТРОЕК SUPABASE (Settings -> API)
-const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3cHptaW94aGJrbXhyd3dldnN2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzk1Mzc1OSwiZXhwIjoyMDg5NTI5NzU5fQ.8_fGPNsPAVu4s1z1LYOno7LQ3sVL6Z2P8HyhX0Dpnf0"; 
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false
-  }
-});
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 export type NewsItem = {
   id: number; title: string; text: string; date: string;
