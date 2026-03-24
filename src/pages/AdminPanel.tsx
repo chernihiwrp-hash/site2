@@ -2629,20 +2629,6 @@ const ManageFactionsTab = () => {
     </div>
   );
 };
-                    className="p-1.5 rounded-lg liquid-glass text-destructive active:scale-95">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </NeonCard>
-          ))}
-        </div>
-      )}
-
-      {/* apps section moved to FactionAppsTab in main menu */}
-    </div>
-  );
-};
 
 
 // ─── BANS TAB ─────────────────────────────────────────────────────────────────
