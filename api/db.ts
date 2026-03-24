@@ -1,25 +1,32 @@
 import { createClient } from '@supabase/supabase-js'
 
+// ВСТАВЬ СЮДА СВОИ ДАННЫЕ ИЗ SETTINGS -> API
 const supabaseAdmin = createClient(
   "https://qwpzmioxhbkmxrwwevsv.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE!
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3cHptaW94aGJrbXhyd3dldnN2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzk1Mzc1OSwiZXhwIjoyMDg5NTI5NzU5fQ.8_fGPNsPAVu4s1z1LYOno7LQ3sVL6Z2P8HyhX0Dpnf0" // Тот, который секретный!
 )
 
-export default async function handler(req: any, res: any) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  
-  const { table, method, data, filter } = req.body;
+export default async function handler(req, res) {
+  const { table, method, data, filter, password } = req.body;
 
-  try {
-    let query;
-    if (method === 'INSERT') query = supabaseAdmin.from(table).insert(data);
-    else if (method === 'UPDATE') query = supabaseAdmin.from(table).update(data).ilike(filter.col, filter.val);
-    else if (method === 'DELETE') query = supabaseAdmin.from(table).delete().eq(filter.col, filter.val);
-
-    const { data: result, error } = await query!.select();
-    if (error) throw error;
-    return res.status(200).json(result);
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message });
+  // Проверка нашего пароля, чтобы левые челы не спамили в API
+  if (password !== 'CH-RP_Secure-Gate_2026_!v3') {
+    return res.status(403).json({ error: "Access Denied" });
   }
+
+  let query = supabaseAdmin.from(table);
+  
+  if (method === 'INSERT') {
+    const { data: result, error } = await query.insert(data).select();
+    if (error) return res.status(500).json(error);
+    return res.status(200).json(result);
+  }
+
+  if (method === 'UPDATE') {
+    const { data: result, error } = await query.update(data).ilike(filter.col, filter.val).select();
+    if (error) return res.status(500).json(error);
+    return res.status(200).json(result);
+  }
+
+  return res.status(405).json({ error: "Method not allowed" });
 }
