@@ -6,7 +6,6 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ─── PROTECTED API BRIDGE ────────────────────────────────────────────────────
-// Эта функция шлет запросы на твой Vercel Backend, где спрятан SERVICE_ROLE_KEY
 const secureAction = async (table: string, method: 'INSERT' | 'UPDATE' | 'DELETE', data: any, filter?: { col: string, val: any }) => {
   const response = await fetch('/api/db', {
     method: 'POST',
@@ -15,7 +14,7 @@ const secureAction = async (table: string, method: 'INSERT' | 'UPDATE' | 'DELETE
   });
   if (!response.ok) {
     const err = await response.json();
-    throw new Error(err.error || 'Ошибка защищенного соединения');
+    throw new Error(err.error || 'Ошибка защиты');
   }
   return response.json();
 };
@@ -38,10 +37,25 @@ export type FactionDB = { id: number; name: string; color: string; logo_url?: st
 
 // ─── BALANCE HELPERS ──────────────────────────────────────────────────────────
 export const getBalance = (nick: string): number => {
-  try { return parseInt(localStorage.getItem(`crp_bal_${nick.toLowerCase()}`) || "0"); } catch { return 0; }
+  try { return parseInt(localStorage.getItem(`crp_bal_${nick.toLowerCase()}`) || "0"); }
+  catch { return 0; }
 };
 export const setBalance = (nick: string, amount: number) => {
   localStorage.setItem(`crp_bal_${nick.toLowerCase()}`, String(Math.max(0, amount)));
+};
+export const addBalance = async (nick: string, amount: number) => {
+  const current = getBalance(nick);
+  const newVal = current + amount;
+  setBalance(nick, newVal);
+  await secureAction("users", 'UPDATE', { balance: newVal }, { col: 'username', val: nick });
+};
+export const subtractBalance = async (nick: string, amount: number): Promise<boolean> => {
+  const cur = getBalance(nick);
+  if (cur < amount) return false;
+  const newVal = cur - amount;
+  setBalance(nick, newVal);
+  await secureAction("users", 'UPDATE', { balance: newVal }, { col: 'username', val: nick });
+  return true;
 };
 
 // ─── STORE ───────────────────────────────────────────────────────────────────
@@ -120,6 +134,10 @@ export const store = {
     try { await secureAction("factions", 'INSERT', { name, color, logo_url: logoUrl || null, gradient: gradient || null, section }); return true; } catch { return false; }
   },
   deleteFaction: async (id: number) => { await secureAction("factions", 'DELETE', null, { col: 'id', val: id }); },
+  getPlayerFaction: async (nick: string): Promise<string | null> => {
+    const { data } = await supabase.from("faction_applications").select("faction_name").eq("username", nick).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    return (data as any)?.faction_name || null;
+  },
 
   // ── FACTION APPLICATIONS ──
   getFactionApps: async (): Promise<FactionApplication[]> => {
@@ -214,7 +232,7 @@ export const store = {
     const { data } = await supabase.from("sos_signals").select("*").eq("status", "active").order("created_at", { ascending: false });
     return data ? data.map((r: any) => ({ id: r.id, reason: r.type, description: r.message, date: new Date(r.created_at).toLocaleDateString("uk-UA"), type: r.type })) : [];
   },
-  addSos: async (username: string, reason: string, description: string, type: string = "other") => {
+  addSos: async (username: string, reason: string, description: string, type: any = "other") => {
     await secureAction("sos_signals", 'INSERT', { username, message: description, type, status: "active" });
   },
   resolveSos: async (id: number) => { await secureAction("sos_signals", 'UPDATE', { status: "resolved" }, { col: 'id', val: id }); },
@@ -243,8 +261,6 @@ export const store = {
     return data ? data.map((r: any) => ({ id: r.id, text: r.text, date: new Date(r.created_at).toLocaleDateString("uk-UA"), read: r.read })) : [];
   },
   markNotificationsRead: async (username: string) => {
-    // В данном случае UPDATE по фильтру, но т.к. массово, прокси-метод подправим позже если надо
-    // Для простоты — оставим как есть или добавим в secureAction поддержку массовости
     await supabase.from("notifications").update({ read: true }).ilike("username", username).eq("read", false);
   },
   addNotification: async (username: string, text: string) => {
@@ -261,6 +277,20 @@ export const store = {
     return { citizens: u.count || 0, houses: h.count || 0, factions: f.count || 0 };
   },
 
-  // ── REALTIME ── (Оставляем через ANON_KEY, это безопасно)
+  // ── PROFILE ──
+  getPlayerProfile: async (nick: string) => {
+    const [houseRes, factionRes, licRes] = await Promise.all([
+      supabase.from("houses").select("id, name, price").eq("owner_username", nick),
+      supabase.from("faction_applications").select("faction_name, status").eq("username", nick).order("created_at", { ascending: false }),
+      supabase.from("license_applications").select("id, license_type, plate_number, status").eq("username", nick).eq("status", "approved"),
+    ]);
+    return {
+      houses: (houseRes.data || []) as any[],
+      factionApps: (factionRes.data || []) as any[],
+      licenses: (licRes.data || []) as any[],
+    };
+  },
+
+  // ── REALTIME ──
   onNewSos: (cb: any) => supabase.channel("sos_live").on("postgres_changes", { event: "INSERT", schema: "public", table: "sos_signals" }, (p: any) => cb({ id: p.new.id, reason: p.new.type, description: p.new.message, date: new Date(p.new.created_at).toLocaleDateString("uk-UA"), type: p.new.type })).subscribe(),
 };
