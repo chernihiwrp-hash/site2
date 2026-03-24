@@ -28,9 +28,9 @@ const PulseCity = () => {
   }, []);
 
   const stats = [
-    { icon: Users,  label: "ГРАВЦІВ",    value: data.citizens, color: "hsl(var(--primary))",    bg: "hsl(var(--primary) / 0.08)",  border: "hsl(var(--primary) / 0.2)" },
-    { icon: Home,   label: "БУДИНКІВ",   value: data.houses,   color: "hsl(45, 100%, 55%)",       bg: "hsl(45 100% 55% / 0.08)",     border: "hsl(45 100% 55% / 0.2)" },
-    { icon: Shield, label: "У ФРАКЦІЯХ", value: data.factions, color: "hsl(142, 71%, 45%)",       bg: "hsl(142 71% 45% / 0.08)",     border: "hsl(142 71% 45% / 0.2)" },
+    { icon: Users,  label: "ГРАВЦІВ",    value: data.citizens, color: "hsl(var(--primary))",   bg: "hsl(var(--primary) / 0.08)",  border: "hsl(var(--primary) / 0.2)" },
+    { icon: Home,   label: "БУДИНКІВ",   value: data.houses,   color: "hsl(var(--secondary))", bg: "hsl(var(--secondary) / 0.08)", border: "hsl(var(--secondary) / 0.2)" },
+    { icon: Shield, label: "У ФРАКЦІЯХ", value: data.factions, color: "hsl(var(--accent))",    bg: "hsl(var(--accent) / 0.08)",   border: "hsl(var(--accent) / 0.2)" },
   ];
 
   return (
@@ -68,7 +68,7 @@ const PulseCity = () => {
                 fontSize: 28,
                 lineHeight: 1,
                 color: s.color,
-                textShadow: `0 0 20px ${s.color.replace("hsl(", "hsl(").replace(")", " / 0.5)")}`,
+                textShadow: `0 0 20px ${s.color.replace(")", " / 0.5)")}`,
                 fontVariantNumeric: "tabular-nums",
               }}>
                 {loaded ? s.value : "—"}
