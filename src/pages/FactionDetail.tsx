@@ -124,7 +124,7 @@ const FactionDetail = () => {
     const loadMembers = async () => {
       setMembersLoading(true);
 
-      // 1. Load approved faction applications
+      // 1. Load ALL approved faction applications
       const { data: apps } = await supabase
         .from("faction_applications")
         .select("username, form_data, faction_id, faction_name")
@@ -135,10 +135,22 @@ const FactionDetail = () => {
       const staticFaction = factionsData[id || ""];
       const staticName = staticFaction?.name?.toLowerCase() || "";
 
+      // Also try to get the DB faction name in case id is numeric
+      let dbFactionName = "";
+      if (id && !isNaN(Number(id))) {
+        const { data: fData } = await supabase.from("factions").select("name").eq("id", Number(id)).maybeSingle();
+        if (fData?.name) dbFactionName = (fData.name as string).toLowerCase();
+      }
+
       const matched = (apps as Record<string, unknown>[]).filter(a => {
         const fid = String(a.faction_id || "");
         const fname = (a.faction_name as string || "").toLowerCase().trim();
-        return fid === id || fname === staticName || fname === id?.toLowerCase();
+        return (
+          fid === id ||
+          fname === staticName ||
+          fname === id?.toLowerCase() ||
+          (dbFactionName && fname === dbFactionName)
+        );
       });
 
       if (matched.length === 0) { setMembers([]); setMembersLoading(false); return; }
