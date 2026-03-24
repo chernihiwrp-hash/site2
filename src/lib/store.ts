@@ -1,16 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-// ─── CONFIG & CLIENT ─────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://qwpzmioxhbkmxrwwevsv.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3cHptaW94aGJrbXhyd3dldnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTM3NTksImV4cCI6MjA4OTUyOTc1OX0.CrPDm1vWaEruGVQpfBYKYwYO4DG9WlibhVzLHaBMGh8";
-const APP_SECRET = "ARTEMIDAHUESOS"; 
 
-// Инициализируем клиент с глобальным заголовком для обхода RLS
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  global: {
-    headers: {
-      'x-my-app-secret': APP_SECRET
-    }
+// СЮДА ВСТАВЬ КЛЮЧ "service_role" ИЗ НАСТРОЕК SUPABASE (Settings -> API)
+const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3cHptaW94aGJrbXhyd3dldnN2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzk1Mzc1OSwiZXhwIjoyMDg5NTI5NzU5fQ.8_fGPNsPAVu4s1z1LYOno7LQ3sVL6Z2P8HyhX0Dpnf0"; 
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false
   }
 });
 // ─── TYPES ───────────────────────────────────────────────────────────────────
