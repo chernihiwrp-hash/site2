@@ -1,32 +1,31 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = "https://qwpzmioxhbkmxrwwevsv.supabase.co";
-// ВСТАВЬ СЮДА СВЕЖИЙ КЛЮЧ ИЗ SETTINGS -> API (anon public)
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3cHptaW94aGJrbXhyd3dldnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTM3NTksImV4cCI6MjA4OTUyOTc1OX0.CrPDm1vWaEruGVQpfBYKYwYO4DG9WlibhVzLHaBMGh8";
+// Этот ключ оставляем, он нужен Supabase клиенту для структуры, 
+// но записывать мы будем через прокси-сервер.
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; 
 
-// Создаем клиент с секретным "паспортом"
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  global: {
-    headers: {
-      'x-my-app-password': 'CH-RP_Secure-Gate_2026_!v3', 
-    },
-  },
-});
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- Вспомогательная функция для записи ---
+// --- СЕКРЕТНЫЙ МОСТ (Вместо прямого обращения к базе) ---
 const dbWrite = async (table: string, method: 'INSERT' | 'UPDATE' | 'DELETE', data: any, filter?: { col: string, val: any }) => {
-  let query: any = supabase.from(table);
-  
-  if (method === 'INSERT') query = query.insert(data);
-  if (method === 'UPDATE') query = query.update(data).ilike(filter!.col, filter!.val);
-  if (method === 'DELETE') query = query.delete().eq(filter!.col, filter!.val);
+  const response = await fetch('/api/db', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      table, 
+      method, 
+      data, 
+      filter, 
+      password: 'CH-RP_Secure-Gate_2026_!v3' // Твой секретный пароль
+    })
+  });
 
-  const { data: res, error } = await query.select();
-  if (error) {
-    console.error(`Ошибка в таблице ${table}:`, error.message);
-    throw error;
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.error || 'Ошибка прокси-сервера');
   }
-  return res;
+  return result;
 };
 
 // --- TYPES ---
@@ -229,7 +228,7 @@ export const store = {
   },
   resolveSos: async (id: number) => { await dbWrite("sos_signals", 'UPDATE', { status: "resolved" }, { col: 'id', val: id }); },
 
-  // TOKENS / BALANCE
+  // TOKENS / BALANCE (GIVE/TAKE)
   giveTokens: async (nick: string, amount: number): Promise<boolean> => {
     const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
     const newBalance = ((user?.balance as number) || 0) + amount;
@@ -283,6 +282,6 @@ export const store = {
     };
   },
 
-  // REALTIME
+  // REALTIME (Работает даже через анон)
   onNewSos: (cb: any) => supabase.channel("sos_live").on("postgres_changes", { event: "INSERT", schema: "public", table: "sos_signals" }, (p: any) => cb({ id: p.new.id, reason: p.new.type, description: p.new.message, date: new Date(p.new.created_at).toLocaleDateString("uk-UA"), type: p.new.type })).subscribe(),
 };
