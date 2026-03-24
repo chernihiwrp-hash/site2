@@ -1,13 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Vercel автоматически подставит эти значения из Environment Variables
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Тот самый секретный ключ для обхода "дули" хакерам
+const APP_SECRET = import.meta.env.VITE_SUPABASE_APP_SECRET || 'Chernihiv_Super_Access_2026_XYZ';
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn("Внимание: Переменные окружения Supabase не найдены!");
+  console.warn("Внимание: Переменные окружения Supabase не найдены в Vercel!");
 }
 
-export const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON_KEY || '');
+// Инициализируем клиент с секретным заголовком
+export const supabase = createClient(
+  SUPABASE_URL || '', 
+  SUPABASE_ANON_KEY || '',
+  {
+    global: {
+      headers: {
+        'x-application-secret': APP_SECRET
+      }
+    }
+  }
+);
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 export type NewsItem = {
