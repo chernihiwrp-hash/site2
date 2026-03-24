@@ -47,19 +47,45 @@ export type AdminApplication = { id: number; nick: string; roblox: string; age: 
 export type CityVoiceItem = { id: number; author: string; text: string; type: "idea" | "petition"; likes: number; dislikes: number; status: "active" | "approved" | "rejected"; };
 export type MayorCandidate = { id: number; name: string; program: string; bio: string; votes: number };
 export type DocumentItem = { id: number; title: string; content: string };
+export type CarRecord = { plate: string; model: string; owner: string };
 export type SosMessage = { id: number; reason: string; description: string; date: string; type?: string; };
 export type Notification = { id: number; text: string; date: string; read: boolean };
 export type LicenseApplication = { id: number; username: string; license_type: string; plate_number: string | null; status: "pending" | "approved" | "rejected"; created_at: string; };
 export type HousePurchaseRequest = { id: number; house_id: number; username: string; house_name?: string; house_price?: number; rental_days?: number; avatar_url?: string; status: "pending" | "approved" | "rejected"; created_at: string; };
 export type FactionDB = { id: number; name: string; color: string; logo_url?: string; gradient?: string; section: "main" | "separate"; created_at: string; };
 
-// ─── BALANCE HELPERS ──────────────────────────────────────────────────────────
+// ─── BALANCE HELPERS (Fixes Rollup/Vercel errors) ─────────────────────────────
 export const getBalance = (nick: string): number => {
   try { return parseInt(localStorage.getItem(`crp_bal_${nick.toLowerCase()}`) || "0"); }
   catch { return 0; }
 };
+
 export const setBalance = (nick: string, amount: number) => {
   localStorage.setItem(`crp_bal_${nick.toLowerCase()}`, String(Math.max(0, amount)));
+};
+
+export const addBalance = async (nick: string, amount: number) => {
+  const current = getBalance(nick);
+  const newVal = current + amount;
+  setBalance(nick, newVal);
+  try {
+    await store.giveTokens(nick, amount);
+  } catch (e) {
+    console.error("Failed to sync balance to DB", e);
+  }
+};
+
+export const subtractBalance = async (nick: string, amount: number): Promise<boolean> => {
+  const cur = getBalance(nick);
+  if (cur < amount) return false;
+  const newVal = cur - amount;
+  setBalance(nick, newVal);
+  try {
+    const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
+    const dbBalance = ((user?.balance as number) || 0) - amount;
+    await dbWrite("users", 'UPDATE', { balance: Math.max(0, dbBalance) }, { col: 'username', val: nick });
+    return true;
+  } catch { return false; }
 };
 
 // ─── STORE ───────────────────────────────────────────────────────────────────
@@ -172,7 +198,7 @@ export const store = {
     await dbWrite("notifications", 'INSERT', { username, text, read: false });
   },
 
-  // TOKENS (Замена старой логики на DB-driven)
+  // TOKENS (Database sync)
   giveTokens: async (nick: string, amount: number): Promise<boolean> => {
     try {
       const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
@@ -182,6 +208,20 @@ export const store = {
       await store.addNotification(nick, `Вам нараховано ${amount} CR!`);
       return true;
     } catch { return false; }
+  },
+
+  // PULSE CITY
+  getPulse: async (): Promise<{ citizens: number; houses: number; factions: number }> => {
+    const [usersRes, housesRes, factionsRes] = await Promise.all([
+      supabase.from("users").select("id", { count: "exact", head: true }),
+      supabase.from("houses").select("id", { count: "exact", head: true }).eq("is_for_sale", false),
+      supabase.from("faction_applications").select("id", { count: "exact", head: true }).eq("status", "approved"),
+    ]);
+    return {
+      citizens: usersRes.count || 0,
+      houses: housesRes.count || 0,
+      factions: factionsRes.count || 0,
+    };
   },
 
   // REALTIME
