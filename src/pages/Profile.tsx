@@ -24,7 +24,7 @@ const Trident = () => (
 );
 
 type ProfileData = {
-  houses: { id: number; name: string; price: number }[];
+  houses: { id: number; name: string; price: number; image_url?: string; image?: string; photos?: string[]; rental_days?: number; pending?: boolean }[];
   factionApps: { faction_name: string; status: string }[];
   licenses: { id: number; license_type: string; plate_number: string | null; status: string }[];
 };
@@ -358,30 +358,46 @@ const Profile = () => {
           <div className="px-4 py-3">
             {profileData.houses.length > 0 ? (
               <div className="space-y-2">
-                {profileData.houses.map(h => {
-                  const photo = h.photos?.find((p: string) => p.startsWith("http")) || h.image;
+                {profileData.houses.map((h: Record<string, unknown>) => {
+                  const photo = (h.image_url as string) || (h.image as string) || ((h.photos as string[])?.find((p: string) => p.startsWith("http")));
+                  const isPending = (h.pending as boolean) || false;
+                  const rentalDays = h.rental_days as number | undefined;
                   return (
-                    <div key={h.id} className="rounded-xl overflow-hidden"
-                      style={{ background: "hsl(142 71% 45% / 0.05)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
-                      {photo && (
-                        <div className="relative h-28 overflow-hidden">
-                          <img src={photo} alt={h.name} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div key={h.id as number} className="rounded-xl overflow-hidden"
+                      style={{ background: "hsl(142 71% 45% / 0.05)", border: `1px solid hsl(142 71% 45% / ${isPending ? "0.1" : "0.25"})` }}>
+                      {photo ? (
+                        <div className="relative h-32 overflow-hidden">
+                          <img src={photo} alt={h.name as string} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+                          {isPending && (
+                            <div className="absolute top-2 right-2 px-2 py-0.5 rounded-lg text-[9px] font-bold"
+                              style={{ background: "hsl(45 100% 55% / 0.2)", border: "1px solid hsl(45 100% 55% / 0.4)", color: "hsl(45 100% 55%)" }}>
+                              НА РОЗГЛЯДІ
+                            </div>
+                          )}
                           <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
-                            <p className="text-sm font-black text-white drop-shadow">{h.name}</p>
-                            <span className="text-[10px] font-bold text-yellow-400">{h.price.toLocaleString()}€</span>
+                            <div>
+                              <p className="text-sm font-black text-white drop-shadow">{h.name as string}</p>
+                              {rentalDays && <p className="text-[9px] text-white/60">{rentalDays} днів</p>}
+                            </div>
+                            <span className="text-[10px] font-bold text-yellow-400">{(h.price as number).toLocaleString()}€</span>
                           </div>
                         </div>
-                      )}
-                      {!photo && (
+                      ) : (
                         <div className="flex items-center gap-3 p-3">
                           <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
                             style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
                             <Home className="w-5 h-5" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
                           </div>
-                          <div>
-                            <p className="text-xs font-semibold text-foreground">{h.name}</p>
-                            <p className="text-[10px] text-yellow-400 font-bold">{h.price.toLocaleString()}€</p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-semibold text-foreground">{h.name as string}</p>
+                              {isPending && <span className="text-[8px] px-1.5 py-0.5 rounded font-bold" style={{ background: "hsl(45 100% 55% / 0.15)", color: "hsl(45 100% 55%)" }}>НА РОЗГЛЯДІ</span>}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <p className="text-[10px] text-yellow-400 font-bold">{(h.price as number).toLocaleString()}€</p>
+                              {rentalDays && <p className="text-[10px] text-muted-foreground">{rentalDays} днів</p>}
+                            </div>
                           </div>
                         </div>
                       )}
