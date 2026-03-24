@@ -16,7 +16,7 @@ const Documents = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 px-4 pt-4">
-      <PageHeader title="ДОКУМЕНТИ" subtitle="Офіційні папери" backTo="/" />
+      <PageHeader title="ПРАВИЛА" subtitle="Офіційні папери" backTo="/" />
 
       {/* Посилання на сайт з правилами */}
       <a href="https://sleepmancybr.github.io/chernihiv" target="_blank" rel="noopener noreferrer"
@@ -66,7 +66,7 @@ const Documents = () => {
           {docs.length === 0 && (
             <div className="text-center py-12 liquid-glass-card rounded-2xl">
               <BookOpen className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
-              <p className="text-xs text-muted-foreground">Документів поки немає</p>
+              <p className="text-xs text-muted-foreground">ПРАВИЛ поки немає</p>
             </div>
           )}
         </div>
