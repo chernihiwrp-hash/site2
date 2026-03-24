@@ -107,7 +107,7 @@ const Index = () => {
     setSosSending(true);
     await store.addSos(sosNick || localStorage.getItem("crp_nick") || "Гравець", sosType, sosDesc, sosType as "raid"|"cheater"|"nrp"|"other");
     setSosSending(false); setShowSos(false); setSosDesc(""); setSosNick("");
-    toast.success("SOS сигнал відправлено адміністрації!");
+    toast.success("Виклик відправлено адміністрації!");
   };
 
   const copyCode = () => {
@@ -162,7 +162,7 @@ const Index = () => {
               <div className="w-8 h-8 rounded-xl bg-destructive/15 border border-destructive/25 flex items-center justify-center">
                 <AlertTriangle className="w-4 h-4 text-destructive" />
               </div>
-              <h3 className="font-display text-sm font-bold text-destructive">SOS СИГНАЛ</h3>
+              <h3 className="font-display text-sm font-bold text-destructive">Виклик Адміністрації</h3>
             </div>
             <label className="text-xs text-muted-foreground mb-1.5 block">Ваш нік</label>
             <input value={sosNick || localStorage.getItem("crp_nick") || ""} onChange={e => setSosNick(e.target.value)} placeholder="Нік в грі"
@@ -181,7 +181,7 @@ const Index = () => {
               className="w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none resize-none h-20 bg-transparent mb-4" />
             <GradientButton variant="danger" className="w-full" onClick={handleSos} disabled={sosSending}>
               <AlertTriangle className="w-4 h-4 inline mr-1.5" />
-              {sosSending ? "Відправляю..." : "Відправити SOS"}
+              {sosSending ? "Викликаю..." : "Викликати Адміністрацію"}
             </GradientButton>
           </div>
         </div>
