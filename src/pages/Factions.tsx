@@ -16,17 +16,6 @@ const ICON_MAP: Record<string, typeof Shield> = {
 
 // Базові дані статичних фракцій (використовуються тільки як fallback)
 const STATIC_BASE = [
-  { id: "sbu",        name: "СБУ",         desc: "Служба безпеки",              icon: "Eye",        color: "hsl(220,60%,55%)", gradient: "linear-gradient(135deg,hsl(220,60%,30%,0.25),hsl(220,60%,15%,0.08))", dangerous: false },
-  { id: "dbr",        name: "ДБР",         desc: "Держ. бюро розслідувань",      icon: "Target",     color: "hsl(160,50%,45%)", gradient: "linear-gradient(135deg,hsl(160,50%,30%,0.25),hsl(160,50%,15%,0.08))", dangerous: false },
-  { id: "npu",        name: "НПУ",         desc: "Національна поліція",          icon: "Shield",     color: "hsl(210,70%,55%)", gradient: "linear-gradient(135deg,hsl(210,70%,40%,0.25),hsl(210,70%,20%,0.08))", dangerous: false },
-  { id: "vsu",        name: "ВСУ",         desc: "Збройні сили",                icon: "Swords",     color: "hsl(140,45%,45%)", gradient: "linear-gradient(135deg,hsl(140,45%,30%,0.25),hsl(100,40%,18%,0.08))", dangerous: false },
-  { id: "prosecutor", name: "Прокуратура", desc: "Нагляд за законністю",         icon: "Scale",      color: "hsl(35,45%,50%)",  gradient: "linear-gradient(135deg,hsl(35,45%,35%,0.25),hsl(30,30%,20%,0.08))",  dangerous: false },
-  { id: "dsns",       name: "ДСНС",        desc: "Надзвичайні ситуації",         icon: "Flame",      color: "hsl(15,80%,55%)",  gradient: "linear-gradient(135deg,hsl(15,80%,40%,0.25),hsl(15,70%,20%,0.08))",  dangerous: false },
-  { id: "judge",      name: "Суддя",       desc: "Судова система",              icon: "Gavel",      color: "hsl(45,70%,55%)",  gradient: "linear-gradient(135deg,hsl(45,70%,45%,0.25),hsl(40,60%,22%,0.08))",  dangerous: false },
-  { id: "lawyers",    name: "Адвокати",    desc: "Захист прав",                 icon: "BookOpen",   color: "hsl(25,70%,55%)",  gradient: "linear-gradient(135deg,hsl(25,70%,45%,0.25),hsl(20,60%,22%,0.08))",  dangerous: false },
-  { id: "mafia",      name: "МАФІЯ",       desc: "Організована злочинність",     icon: "Skull",      color: "hsl(0,55%,45%)",   gradient: "linear-gradient(135deg,hsl(0,55%,22%,0.4),hsl(0,0%,4%,0.5))",        dangerous: true  },
-  { id: "ghetto",     name: "ГЕТТО",       desc: "Вуличне угруповання",          icon: "Crosshair",  color: "hsl(0,50%,42%)",   gradient: "linear-gradient(135deg,hsl(0,50%,20%,0.45),hsl(0,0%,3%,0.5))",       dangerous: true  },
-  { id: "orion",      name: "ОРІОН",       desc: "Приватна військова компанія",  icon: "ShieldCheck",color: "hsl(0,45%,40%)",   gradient: "linear-gradient(135deg,hsl(0,45%,22%,0.4),hsl(0,0%,4%,0.45))",       dangerous: true  },
 ];
 
 type FactionItem = {
