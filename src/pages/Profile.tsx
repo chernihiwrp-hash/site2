@@ -257,7 +257,7 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
         </div>
       )}
 
-      {/* ═══ PASSPORT CARD — БОМБА VFX 2026 ═══ */}
+          {/* ═══ PASSPORT CARD — БОМБА VFX 2026 ═══ */}
       <div className="mb-4 animate-fade-in group">
         {/* Inject keyframes */}
         {vfx.keyframes && <style>{vfx.keyframes}</style>}
@@ -286,7 +286,7 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
           {/* VFX Container */}
           <div className={`absolute inset-0 pointer-events-none overflow-hidden rounded-2xl ${vfx.cssClass}`} />
 
-          {/* Neon Blue */}
+          {/* === VFX EFFECTS === */}
           {themeId === "neon_blue" && (
             <>
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/15 to-transparent animate-[neonScan_3.2s_linear_infinite]" />
@@ -294,7 +294,6 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
             </>
           )}
 
-          {/* Cyber Red */}
           {themeId === "cyber_red" && (
             <>
               <div className="absolute inset-0 border-2 border-red-500/60 animate-[glitch_0.45s_linear_infinite]" />
@@ -302,7 +301,6 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
             </>
           )}
 
-          {/* Gold VIP */}
           {themeId === "gold_vip" && (
             <>
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/60 to-transparent bg-[length:280%_100%] animate-[goldShimmer_2.5s_linear_infinite]" />
@@ -322,12 +320,10 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
             </>
           )}
 
-          {/* Purple Haze */}
           {themeId === "purple_haze" && (
             <div className="absolute inset-0 bg-[radial-gradient(at_35%_25%,#c026d3_10%,#6b21a8_50%,transparent_80%)] bg-[length:200%_200%] animate-[auroraFlow_13s_linear_infinite]" />
           )}
 
-          {/* Arctic Snow */}
           {themeId === "arctic" && (
             Array.from({ length: 18 }).map((_, i) => (
               <div
@@ -344,7 +340,6 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
             ))
           )}
 
-          {/* Matrix Rain */}
           {themeId === "matrix" && (
             Array.from({ length: 10 }).map((_, i) => (
               <div
@@ -360,7 +355,6 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
             ))
           )}
 
-          {/* Sunset Embers */}
           {themeId === "sunset" && (
             Array.from({ length: 9 }).map((_, i) => (
               <div
@@ -381,6 +375,7 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
             <Trident />
           </div>
 
+          {/* === ПАСПОРТНИЙ КОНТЕНТ === */}
           {/* Header strip */}
           <div className="relative flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.07)" }}>
             <div>
