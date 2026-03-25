@@ -114,18 +114,77 @@ const Profile = () => {
   const passportBg = document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))";
   const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
 
-const THEME_VFX: Record<string, { label: string; color: string; glow: string; type: string }> = {
-  lime: { label: "STANDARD", color: "#84cc16", glow: "rgba(132, 204, 22, 0.15)", type: 'default' },
-  neon_blue: { label: "ROYAL", color: "#3b82f6", glow: "rgba(59, 130, 246, 0.5)", type: 'blue' },
-  cyber_red: { label: "DEMON", color: "#ef4444", glow: "rgba(239, 68, 68, 0.5)", type: 'red' },
-  gold_vip: { label: "VIP", color: "#fbbf24", glow: "rgba(251, 191, 36, 0.5)", type: 'gold' },
-  purple_haze: { label: "COSMOS", color: "#a855f7", glow: "rgba(168, 85, 247, 0.5)", type: 'purple' },
-  arctic: { label: "FROST", color: "#7dd3fc", glow: "rgba(125, 211, 252, 0.4)", type: 'arctic' },
-  matrix: { label: "HACKER", color: "#22c55e", glow: "rgba(34, 197, 94, 0.5)", type: 'matrix' },
-  sunset: { label: "BEACH", color: "#f97316", glow: "rgba(249, 115, 22, 0.4)", type: 'sunset' },
+  const THEME_VFX = {
+  lime: { label: "🌿", icon: "🌿", overlay: null },
+  neon_blue: { 
+    label: "⚡", icon: "⚡", 
+    overlay: (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute w-full h-[3px] bg-cyan-400/30 shadow-[0_0_15px_cyan] animate-[vfx-scan_3s_linear_infinite]" />
+        <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
+      </div>
+    )
+  },
+  cyber_red: { 
+    label: "🔴", icon: "🔴", 
+    overlay: (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden border-2 border-red-600/20">
+        <div className="absolute inset-0 bg-red-900/5 opacity-30 mix-blend-overlay animate-[vfx-flicker_0.2s_infinite]" />
+        <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(255,0,0,0.1)_50%,transparent_50%)] bg-[length:100%_4px]" />
+      </div>
+    )
+  },
+  gold_vip: { 
+    label: "✨", icon: "✨", 
+    overlay: (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 -left-[100%] w-[60%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-25deg] animate-[vfx-shimmer_3s_infinite]" />
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="absolute animate-ping bg-yellow-400/40 rounded-full w-1 h-1" 
+               style={{ top: `${Math.random()*100}%`, left: `${Math.random()*100}%`, animationDelay: `${i*0.4}s` }} />
+        ))}
+      </div>
+    )
+  },
+  purple_haze: { 
+    label: "🔮", icon: "🔮", 
+    overlay: (
+      <div className="absolute inset-0 pointer-events-none flex justify-around items-end pb-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="w-2 h-2 bg-purple-500/40 rounded-full blur-sm animate-[vfx-float_4s_infinite_ease-in-out]" 
+               style={{ animationDelay: `${i*0.7}s` }} />
+        ))}
+      </div>
+    )
+  },
+  matrix: { 
+    label: "💻", icon: "💻", 
+    overlay: (
+      <div className="absolute inset-0 pointer-events-none opacity-20 font-mono text-[8px] text-green-500 overflow-hidden leading-none">
+        {Array(15).fill("10100111001").map((t, i) => <div key={i} className="animate-[vfx-rain_2s_infinite_linear]" style={{animationDelay: `${i*0.2}s`}}>{t}</div>)}
+      </div>
+    )
+  },
+  arctic: { 
+    label: "❄️", icon: "❄️", 
+    overlay: (
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,white/5_100%)] backdrop-blur-[1px]">
+        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/frozen-wall.png')]" />
+      </div>
+    )
+  },
+  sunset: { 
+    label: "🌅", icon: "🌅", 
+    overlay: (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="absolute w-1 h-1 bg-orange-500 shadow-[0_0_8px_orange] rounded-full animate-[vfx-ember_3s_infinite_linear]" 
+               style={{ bottom: '-10%', left: `${Math.random()*100}%`, animationDelay: `${i*0.5}s` }} />
+        ))}
+      </div>
+    )
+  },
 };
-
-const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
 
   const handleAdmin = () => {
     if (adminCode === "5319son") { navigate("/admin-panel"); toast.success("Доступ відкрито"); }
@@ -194,115 +253,76 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
         </div>
       )}
 
-                     {/* ═══ PASSPORT CARD ═══ */}
-<div className="mb-4 animate-fade-in group">
-  <style>{`
-    @keyframes pulse-glow { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-    @keyframes shimmer-line { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-    @keyframes matrix-run { 0% { top: -100%; } 100% { top: 100%; } }
-    @keyframes float-item { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-  `}</style>
-
-  <div 
-    className="rounded-2xl overflow-hidden relative bg-[#0a0a0a] border transition-all duration-500 min-h-[200px]"
-    style={{ 
-      borderColor: themeId === 'lime' ? 'rgba(255,255,255,0.1)' : vfx.color,
-      boxShadow: themeId === 'lime' ? 'none' : `0 0 20px ${vfx.glow}` 
-    }}
-  >
-    {/* ─── ФОНОВЫЕ ЭФФЕКТЫ ─── */}
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      
-      {/* Дефолтная подсветка СНИЗУ (для всех, но в lime она основная) */}
       <div 
-        className="absolute bottom-0 left-0 right-0 h-32 opacity-30 transition-all duration-1000"
-        style={{ background: `linear-gradient(to top, ${vfx.color}, transparent)` }}
-      />
+  className="relative overflow-hidden rounded-[2.5rem] p-[2px] transition-all duration-500"
+  style={{ background: `linear-gradient(145deg, ${passportBorder}, transparent)` }}
+>
+  <div 
+    className="relative rounded-[2.4rem] overflow-hidden bg-black/40 backdrop-blur-2xl p-6 h-full border border-white/5"
+    style={{ background: passportBg }}
+  >
+    {/* Глобальный оверлей из конфига */}
+    {vfx.overlay}
 
-      {/* Матрица: Бегущие строки */}
-      {themeId === 'matrix' && (
-        <div className="absolute inset-0 opacity-10 font-mono text-[6px] text-green-500 leading-none animate-[matrix-run_20s_linear_infinite]">
-          {Array(50).fill(0).map((_, i) => <div key={i}>0101101010110101011010101101011010110101011010101</div>)}
-        </div>
-      )}
-
-      {/* Космос: Фиолетовые звезды */}
-      {themeId === 'purple_haze' && Array.from({ length: 20 }).map((_, i) => (
-        <div key={i} className="absolute w-0.5 h-0.5 bg-white rounded-full animate-pulse"
-             style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 3}s` }} />
-      )}
+    {/* Header */}
+    <div className="flex justify-between items-start mb-6 relative z-10">
+      <div className="flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+        <span className="text-[10px] font-bold tracking-widest text-white/80 uppercase">Passport</span>
+      </div>
+      <span className="text-xl font-black italic text-white/20 tracking-tighter">#{uid.slice(-6)}</span>
     </div>
 
-    {/* ─── КОНТЕНТ ─── */}
-    <div className="relative z-10">
-      
-      {/* Иконки-украшения по темам */}
-      <div className="absolute top-2 right-4 flex gap-2">
-        {themeId === 'neon_blue' && <Crown size={16} className="text-blue-400 animate-[float-item_3s_infinite]" />}
-        {themeId === 'cyber_red' && <Flame size={16} className="text-red-500 animate-pulse" />}
-        {themeId === 'gold_vip' && <Star size={16} className="text-yellow-400 fill-current animate-spin-slow" />}
+    {/* Main Row */}
+    <div className="flex gap-5 relative z-10">
+      <div className="relative group">
+        <div className="w-24 h-32 rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-transform group-hover:scale-105">
+          {tgUser?.photo_url ? (
+            <img src={tgUser.photo_url} alt="Ava" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center">
+              <User size={40} className="text-white/20" />
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-        <div className="flex flex-col">
-          <span className="text-[7px] text-white/20 tracking-[3px] font-bold uppercase">Identification</span>
-          <span className="text-[10px] font-black italic text-white/90">CHERNIHIV <span style={{ color: vfx.color }}>RP</span></span>
+      <div className="flex-1 space-y-3">
+        <div>
+          <p className="text-[10px] uppercase text-white/40 tracking-wider">Громадянин</p>
+          <p className="text-lg font-bold text-white truncate leading-none">{name}</p>
+          {uname && <p className="text-[10px] text-primary/80 font-mono">{uname}</p>}
         </div>
-        <span className="text-[9px] font-mono text-white/30 tracking-widest">#{uid.slice(-6)}</span>
-      </div>
 
-      {/* Main Block */}
-      <div className="p-4 flex gap-4">
-        {/* Аватар */}
-        <div className="relative">
-          <div className="w-16 h-16 rounded-xl overflow-hidden border border-white/10 bg-black/40">
-            {tgUser?.photo_url ? (
-              <img src={tgUser.photo_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-white/5"><User className="text-white/10" /></div>
-            )}
+        <div className="flex gap-4">
+          <div>
+            <p className="text-[10px] uppercase text-white/40 tracking-wider">Баланс</p>
+            <p className="text-sm font-black text-white flex items-center gap-1">
+              <Coins size={12} className="text-yellow-400" /> {balance} <span className="text-[10px] text-white/40">CR</span>
+            </p>
           </div>
-          <div className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-[#0a0a0a] border border-white/10">
-             <CheckCircle size={10} style={{ color: vfx.color }} />
+          <div>
+            <p className="text-[10px] uppercase text-white/40 tracking-wider">Дата</p>
+            <p className="text-sm font-bold text-white/90">{regDate}</p>
           </div>
         </div>
 
-        {/* Инфо */}
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold text-white truncate leading-none mb-1">{name}</h2>
-          <div className="flex items-center gap-1.5">
-             <div className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded border border-white/5">
-                <Coins size={10} className="text-yellow-500" />
-                <span className="text-[10px] font-bold text-white/90">{balance}</span>
-             </div>
-             <span className="text-[8px] text-white/20 font-mono tracking-tighter">{regDate}</span>
+        <div className="pt-2">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/10 border border-primary/20 w-fit">
+            <Shield size={10} className="text-primary" />
+            <span className="text-[9px] font-black text-primary uppercase tracking-tighter">Verified Citizen</span>
           </div>
         </div>
       </div>
+    </div>
 
-      {/* Stats */}
-      <div className="px-4 pb-4 grid grid-cols-2 gap-2">
-        <div className="bg-white/[0.03] p-2 rounded-lg border border-white/5">
-          <p className="text-[7px] uppercase text-white/30 font-bold mb-0.5">Фракція</p>
-          <p className="text-[10px] font-medium text-white/70 truncate">{activeFaction || "Немає"}</p>
-        </div>
-        <div className="bg-white/[0.03] p-2 rounded-lg border border-white/5">
-          <p className="text-[7px] uppercase text-white/30 font-bold mb-0.5">Дім</p>
-          <p className="text-[10px] font-medium text-white/70 truncate">{firstHouse?.name || "Немає"}</p>
-        </div>
-      </div>
-
-      {/* Footer Line */}
-      <div className="py-1.5 bg-black/40 border-t border-white/5 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-[shimmer-line_4s_infinite]" />
-        <p className="text-[6px] font-mono text-white/10 tracking-[6px] relative z-10 uppercase">
-          {nick} << {uid.slice(0,8)} << UKR
-        </p>
-      </div>
+    {/* Machine Line */}
+    <div className="mt-6 pt-3 border-t border-white/5 font-mono text-[9px] text-white/10 tracking-[0.2em] uppercase overflow-hidden whitespace-nowrap opacity-50">
+      ID{uid.slice(-8)} &lt;&lt; {nick.toUpperCase()} &lt;&lt; CHERNIHIV RP
     </div>
   </div>
 </div>
+                     
       {/* Діяльність */}
       <div className="mb-2">
         <button onClick={() => setShowActivity(!showActivity)}
