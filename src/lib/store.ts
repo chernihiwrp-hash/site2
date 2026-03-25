@@ -365,6 +365,45 @@ export const store = {
   deleteCityVoice: async (id: number) => { await supabase.from("city_voice").delete().eq("id", id); },
   setCityVoice: (_: CityVoiceItem[]) => {},
 
+    // ── CITY VOICE LIKES / DISLIKES ───────────────────────────────────────────
+  incrementCityVoiceLikes: async (id: number) => {
+    const { data, error } = await supabase
+      .from("city_voice")
+      .select("likes")
+      .eq("id", id)
+      .single();
+
+    if (error) throw error;
+
+    const newLikes = ((data?.likes as number) || 0) + 1;
+
+    const { error: updateError } = await supabase
+      .from("city_voice")
+      .update({ likes: newLikes })
+      .eq("id", id);
+
+    if (updateError) throw updateError;
+  },
+
+  incrementCityVoiceDislikes: async (id: number) => {
+    const { data, error } = await supabase
+      .from("city_voice")
+      .select("dislikes")
+      .eq("id", id)
+      .single();
+
+    if (error) throw error;
+
+    const newDislikes = ((data?.dislikes as number) || 0) + 1;
+
+    const { error: updateError } = await supabase
+      .from("city_voice")
+      .update({ dislikes: newDislikes })
+      .eq("id", id);
+
+    if (updateError) throw updateError;
+  },
+
   // ── MAYOR ELECTION ────────────────────────────────────────────────────────
   getCandidates: async (): Promise<MayorCandidate[]> => {
     const { data } = await supabase.from("mayor_election").select("*").order("votes", { ascending: false });
