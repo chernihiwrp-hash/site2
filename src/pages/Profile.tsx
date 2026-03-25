@@ -114,70 +114,62 @@ const Profile = () => {
   const passportBg = document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))";
   const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
 
-  // ─── SIMPLE GLOW PARTICLES + GRADIENTS ─────────────────────────────
+// ─── ADVANCED VISUAL EFFECTS CONFIG ─────────────────────────────────────
 const THEME_VFX: Record<string, {
   label: string;
-  cssClass: string;
-  particleClass: string;
-  particleColor: string;
-  keyframes: string;
+  color: string;
+  glow: string;
+  type: 'blue_crown' | 'red_demon' | 'gold_stars' | 'purple_space' | 'arctic' | 'matrix' | 'sunset' | 'standard';
 }> = {
-  lime: { label: "", cssClass: "", particleClass: "", particleColor: "", keyframes: "" },
-
-  neon_blue: {
-    label: "NEON",
-    cssClass: "bg-gradient-to-br from-blue-500/10 via-cyan-400/20 to-blue-600/10",
-    particleClass: "animate-pulse",
-    particleColor: "#67e8f9",
-    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-25px) scale(1.3); } }`,
+  lime: { label: "STANDARD", color: "#84cc16", glow: "transparent", type: 'standard' },
+  
+  neon_blue: { 
+    label: "ROYAL", 
+    color: "#3b82f6", 
+    glow: "rgba(59, 130, 246, 0.5)", 
+    type: 'blue_crown' 
   },
-
-  cyber_red: {
-    label: "DEMON",
-    cssClass: "bg-gradient-to-br from-red-600/20 via-rose-500/15 to-red-700/10",
-    particleClass: "animate-pulse",
-    particleColor: "#f87171",
-    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-30px) scale(0.8); } }`,
+  
+  cyber_red: { 
+    label: "HELLISH", 
+    color: "#ef4444", 
+    glow: "rgba(239, 68, 68, 0.5)", 
+    type: 'red_demon' 
   },
-
-  gold_vip: {
-    label: "LUXURY",
-    cssClass: "bg-gradient-to-br from-amber-400/20 via-yellow-300/15 to-amber-500/10",
-    particleClass: "animate-pulse",
-    particleColor: "#fcd34d",
-    keyframes: `@keyframes particle-float { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8px,-35px) scale(1.4); } }`,
+  
+  gold_vip: { 
+    label: "TREASURE", 
+    color: "#fbbf24", 
+    glow: "rgba(251, 191, 36, 0.5)", 
+    type: 'gold_stars' 
   },
-
-  purple_haze: {
-    label: "NEBULA",
-    cssClass: "bg-gradient-to-br from-purple-600/20 via-violet-500/15 to-fuchsia-600/10",
-    particleClass: "animate-pulse",
-    particleColor: "#c084fc",
-    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-28px); } }`,
+  
+  purple_haze: { 
+    label: "COSMOS", 
+    color: "#a855f7", 
+    glow: "rgba(168, 85, 247, 0.5)", 
+    type: 'purple_space' 
   },
-
-  arctic: {
-    label: "FROST",
-    cssClass: "bg-gradient-to-br from-sky-400/20 via-cyan-300/15 to-blue-400/10",
-    particleClass: "animate-pulse",
-    particleColor: "#bae6fd",
-    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-40px) scale(0.6); } }`,
+  
+  arctic: { 
+    label: "FROST", 
+    color: "#7dd3fc", 
+    glow: "rgba(125, 211, 252, 0.4)", 
+    type: 'arctic' 
   },
-
-  matrix: {
-    label: "MATRIX",
-    cssClass: "bg-gradient-to-br from-emerald-900/30 via-black/40 to-emerald-800/20",
-    particleClass: "",
-    particleColor: "#4ade80",
-    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }`,
+  
+  matrix: { 
+    label: "HACKER", 
+    color: "#22c55e", 
+    glow: "rgba(34, 197, 94, 0.5)", 
+    type: 'matrix' 
   },
-
-  sunset: {
-    label: "SUNSET",
-    cssClass: "bg-gradient-to-br from-orange-500/20 via-rose-400/15 to-amber-500/10",
-    particleClass: "animate-pulse",
-    particleColor: "#fb923c",
-    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-25px) scale(1.2); } }`,
+  
+  sunset: { 
+    label: "RESORT", 
+    color: "#f97316", 
+    glow: "rgba(249, 115, 22, 0.4)", 
+    type: 'sunset' 
   },
 };
 
@@ -250,137 +242,135 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
         </div>
       )}
 
-                      {/* ═══ PASSPORT CARD — GLOW PARTICLES + GRADIENTS ═══ */}
-      <div className="mb-4 animate-fade-in group">
-        {vfx.keyframes && <style>{vfx.keyframes}</style>}
+                     {/* ═══ ULTIMATE PASSPORT CARD ═══ */}
+<div className="mb-4 animate-fade-in group perspective-1000">
+  <style>{`
+    @keyframes crown-move { 0%, 100% { transform: translateY(0) rotate(5deg); } 50% { transform: translateY(-5px) rotate(-5deg); } }
+    @keyframes fire-rise { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-40px) scale(0.5); opacity: 0; } }
+    @keyframes star-twinkle { 0%, 100% { opacity: 0.3; transform: scale(0.8) rotate(0deg); } 50% { opacity: 1; transform: scale(1.2) rotate(90deg); } }
+    @keyframes matrix-scroll { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
+    @keyframes snow-fall { 0% { transform: translateY(-10px) translateX(0); } 100% { transform: translateY(120px) translateX(10px); } }
+    .glow-border { box-shadow: 0 0 15px ${vfx.glow}, inset 0 0 10px ${vfx.glow}; border: 1px solid ${vfx.color}; }
+  `}</style>
 
-        <div 
-          className="rounded-2xl overflow-hidden relative select-none group-hover:scale-[1.01] transition-transform duration-700"
-          style={{
-            border: "1px solid hsl(0 0% 100% / 0.15)",
-            boxShadow: "0 10px 50px hsl(0 0% 0% / 0.65)",
-          }}
-        >
-          {/* Background */}
-          <div className="absolute inset-0">
-            <img
-              src="https://i.ibb.co/NbX6ZNs/images-2.jpg"
-              alt=""
-              className="w-full h-full object-cover opacity-25"
-              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-br from-black/90 via-black/80 to-black/90" />
+  <div className={`rounded-2xl overflow-hidden relative transition-all duration-500 bg-slate-950 ${vfx.type !== 'standard' ? 'glow-border' : 'border border-white/10'}`}>
+    
+    {/* ─── ДИНАМИЧЕСКИЕ ФОНЫ ─── */}
+    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+      
+      {/* КРАСНЫЙ: Искры огня */}
+      {vfx.type === 'red_demon' && Array.from({ length: 10 }).map((_, i) => (
+        <div key={i} className="absolute w-1 h-2 bg-orange-500 blur-[1px] rounded-full animate-[fire-rise_2s_infinite]"
+             style={{ left: `${Math.random() * 100}%`, bottom: '-10px', animationDelay: `${Math.random() * 2}s` }} />
+      ))}
+
+      {/* МАТРИЦА: Командная строка */}
+      {vfx.type === 'matrix' && (
+        <div className="absolute inset-0 opacity-20 font-mono text-[8px] text-green-500 p-2 overflow-hidden leading-tight">
+          <div className="animate-[matrix-scroll_10s_linear_infinite]">
+            {"> system.init()\n> connection_secure\n> access_granted\n> loading_profile...\n> decrypting_id\n> root@chernihiv_rp\n> data_sync_ok"}
           </div>
+        </div>
+      )}
 
-          {/* Glass Base */}
-          <div className="absolute inset-0 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl" />
+      {/* АРКТИКА: Снежинки */}
+      {vfx.type === 'arctic' && Array.from({ length: 15 }).map((_, i) => (
+        <div key={i} className="absolute text-white/40 animate-[snow-fall_4s_linear_infinite]"
+             style={{ left: `${Math.random() * 100}%`, top: '-20px', fontSize: `${Math.random() * 10 + 5}px`, animationDelay: `${Math.random() * 4}s` }}>❄</div>
+      ))}
 
-          {/* Dynamic Gradient Background */}
-          <div className={`absolute inset-0 ${vfx.cssClass}`} />
+      {/* КОСМОС: Звезды */}
+      {vfx.type === 'purple_space' && Array.from({ length: 20 }).map((_, i) => (
+        <div key={i} className="absolute w-0.5 h-0.5 bg-white rounded-full animate-pulse"
+             style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`, opacity: Math.random() }} />
+      ))}
+    </div>
 
-          {/* Glow Particles Container */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {Array.from({ length: 18 }).map((_, i) => (
-              <div
-                key={i}
-                className={`absolute w-1.5 h-1.5 rounded-full animate-particle-float ${vfx.particleClass || ''}`}
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animationDelay: `-${Math.random() * 8}s`,
-                  background: vfx.particleColor,
-                  boxShadow: `0 0 12px ${vfx.particleColor}, 0 0 24px ${vfx.particleColor}`,
-                  opacity: 0.7 + Math.random() * 0.3,
-                }}
-              />
-            ))}
-          </div>
+    {/* ─── ГРАФИЧЕСКИЕ ЭЛЕМЕНТЫ (РОГА, КОРОНЫ И Т.Д.) ─── */}
+    <div className="relative z-10 passport-glass">
+      
+      {/* СИНИЙ: Корона */}
+      {vfx.type === 'blue_crown' && (
+        <div className="absolute -top-1 left-4 z-20 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)] animate-[crown-move_3s_infinite_ease-in-out]">
+          <Crown size={16} fill="currentColor" />
+        </div>
+      )}
 
-          {/* Trident Watermark */}
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 w-28 h-32 pointer-events-none opacity-10">
-            <Trident />
-          </div>
+      {/* КРАСНЫЙ: Рога */}
+      {vfx.type === 'red_demon' && (
+        <>
+          <div className="absolute -top-2 left-6 text-red-600 blur-[0.5px] rotate-[-20deg] drop-shadow-[0_0_5px_red]"><Flame size={20} /></div>
+          <div className="absolute -top-2 right-6 text-red-600 blur-[0.5px] rotate-[20deg] drop-shadow-[0_0_5px_red]"><Flame size={20} /></div>
+        </>
+      )}
 
-          {/* Header strip */}
-          <div className="relative flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.07)" }}>
-            <div>
-              <p className="text-[7px] text-muted-foreground/50 tracking-[0.3em] uppercase">Удостоверение</p>
-              <p className="text-[8px] text-muted-foreground/70 tracking-[0.15em] font-semibold uppercase">Chernihiv RP</p>
-            </div>
-            <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
-          </div>
+      {/* ЗОЛОТО: Звезды и Слитки */}
+      {vfx.type === 'gold_stars' && (
+        <>
+          <div className="absolute top-2 right-10 animate-[star-twinkle_2s_infinite] text-yellow-300 drop-shadow-[0_0_5px_gold]"><Star size={12} fill="currentColor" /></div>
+          <div className="absolute bottom-2 right-4 opacity-30 text-yellow-600"><Database size={24} /></div> {/* Типа слитки */}
+        </>
+      )}
 
-          {/* Main row */}
-          <div className="relative px-4 py-3 flex items-start gap-3">
-            <div className="w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0" style={{ border: "1.5px solid hsl(0 0% 100% / 0.15)" }}>
-              {tgUser?.photo_url ? (
-                <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
-                  <User className="w-8 h-8 text-primary/30" />
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
-              <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
-              {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <CheckCircle className="w-3 h-3 text-primary shrink-0" />
-                <span className="text-xs text-primary font-semibold">Верифіковано</span>
-                <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Coins className="w-3 h-3 text-yellow-400/70" />
-                <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
-              </div>
-            </div>
-          </div>
+      {/* ЗАКАЗ: Солнце */}
+      {vfx.type === 'sunset' && (
+        <div className="absolute inset-0 bg-gradient-to-t from-orange-600/20 via-rose-500/10 to-transparent pointer-events-none" />
+      )}
 
-          {/* Bottom stats */}
-          <div className="relative px-4 pb-3 grid grid-cols-2 gap-2">
-            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{
-                background: activeFaction ? "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--secondary) / 0.08))" : "hsl(0 0% 100% / 0.05)",
-                border: activeFaction ? "1px solid hsl(var(--primary) / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)",
-              }}>
-              <Shield className="w-3 h-3 shrink-0" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 40%)" }} />
-              <div>
-                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Фракція</p>
-                <p className="text-[10px] font-medium truncate" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 60%)" }}>
-                  {activeFaction || (pendingFaction ? `${pendingFaction}...` : "Немає")}
-                </p>
-              </div>
-            </div>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-black/40 backdrop-blur-md">
+        <div className="flex flex-col">
+          <span className="text-[7px] text-white/40 tracking-[3px] uppercase font-bold">Chernihiv ID</span>
+          <span className="text-[10px] font-black italic text-white" style={{ textShadow: `0 0 10px ${vfx.color}` }}>
+            {vfx.label} EDITION
+          </span>
+        </div>
+        {/* Синий блик (универсальный, меняет цвет) */}
+        <div className="w-20 h-full absolute top-0 left-0 bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-[-20deg] animate-[shimmer_3s_infinite]" />
+      </div>
 
-            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{
-                background: firstHouse ? "hsl(142 71% 45% / 0.1)" : "hsl(0 0% 100% / 0.05)",
-                border: firstHouse ? "1px solid hsl(142 71% 45% / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)",
-              }}>
-              <Home className="w-3 h-3 shrink-0" style={{
-                color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 40%)",
-                filter: firstHouse ? "drop-shadow(0 0 4px hsl(142 71% 45% / 0.8))" : "none",
-              }} />
-              <div>
-                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Дім</p>
-                <p className="text-[10px] font-medium truncate" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 60%)" }}>
-                  {firstHouse?.name || "Немає"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Machine line */}
-          <div className="relative px-4 py-1.5" style={{ borderTop: "1px solid hsl(0 0% 100% / 0.05)", background: "hsl(0 0% 100% / 0.02)" }}>
-            <p className="text-[6px] text-muted-foreground/20 font-mono tracking-widest text-center truncate">
-              CHERNIHIV RP &lt;&lt; {nick.toUpperCase()} &lt;&lt; {uid.slice(-8)}
-            </p>
+      {/* Твоя основная инфо-панель (имя, аватар и т.д.) */}
+      <div className="p-4 flex gap-4 relative">
+        <div className="w-20 h-20 rounded-xl overflow-hidden border border-white/20 bg-slate-900 shadow-2xl relative z-10">
+          <img src={tgUser?.photo_url || "https://i.ibb.co/placeholder.jpg"} className="w-full h-full object-cover" />
+        </div>
+        
+        <div className="flex-1 flex flex-col justify-center">
+          <h2 className="text-xl font-black text-white leading-none tracking-tight mb-1" style={{ color: vfx.color }}>
+            {name}
+          </h2>
+          <div className="flex items-center gap-2">
+             <div className="px-2 py-0.5 rounded bg-black/50 border border-white/5 flex items-center gap-1">
+                <Coins size={10} className="text-yellow-500" />
+                <span className="text-[11px] font-bold text-white">{balance}</span>
+             </div>
+             {vfx.type === 'arctic' && <div className="text-[8px] text-blue-200 uppercase font-bold">Заморожено</div>}
           </div>
         </div>
       </div>
 
+      {/* Нижние статы */}
+      <div className="px-4 pb-4 grid grid-cols-2 gap-2">
+        <div className="bg-black/40 p-2 rounded-lg border border-white/5">
+          <p className="text-[7px] uppercase text-white/30 font-bold">Фракція</p>
+          <p className="text-[10px] font-medium text-white/80">{activeFaction || "Цивільний"}</p>
+        </div>
+        <div className="bg-black/40 p-2 rounded-lg border border-white/5">
+          <p className="text-[7px] uppercase text-white/30 font-bold">Нерухомість</p>
+          <p className="text-[10px] font-medium text-white/80">{firstHouse?.name || "Немає"}</p>
+        </div>
+      </div>
+      
+      {/* Сосульки для арктической темы */}
+      {vfx.type === 'arctic' && (
+        <div className="absolute top-0 left-0 right-0 flex justify-around opacity-40 pointer-events-none">
+          {[1,2,3,4,5].map(i => <div key={i} className="w-1 h-4 bg-gradient-to-b from-white to-transparent rounded-b-full" />)}
+        </div>
+      )}
+
+    </div>
+  </div>
+</div>
       {/* Діяльність */}
       <div className="mb-2">
         <button onClick={() => setShowActivity(!showActivity)}
