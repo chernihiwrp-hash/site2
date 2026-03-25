@@ -114,92 +114,76 @@ const Profile = () => {
   const passportBg = document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))";
   const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
 
-  // VFX config per theme
-  // ─── VFX CONFIG — НОВА КРАСИВА ВЕРСІЯ 2026 ───────────────────────────────
+  // ─── VFX CONFIG — БОМБА 2026 (ГЛАЗ НЕ СВОДИТЬ) ─────────────────────────────
 const THEME_VFX: Record<string, {
   label: string;
   cssClass: string;
   keyframes: string;
 }> = {
-  lime: {
-    label: "",
-    cssClass: "",
-    keyframes: "",
-  },
+  lime: { label: "", cssClass: "", keyframes: "" },
 
   neon_blue: {
-    label: "⚡ NEON",
+    label: "NEON CORE",
     cssClass: "vfx-neon-blue",
     keyframes: `
-      @keyframes neonScan { 0% { transform: translateY(-120%); } 100% { transform: translateY(300%); } }
-      @keyframes neonFlicker { 0%, 100% { opacity: 0.65; } 50% { opacity: 1; } }
-      @keyframes neonGlowPulse { 0%, 100% { box-shadow: 0 0 20px #67e8f9, 0 0 40px #22d3ee; } 50% { box-shadow: 0 0 35px #67e8f9, 0 0 70px #22d3ee; } }
+      @keyframes neonScan { 0% { transform: translateY(-150%); } 100% { transform: translateY(350%); } }
+      @keyframes neonFlicker { 0%,100% { opacity: 0.75; } 50% { opacity: 1; } }
+      @keyframes neonPulse { 0%,100% { box-shadow: 0 0 25px #67e8f9, 0 0 50px #22d3ee, 0 0 80px #06b6d4; } 50% { box-shadow: 0 0 40px #67e8f9, 0 0 90px #22d3ee, 0 0 120px #06b6d4; } }
     `,
   },
 
   cyber_red: {
-    label: "⛓️ CYBER",
+    label: "GLITCH PROTOCOL",
     cssClass: "vfx-cyber-red",
     keyframes: `
-      @keyframes glitch { 
-        0%,100% { transform: translate(0); } 
-        20% { transform: translate(-4px, 3px); } 
-        40% { transform: translate(4px, -3px); } 
-        60% { transform: translate(-3px, 2px); } 
-        80% { transform: translate(3px, -2px); } 
-      }
-      @keyframes redScan { 0% { top: -80%; opacity: 0; } 50% { opacity: 0.6; } 100% { top: 180%; opacity: 0; } }
-      @keyframes redIntenseGlow { 0%,100% { box-shadow: 0 0 25px #ef4444, inset 0 0 30px #b91c1c; } 50% { box-shadow: 0 0 60px #f87171, inset 0 0 50px #ef4444; } }
+      @keyframes glitch { 0%,100% { transform: translate(0); } 20% { transform: translate(-5px,4px); } 40% { transform: translate(5px,-4px); } 60% { transform: translate(-4px,3px); } 80% { transform: translate(4px,-3px); } }
+      @keyframes redScan { 0% { top: -100%; opacity: 0; } 50% { opacity: 0.7; } 100% { top: 200%; opacity: 0; } }
+      @keyframes redCoreGlow { 0%,100% { box-shadow: 0 0 30px #ef4444, inset 0 0 40px #b91c1c; } 50% { box-shadow: 0 0 70px #f87171, inset 0 0 70px #ef4444; } }
     `,
   },
 
   gold_vip: {
-    label: "✨ LUXURY",
+    label: "LUXURY ELITE",
     cssClass: "vfx-gold-vip",
     keyframes: `
-      @keyframes goldShimmer { 0% { background-position: -300% 0; } 100% { background-position: 400% 0; } }
-      @keyframes goldSpark { 0%,100% { transform: scale(0.6) rotate(0deg); opacity: 0.6; } 50% { transform: scale(1.4) rotate(20deg); opacity: 1; } }
-      @keyframes luxuryGlow { 0%,100% { box-shadow: 0 0 30px #fbbf24, 0 0 70px #fcd34d; } 50% { box-shadow: 0 0 55px #fbbf24, 0 0 100px #fcd34d; } }
+      @keyframes goldShimmer { 0% { background-position: -400% 0; } 100% { background-position: 500% 0; } }
+      @keyframes goldSpark { 0%,100% { transform: scale(0.7) rotate(0deg); opacity: 0.7; } 50% { transform: scale(1.6) rotate(25deg); opacity: 1; } }
+      @keyframes luxuryPulse { 0%,100% { box-shadow: 0 0 35px #fbbf24, 0 0 80px #fcd34d, 0 0 110px #facc15; } 50% { box-shadow: 0 0 60px #fbbf24, 0 0 110px #fcd34d, 0 0 140px #facc15; } }
     `,
   },
 
   purple_haze: {
-    label: "🌌 AURORA",
+    label: "AURORA VOID",
     cssClass: "vfx-purple-haze",
     keyframes: `
-      @keyframes auroraFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-      @keyframes orbFloat { 0%,100% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(15px, -25px) rotate(12deg); } }
+      @keyframes auroraFlow { 0% { background-position: 0% 50%; } 50% { background-position: 120% 50%; } 100% { background-position: 0% 50%; } }
+      @keyframes orbFloat { 0%,100% { transform: translate(0,0) rotate(0deg); } 50% { transform: translate(25px,-35px) rotate(15deg); } }
     `,
   },
 
   arctic: {
-    label: "❄️ FROST",
+    label: "FROST REALM",
     cssClass: "vfx-arctic",
     keyframes: `
-      @keyframes snowFall { 0% { transform: translateY(-150px) rotate(0deg); opacity: 0.9; } 100% { transform: translateY(450px) rotate(720deg); opacity: 0; } }
-      @keyframes frostGlow { 0%,100% { box-shadow: 0 0 20px #67e8f9; } 50% { box-shadow: 0 0 45px #bae6fd; } }
+      @keyframes snowFall { 0% { transform: translateY(-180px) rotate(0deg); opacity: 0.95; } 100% { transform: translateY(500px) rotate(1080deg); opacity: 0; } }
+      @keyframes frostGlow { 0%,100% { box-shadow: 0 0 25px #bae6fd; } 50% { box-shadow: 0 0 65px #e0f2fe; } }
     `,
   },
 
   matrix: {
-    label: "⌬ MATRIX",
+    label: "DIGITAL RAIN",
     cssClass: "vfx-matrix",
     keyframes: `
-      @keyframes matrixRain { 
-        0% { transform: translateY(-200%); opacity: 0; } 
-        10% { opacity: 0.85; } 
-        90% { opacity: 0.85; } 
-        100% { transform: translateY(450%); opacity: 0; } 
-      }
+      @keyframes matrixRain { 0% { transform: translateY(-250%); opacity: 0; } 8% { opacity: 0.9; } 92% { opacity: 0.9; } 100% { transform: translateY(500%); opacity: 0; } }
     `,
   },
 
   sunset: {
-    label: "🌅 EMBER",
+    label: "EMBER HORIZON",
     cssClass: "vfx-sunset",
     keyframes: `
-      @keyframes emberRise { 0% { transform: translateY(20px) scale(1); opacity: 0.85; } 100% { transform: translateY(-220px) scale(0.4); opacity: 0; } }
-      @keyframes sunsetPulse { 0%,100% { box-shadow: 0 0 30px #f59e0b, inset 0 0 25px #fb923c; } 50% { box-shadow: 0 0 65px #fb923c, inset 0 0 55px #f59e0b; } }
+      @keyframes emberRise { 0% { transform: translateY(30px) scale(1.1); opacity: 0.9; } 100% { transform: translateY(-280px) scale(0.3); opacity: 0; } }
+      @keyframes sunsetPulse { 0%,100% { box-shadow: 0 0 35px #f59e0b, inset 0 0 40px #fb923c; } 50% { box-shadow: 0 0 75px #fb923c, inset 0 0 70px #f59e0b; } }
     `,
   },
 };
@@ -279,160 +263,112 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
         {vfx.keyframes && <style>{vfx.keyframes}</style>}
 
         <div className="rounded-2xl overflow-hidden relative select-none"
-          style={{
-            border: "1px solid hsl(0 0% 100% / 0.12)",
-            boxShadow: "0 8px 32px hsl(0 0% 0% / 0.5)",
-            // Theme-driven glow animation on card
-            animation: themeId !== "lime" ? `${
-              themeId === "cyber_red" ? "vfx-pulse-red" :
-              themeId === "gold_vip" ? "vfx-gold-glow" :
-              themeId === "purple_haze" ? "vfx-purple-glow" :
-              themeId === "arctic" ? "vfx-arctic-glow" :
-              themeId === "matrix" ? "vfx-matrix-glow" :
-              themeId === "sunset" ? "vfx-sunset-glow" :
-              themeId === "neon_blue" ? "none" : "none"
-            } 2.5s ease-in-out infinite` : undefined,
-          }}>
+           {/* Background Layer */}
+  <div className="absolute inset-0">
+    <img 
+      src="https://i.ibb.co/NbX6ZNs/images-2.jpg" 
+      alt="" 
+      className="w-full h-full object-cover opacity-30" 
+    />
+    <div className="absolute inset-0 bg-gradient-to-br from-black/95 via-black/80 to-black/95" />
+  </div>
 
-          {/* BG image */}
-          <div className="absolute inset-0">
-            <img
-              src="https://i.ibb.co/NbX6ZNs/images-2.jpg"
-              alt=""
-              className="w-full h-full object-cover"
-              style={{ opacity: 0.18 }}
-              onError={e => { e.currentTarget.style.display = "none"; }}
-            />
-            <div className="absolute inset-0" style={{
-              background: passportBg || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))",
-              transition: "background 0.6s ease"
-            }} />
-            {/* Theme color accent overlay */}
-            <div className="absolute inset-0 rounded-2xl" style={{
-              background: `radial-gradient(ellipse 80% 50% at 50% 100%, hsl(var(--primary) / 0.08) 0%, transparent 70%)`,
-              transition: "background 0.6s ease"
-            }} />
-          </div>
+  {/* Main Glass Card with strong glassmorphism */}
+  <div className="absolute inset-0 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl" />
 
-          {/* ── VFX OVERLAYS ─────────────────────────── */}
+  {/* VFX Container */}
+  <div className={`absolute inset-0 pointer-events-none overflow-hidden rounded-2xl ${vfx.cssClass}`} />
 
-          {/* Neon Blue: scanline */}
-          {themeId === "neon_blue" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              <div style={{
-                position: "absolute", left: 0, right: 0, height: "3px",
-                background: "linear-gradient(90deg, transparent, hsl(210,100%,55%,0.5), transparent)",
-                animation: "vfx-scan 3s linear infinite",
-              }} />
-              <div style={{
-                position: "absolute", inset: 0,
-                backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 3px, hsl(210,100%,55%,0.03) 3px, hsl(210,100%,55%,0.03) 4px)",
-                animation: "vfx-flicker 4s ease-in-out infinite",
-              }} />
-            </div>
-          )}
+  {/* ────── THEME-SPECIFIC VFX ────── */}
 
-          {/* Cyber Red: glitch border + scanline */}
-          {themeId === "cyber_red" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              <div style={{
-                position: "absolute", inset: 0,
-                border: "1px solid hsl(0,85%,55%,0.35)",
-                borderRadius: "1rem",
-                animation: "vfx-glitch 5s ease-in-out infinite",
-              }} />
-              <div style={{
-                position: "absolute", left: 0, right: 0, height: "2px",
-                background: "linear-gradient(90deg, transparent, hsl(0,85%,55%,0.6), transparent)",
-                animation: "vfx-scan 4s linear infinite",
-              }} />
-            </div>
-          )}
+  {/* Neon Blue */}
+  {themeId === "neon_blue" && (
+    <>
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/10 to-transparent animate-[neonScan_3.5s_linear_infinite]" />
+      <div className="absolute inset-0 border border-cyan-400/40 animate-[neonFlicker_2s_ease-in-out_infinite]" />
+    </>
+  )}
 
-          {/* Gold VIP: shimmer streak */}
-          {themeId === "gold_vip" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              <div style={{
-                position: "absolute", top: 0, bottom: 0, width: "60px",
-                background: "linear-gradient(90deg, transparent, hsl(45,100%,75%,0.25), transparent)",
-                animation: "vfx-shimmer 3.5s ease-in-out infinite",
-              }} />
-              {/* corner sparkles */}
-              {["top-2 left-2","top-2 right-2","bottom-2 left-2","bottom-2 right-2"].map((pos,i) => (
-                <div key={i} className={`absolute ${pos} text-[10px]`}
-                  style={{ opacity: 0.6, animation: `vfx-flicker ${2+i*0.4}s ease-in-out infinite` }}>✦</div>
-              ))}
-            </div>
-          )}
+  {/* Cyber Red */}
+  {themeId === "cyber_red" && (
+    <>
+      <div className="absolute inset-0 border-2 border-red-500/50 animate-[glitch_0.4s_linear_infinite]" />
+      <div className="absolute inset-x-0 h-px bg-red-400/60 animate-[redScan_1.8s_linear_infinite]" />
+    </>
+  )}
 
-          {/* Purple Haze: float animation on whole card inner + particle orbs */}
-          {themeId === "purple_haze" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              {[...Array(4)].map((_,i) => (
-                <div key={i} style={{
-                  position: "absolute",
-                  width: 6+i*2, height: 6+i*2,
-                  borderRadius: "50%",
-                  background: `hsl(275,80%,70%,${0.3+i*0.1})`,
-                  boxShadow: `0 0 8px hsl(275,80%,60%,0.6)`,
-                  left: `${20+i*20}%`, top: `${30+i*15}%`,
-                  animation: `vfx-float ${2.5+i*0.5}s ease-in-out infinite`,
-                  animationDelay: `${i*0.4}s`,
-                }} />
-              ))}
-            </div>
-          )}
+  {/* Gold VIP */}
+  {themeId === "gold_vip" && (
+    <>
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/50 to-transparent bg-[length:300%_100%] animate-[goldShimmer_2.8s_linear_infinite]" />
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute text-3xl text-amber-300 animate-[goldSpark_1.6s_ease-in-out_infinite]"
+          style={{ left: `${12 + i * 11}%`, top: `${15 + (i % 4) * 18}%`, animationDelay: `${i * 0.2}s` }}
+        >
+          ✨
+        </div>
+      ))}
+    </>
+  )}
 
-          {/* Arctic: frost flakes */}
-          {themeId === "arctic" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              {["❄","❅","❆","❄","❅"].map((flake,i) => (
-                <div key={i} style={{
-                  position: "absolute",
-                  left: `${10+i*18}%`, top: `${10+i*12}%`,
-                  fontSize: 10+i*2, color: "hsl(195,80%,85%)",
-                  opacity: 0.35,
-                  animation: `vfx-freeze ${3+i*0.6}s ease-in-out infinite`,
-                  animationDelay: `${i*0.3}s`,
-                }}>{flake}</div>
-              ))}
-            </div>
-          )}
+  {/* Purple Haze (Aurora) */}
+  {themeId === "purple_haze" && (
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_30%,#c026d3_0%,#7e22ce_40%,transparent_70%)] bg-[length:180%_180%] animate-[auroraFlow_14s_linear_infinite]" />
+  )}
 
-          {/* Matrix: falling code drops */}
-          {themeId === "matrix" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              {["01","10","11","00","10"].map((bit,i) => (
-                <div key={i} style={{
-                  position: "absolute",
-                  left: `${12+i*18}%`,
-                  fontFamily: "monospace", fontSize: 9,
-                  color: "hsl(120,100%,50%)",
-                  opacity: 0.55,
-                  animation: `vfx-rain ${2.5+i*0.5}s linear infinite`,
-                  animationDelay: `${i*0.6}s`,
-                }}>{bit}</div>
-              ))}
-            </div>
-          )}
+  {/* Arctic (Snow) */}
+  {themeId === "arctic" && (
+    Array.from({ length: 18 }).map((_, i) => (
+      <div
+        key={i}
+        className="absolute text-white/80 text-2xl animate-[snowFall_7s_linear_infinite]"
+        style={{
+          left: `${Math.random() * 100}%`,
+          animationDuration: `${5 + Math.random() * 9}s`,
+          animationDelay: `-${Math.random() * 10}s`,
+        }}
+      >
+        ❄
+      </div>
+    ))
+  )}
 
-          {/* Sunset: ember sparks */}
-          {themeId === "sunset" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              {[...Array(5)].map((_,i) => (
-                <div key={i} style={{
-                  position: "absolute",
-                  bottom: `${5+i*8}%`, left: `${15+i*16}%`,
-                  width: 5, height: 5,
-                  borderRadius: "50%",
-                  background: `hsl(${20+i*6},100%,65%)`,
-                  boxShadow: `0 0 6px hsl(25,100%,55%,0.8)`,
-                  animation: `vfx-ember ${1.8+i*0.4}s ease-out infinite`,
-                  animationDelay: `${i*0.5}s`,
-                }} />
-              ))}
-            </div>
-          )}
+  {/* Matrix */}
+  {themeId === "matrix" && (
+    Array.from({ length: 10 }).map((_, i) => (
+      <div
+        key={i}
+        className="absolute font-mono text-[10px] text-emerald-400/80 tracking-[3px] animate-[matrixRain_1.9s_linear_infinite]"
+        style={{
+          left: `${8 + i * 9}%`,
+          animationDelay: `-${i * 0.25}s`,
+        }}
+      >
+        {["01","10","11","00","101","110","001","111"][i % 8]}
+      </div>
+    ))
+  )}
+
+  {/* Sunset (Embers) */}
+  {themeId === "sunset" && (
+    Array.from({ length: 9 }).map((_, i) => (
+      <div
+        key={i}
+        className="absolute w-1.5 h-1.5 bg-orange-400 rounded-full animate-[emberRise_2.2s_ease-out_infinite]"
+        style={{
+          left: `${18 + i * 8}%`,
+          bottom: "-15px",
+          animationDelay: `-${i * 0.35}s`,
+          boxShadow: "0 0 14px #fb923c",
+        }}
+      />
+    ))
+  )}
+
+  {/* Hover Boost Layer (працює на всіх темах) */}
+  <div className="absolute inset-0 border border-white/10 rounded-2xl transition-all duration-700 group-hover:border-white/30 group-hover:scale-[1.015]" />
 
           {/* Trident watermark */}
           <div className="absolute right-3 top-1/2 -translate-y-1/2 w-24 h-28 pointer-events-none">
