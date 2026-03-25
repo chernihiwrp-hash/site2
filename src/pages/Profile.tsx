@@ -114,77 +114,70 @@ const Profile = () => {
   const passportBg = document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))";
   const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
 
-  // ─── VFX CONFIG — БОМБА 2026 (ГЛАЗ НЕ СВОДИТЬ) ─────────────────────────────
+  // ─── SIMPLE GLOW PARTICLES + GRADIENTS ─────────────────────────────
 const THEME_VFX: Record<string, {
   label: string;
   cssClass: string;
+  particleClass: string;
+  particleColor: string;
   keyframes: string;
 }> = {
-  lime: { label: "", cssClass: "", keyframes: "" },
+  lime: { label: "", cssClass: "", particleClass: "", particleColor: "", keyframes: "" },
 
   neon_blue: {
-    label: "NEON CORE",
-    cssClass: "vfx-neon-blue",
-    keyframes: `
-      @keyframes neonScan { 0% { transform: translateY(-150%); } 100% { transform: translateY(350%); } }
-      @keyframes neonFlicker { 0%,100% { opacity: 0.75; } 50% { opacity: 1; } }
-      @keyframes neonPulse { 0%,100% { box-shadow: 0 0 25px #67e8f9, 0 0 50px #22d3ee, 0 0 80px #06b6d4; } 50% { box-shadow: 0 0 40px #67e8f9, 0 0 90px #22d3ee, 0 0 120px #06b6d4; } }
-    `,
+    label: "NEON",
+    cssClass: "bg-gradient-to-br from-blue-500/10 via-cyan-400/20 to-blue-600/10",
+    particleClass: "animate-pulse",
+    particleColor: "#67e8f9",
+    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-25px) scale(1.3); } }`,
   },
 
   cyber_red: {
-    label: "GLITCH PROTOCOL",
-    cssClass: "vfx-cyber-red",
-    keyframes: `
-      @keyframes glitch { 0%,100% { transform: translate(0); } 20% { transform: translate(-5px,4px); } 40% { transform: translate(5px,-4px); } 60% { transform: translate(-4px,3px); } 80% { transform: translate(4px,-3px); } }
-      @keyframes redScan { 0% { top: -100%; opacity: 0; } 50% { opacity: 0.7; } 100% { top: 200%; opacity: 0; } }
-      @keyframes redCoreGlow { 0%,100% { box-shadow: 0 0 30px #ef4444, inset 0 0 40px #b91c1c; } 50% { box-shadow: 0 0 70px #f87171, inset 0 0 70px #ef4444; } }
-    `,
+    label: "DEMON",
+    cssClass: "bg-gradient-to-br from-red-600/20 via-rose-500/15 to-red-700/10",
+    particleClass: "animate-pulse",
+    particleColor: "#f87171",
+    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-30px) scale(0.8); } }`,
   },
 
   gold_vip: {
-    label: "LUXURY ELITE",
-    cssClass: "vfx-gold-vip",
-    keyframes: `
-      @keyframes goldShimmer { 0% { background-position: -400% 0; } 100% { background-position: 500% 0; } }
-      @keyframes goldSpark { 0%,100% { transform: scale(0.7) rotate(0deg); opacity: 0.7; } 50% { transform: scale(1.6) rotate(25deg); opacity: 1; } }
-      @keyframes luxuryPulse { 0%,100% { box-shadow: 0 0 35px #fbbf24, 0 0 80px #fcd34d, 0 0 110px #facc15; } 50% { box-shadow: 0 0 60px #fbbf24, 0 0 110px #fcd34d, 0 0 140px #facc15; } }
-    `,
+    label: "LUXURY",
+    cssClass: "bg-gradient-to-br from-amber-400/20 via-yellow-300/15 to-amber-500/10",
+    particleClass: "animate-pulse",
+    particleColor: "#fcd34d",
+    keyframes: `@keyframes particle-float { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8px,-35px) scale(1.4); } }`,
   },
 
   purple_haze: {
-    label: "AURORA VOID",
-    cssClass: "vfx-purple-haze",
-    keyframes: `
-      @keyframes auroraFlow { 0% { background-position: 0% 50%; } 50% { background-position: 120% 50%; } 100% { background-position: 0% 50%; } }
-      @keyframes orbFloat { 0%,100% { transform: translate(0,0) rotate(0deg); } 50% { transform: translate(25px,-35px) rotate(15deg); } }
-    `,
+    label: "NEBULA",
+    cssClass: "bg-gradient-to-br from-purple-600/20 via-violet-500/15 to-fuchsia-600/10",
+    particleClass: "animate-pulse",
+    particleColor: "#c084fc",
+    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-28px); } }`,
   },
 
   arctic: {
-    label: "FROST REALM",
-    cssClass: "vfx-arctic",
-    keyframes: `
-      @keyframes snowFall { 0% { transform: translateY(-180px) rotate(0deg); opacity: 0.95; } 100% { transform: translateY(500px) rotate(1080deg); opacity: 0; } }
-      @keyframes frostGlow { 0%,100% { box-shadow: 0 0 25px #bae6fd; } 50% { box-shadow: 0 0 65px #e0f2fe; } }
-    `,
+    label: "FROST",
+    cssClass: "bg-gradient-to-br from-sky-400/20 via-cyan-300/15 to-blue-400/10",
+    particleClass: "animate-pulse",
+    particleColor: "#bae6fd",
+    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-40px) scale(0.6); } }`,
   },
 
   matrix: {
-    label: "DIGITAL RAIN",
-    cssClass: "vfx-matrix",
-    keyframes: `
-      @keyframes matrixRain { 0% { transform: translateY(-250%); opacity: 0; } 8% { opacity: 0.9; } 92% { opacity: 0.9; } 100% { transform: translateY(500%); opacity: 0; } }
-    `,
+    label: "MATRIX",
+    cssClass: "bg-gradient-to-br from-emerald-900/30 via-black/40 to-emerald-800/20",
+    particleClass: "",
+    particleColor: "#4ade80",
+    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }`,
   },
 
   sunset: {
-    label: "EMBER HORIZON",
-    cssClass: "vfx-sunset",
-    keyframes: `
-      @keyframes emberRise { 0% { transform: translateY(30px) scale(1.1); opacity: 0.9; } 100% { transform: translateY(-280px) scale(0.3); opacity: 0; } }
-      @keyframes sunsetPulse { 0%,100% { box-shadow: 0 0 35px #f59e0b, inset 0 0 40px #fb923c; } 50% { box-shadow: 0 0 75px #fb923c, inset 0 0 70px #f59e0b; } }
-    `,
+    label: "SUNSET",
+    cssClass: "bg-gradient-to-br from-orange-500/20 via-rose-400/15 to-amber-500/10",
+    particleClass: "animate-pulse",
+    particleColor: "#fb923c",
+    keyframes: `@keyframes particle-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-25px) scale(1.2); } }`,
   },
 };
 
@@ -257,185 +250,54 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
         </div>
       )}
 
-                {/* ═══ PASSPORT CARD — БОМБА VFX 2026 ═══ */}
+                      {/* ═══ PASSPORT CARD — GLOW PARTICLES + GRADIENTS ═══ */}
       <div className="mb-4 animate-fade-in group">
-        {/* Inject keyframes */}
         {vfx.keyframes && <style>{vfx.keyframes}</style>}
 
         <div 
-          className="rounded-2xl overflow-hidden relative select-none group-hover:scale-[1.015] transition-transform duration-700"
+          className="rounded-2xl overflow-hidden relative select-none group-hover:scale-[1.01] transition-transform duration-700"
           style={{
             border: "1px solid hsl(0 0% 100% / 0.15)",
             boxShadow: "0 10px 50px hsl(0 0% 0% / 0.65)",
           }}
         >
-          {/* Background Image + Overlay */}
+          {/* Background */}
           <div className="absolute inset-0">
             <img
               src="https://i.ibb.co/NbX6ZNs/images-2.jpg"
               alt=""
-              className="w-full h-full object-cover opacity-30"
+              className="w-full h-full object-cover opacity-25"
               onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
-            <div className="absolute inset-0 bg-gradient-to-br from-black/95 via-black/85 to-black/95" />
+            <div className="absolute inset-0 bg-gradient-to-br from-black/90 via-black/80 to-black/90" />
           </div>
 
-          {/* Glassmorphism Layer */}
+          {/* Glass Base */}
           <div className="absolute inset-0 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl" />
 
-          {/* VFX Container */}
-          <div className={`absolute inset-0 pointer-events-none overflow-hidden rounded-2xl ${vfx.cssClass}`} />
+          {/* Dynamic Gradient Background */}
+          <div className={`absolute inset-0 ${vfx.cssClass}`} />
 
-          {/* ==================== BLUE — NEON CORE ==================== */}
-          {themeId === "neon_blue" && (
-            <>
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/20 to-transparent animate-[neonScan_3.2s_linear_infinite]" />
-              <div className="absolute inset-0 border-2 border-cyan-400/50 animate-[neonGlow_2s_ease-in-out_infinite]" />
-              {/* Плаваючі корони */}
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className="absolute text-3xl text-cyan-300 animate-[crownFloat_4.5s_ease-in-out_infinite]"
-                  style={{ 
-                    left: `${12 + i * 14}%`, 
-                    top: `${18 + (i % 3) * 15}%`, 
-                    animationDelay: `-${i * 0.7}s` 
-                  }}
-                >
-                  👑
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* ==================== RED — DEMON ==================== */}
-          {themeId === "cyber_red" && (
-            <>
-              <div className="absolute inset-0 border-2 border-red-500/70 animate-[glitch_0.4s_linear_infinite]" />
-              {/* Демонические рога */}
-              <div className="absolute -top-4 left-8 text-6xl text-red-400 animate-[hornPulse_1.3s_ease-in-out_infinite]"> horns </div>
-              <div className="absolute -top-4 right-8 text-6xl text-red-400 animate-[hornPulse_1.5s_ease-in-out_infinite]" style={{ transform: "scaleX(-1)" }}> horns </div>
-              {/* Іскри вогню */}
-              {Array.from({ length: 14 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className="absolute text-orange-400 text-2xl animate-[fireSpark_1.6s_linear_infinite]"
-                  style={{ 
-                    left: `${Math.random() * 100}%`, 
-                    bottom: "-20px", 
-                    animationDelay: `-${Math.random() * 2.5}s` 
-                  }}
-                >
-                  🔥
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* ==================== GOLD — LUXURY ==================== */}
-          {themeId === "gold_vip" && (
-            <>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/70 to-transparent bg-[length:300%_100%] animate-[goldShimmer_2.8s_linear_infinite]" />
-              {/* Анімовані 4-кінцеві зірки */}
-              {Array.from({ length: 7 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className="absolute text-4xl text-amber-200 animate-[starRotate_5s_linear_infinite]"
-                  style={{ 
-                    left: `${10 + i * 12}%`, 
-                    top: `${15 + (i % 4) * 18}%`, 
-                    animationDelay: `-${i * 0.6}s` 
-                  }}
-                >
-                  ✦
-                </div>
-              ))}
-              {/* Золоті слитки */}
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className="absolute text-3xl text-amber-300"
-                  style={{ left: `${22 + i * 18}%`, bottom: "28%" }}
-                >
-                  🪙
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* ==================== PURPLE — COSMOS ==================== */}
-          {themeId === "purple_haze" && (
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_30%,#c026d3_0%,#581c87_45%,transparent_80%)] bg-[length:210%_210%] animate-[nebulaFlow_16s_linear_infinite]" />
-          )}
-
-          {/* ==================== ARCTIC — FROST ==================== */}
-          {themeId === "arctic" && (
-            <>
-              {/* Сніжинки */}
-              {Array.from({ length: 25 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className="absolute text-sky-100 text-2xl animate-[snowFall_6.5s_linear_infinite]"
-                  style={{ 
-                    left: `${Math.random() * 100}%`, 
-                    animationDelay: `-${Math.random() * 14}s` 
-                  }}
-                >
-                  ❄
-                </div>
-              ))}
-              {/* Сосульки */}
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className="absolute text-sky-200 text-5xl animate-[icicleSway_3s_ease-in-out_infinite]"
-                  style={{ left: `${15 + i * 18}%`, top: "12%" }}
-                >
-                  🧊
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* ==================== MATRIX — TERMINAL ==================== */}
-          {themeId === "matrix" && (
-            <>
-              <div className="absolute inset-0 border border-emerald-400/40" />
-              {Array.from({ length: 16 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className="absolute font-mono text-[10px] text-emerald-400/80 tracking-widest animate-[matrixRain_1.7s_linear_infinite]"
-                  style={{ 
-                    left: `${4 + i * 6.5}%`, 
-                    animationDelay: `-${i * 0.25}s` 
-                  }}
-                >
-                  {["> INIT", "ACCESS GRANTED", "RUN PROTOCOL", "SCAN COMPLETE", "PING 0ms", "ROOT ACCESS", "SYS ONLINE"][i % 7]}
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* ==================== SUNSET — BEACH ==================== */}
-          {themeId === "sunset" && (
-            <>
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-rose-500/10 to-transparent" />
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className="absolute w-2 h-2 bg-orange-400 rounded-full animate-[emberRise_2.3s_ease-out_infinite]"
-                  style={{ 
-                    left: `${12 + i * 7}%`, 
-                    bottom: "-15px", 
-                    animationDelay: `-${i * 0.35}s` 
-                  }}
-                />
-              ))}
-            </>
-          )}
+          {/* Glow Particles Container */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {Array.from({ length: 18 }).map((_, i) => (
+              <div
+                key={i}
+                className={`absolute w-1.5 h-1.5 rounded-full animate-particle-float ${vfx.particleClass || ''}`}
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animationDelay: `-${Math.random() * 8}s`,
+                  background: vfx.particleColor,
+                  boxShadow: `0 0 12px ${vfx.particleColor}, 0 0 24px ${vfx.particleColor}`,
+                  opacity: 0.7 + Math.random() * 0.3,
+                }}
+              />
+            ))}
+          </div>
 
           {/* Trident Watermark */}
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 w-32 h-36 pointer-events-none opacity-10">
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 w-28 h-32 pointer-events-none opacity-10">
             <Trident />
           </div>
 
