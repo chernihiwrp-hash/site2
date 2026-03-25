@@ -257,7 +257,7 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
         </div>
       )}
 
-          {/* ═══ PASSPORT CARD — БОМБА VFX 2026 ═══ */}
+                {/* ═══ PASSPORT CARD — БОМБА VFX 2026 ═══ */}
       <div className="mb-4 animate-fade-in group">
         {/* Inject keyframes */}
         {vfx.keyframes && <style>{vfx.keyframes}</style>}
@@ -286,88 +286,152 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
           {/* VFX Container */}
           <div className={`absolute inset-0 pointer-events-none overflow-hidden rounded-2xl ${vfx.cssClass}`} />
 
-          {/* === VFX EFFECTS === */}
+          {/* ==================== BLUE — NEON CORE ==================== */}
           {themeId === "neon_blue" && (
             <>
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/15 to-transparent animate-[neonScan_3.2s_linear_infinite]" />
-              <div className="absolute inset-0 border border-cyan-400/30 animate-[neonFlicker_2.2s_ease-in-out_infinite]" />
-            </>
-          )}
-
-          {themeId === "cyber_red" && (
-            <>
-              <div className="absolute inset-0 border-2 border-red-500/60 animate-[glitch_0.45s_linear_infinite]" />
-              <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-red-400 to-transparent animate-[redScan_1.6s_linear_infinite]" />
-            </>
-          )}
-
-          {themeId === "gold_vip" && (
-            <>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/60 to-transparent bg-[length:280%_100%] animate-[goldShimmer_2.5s_linear_infinite]" />
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute text-3xl text-amber-200 animate-[goldSpark_1.7s_ease-in-out_infinite]"
-                  style={{
-                    left: `${10 + i * 11}%`,
-                    top: `${18 + (i % 3) * 22}%`,
-                    animationDelay: `${i * 180}ms`,
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/20 to-transparent animate-[neonScan_3.2s_linear_infinite]" />
+              <div className="absolute inset-0 border-2 border-cyan-400/50 animate-[neonGlow_2s_ease-in-out_infinite]" />
+              {/* Плаваючі корони */}
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="absolute text-3xl text-cyan-300 animate-[crownFloat_4.5s_ease-in-out_infinite]"
+                  style={{ 
+                    left: `${12 + i * 14}%`, 
+                    top: `${18 + (i % 3) * 15}%`, 
+                    animationDelay: `-${i * 0.7}s` 
                   }}
                 >
-                  ✨
+                  👑
                 </div>
               ))}
             </>
           )}
 
+          {/* ==================== RED — DEMON ==================== */}
+          {themeId === "cyber_red" && (
+            <>
+              <div className="absolute inset-0 border-2 border-red-500/70 animate-[glitch_0.4s_linear_infinite]" />
+              {/* Демонические рога */}
+              <div className="absolute -top-4 left-8 text-6xl text-red-400 animate-[hornPulse_1.3s_ease-in-out_infinite]"> horns </div>
+              <div className="absolute -top-4 right-8 text-6xl text-red-400 animate-[hornPulse_1.5s_ease-in-out_infinite]" style={{ transform: "scaleX(-1)" }}> horns </div>
+              {/* Іскри вогню */}
+              {Array.from({ length: 14 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="absolute text-orange-400 text-2xl animate-[fireSpark_1.6s_linear_infinite]"
+                  style={{ 
+                    left: `${Math.random() * 100}%`, 
+                    bottom: "-20px", 
+                    animationDelay: `-${Math.random() * 2.5}s` 
+                  }}
+                >
+                  🔥
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* ==================== GOLD — LUXURY ==================== */}
+          {themeId === "gold_vip" && (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/70 to-transparent bg-[length:300%_100%] animate-[goldShimmer_2.8s_linear_infinite]" />
+              {/* Анімовані 4-кінцеві зірки */}
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="absolute text-4xl text-amber-200 animate-[starRotate_5s_linear_infinite]"
+                  style={{ 
+                    left: `${10 + i * 12}%`, 
+                    top: `${15 + (i % 4) * 18}%`, 
+                    animationDelay: `-${i * 0.6}s` 
+                  }}
+                >
+                  ✦
+                </div>
+              ))}
+              {/* Золоті слитки */}
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="absolute text-3xl text-amber-300"
+                  style={{ left: `${22 + i * 18}%`, bottom: "28%" }}
+                >
+                  🪙
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* ==================== PURPLE — COSMOS ==================== */}
           {themeId === "purple_haze" && (
-            <div className="absolute inset-0 bg-[radial-gradient(at_35%_25%,#c026d3_10%,#6b21a8_50%,transparent_80%)] bg-[length:200%_200%] animate-[auroraFlow_13s_linear_infinite]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_30%,#c026d3_0%,#581c87_45%,transparent_80%)] bg-[length:210%_210%] animate-[nebulaFlow_16s_linear_infinite]" />
           )}
 
+          {/* ==================== ARCTIC — FROST ==================== */}
           {themeId === "arctic" && (
-            Array.from({ length: 18 }).map((_, i) => (
-              <div
-                key={i}
-                className="absolute text-sky-100/90 text-xl animate-[snowFall_6s_linear_infinite]"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  animationDuration: `${4.5 + Math.random() * 8}s`,
-                  animationDelay: `-${Math.random() * 12}s`,
-                }}
-              >
-                ❄
-              </div>
-            ))
+            <>
+              {/* Сніжинки */}
+              {Array.from({ length: 25 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="absolute text-sky-100 text-2xl animate-[snowFall_6.5s_linear_infinite]"
+                  style={{ 
+                    left: `${Math.random() * 100}%`, 
+                    animationDelay: `-${Math.random() * 14}s` 
+                  }}
+                >
+                  ❄
+                </div>
+              ))}
+              {/* Сосульки */}
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="absolute text-sky-200 text-5xl animate-[icicleSway_3s_ease-in-out_infinite]"
+                  style={{ left: `${15 + i * 18}%`, top: "12%" }}
+                >
+                  🧊
+                </div>
+              ))}
+            </>
           )}
 
+          {/* ==================== MATRIX — TERMINAL ==================== */}
           {themeId === "matrix" && (
-            Array.from({ length: 10 }).map((_, i) => (
-              <div
-                key={i}
-                className="absolute font-mono text-xs text-emerald-400/75 tracking-[2px] animate-[matrixRain_1.8s_linear_infinite]"
-                style={{
-                  left: `${8 + i * 9}%`,
-                  animationDelay: `-${i * 0.22}s`,
-                }}
-              >
-                {["01","10","11","00","101","110","001","111"][i % 8]}
-              </div>
-            ))
+            <>
+              <div className="absolute inset-0 border border-emerald-400/40" />
+              {Array.from({ length: 16 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="absolute font-mono text-[10px] text-emerald-400/80 tracking-widest animate-[matrixRain_1.7s_linear_infinite]"
+                  style={{ 
+                    left: `${4 + i * 6.5}%`, 
+                    animationDelay: `-${i * 0.25}s` 
+                  }}
+                >
+                  {["> INIT", "ACCESS GRANTED", "RUN PROTOCOL", "SCAN COMPLETE", "PING 0ms", "ROOT ACCESS", "SYS ONLINE"][i % 7]}
+                </div>
+              ))}
+            </>
           )}
 
+          {/* ==================== SUNSET — BEACH ==================== */}
           {themeId === "sunset" && (
-            Array.from({ length: 9 }).map((_, i) => (
-              <div
-                key={i}
-                className="absolute w-1.5 h-1.5 bg-orange-400 rounded-full animate-[emberRise_2.4s_ease-out_infinite]"
-                style={{
-                  left: `${15 + i * 8}%`,
-                  bottom: "-10px",
-                  animationDelay: `-${i * 0.3}s`,
-                  boxShadow: "0 0 16px #fb923c",
-                }}
-              />
-            ))
+            <>
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-rose-500/10 to-transparent" />
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="absolute w-2 h-2 bg-orange-400 rounded-full animate-[emberRise_2.3s_ease-out_infinite]"
+                  style={{ 
+                    left: `${12 + i * 7}%`, 
+                    bottom: "-15px", 
+                    animationDelay: `-${i * 0.35}s` 
+                  }}
+                />
+              ))}
+            </>
           )}
 
           {/* Trident Watermark */}
@@ -375,7 +439,6 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
             <Trident />
           </div>
 
-          {/* === ПАСПОРТНИЙ КОНТЕНТ === */}
           {/* Header strip */}
           <div className="relative flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.07)" }}>
             <div>
