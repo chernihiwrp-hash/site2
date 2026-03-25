@@ -262,7 +262,7 @@ const Profile = () => {
     style={{ background: passportBg }}
   >
     {/* Глобальный оверлей из конфига */}
-    {vfx.overlay}
+    const vfx = THEME_VFX[themeId as keyof typeof THEME_VFX] || THEME_VFX.lime;
 
     {/* Header */}
     <div className="flex justify-between items-start mb-6 relative z-10">
