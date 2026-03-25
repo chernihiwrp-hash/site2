@@ -115,17 +115,96 @@ const Profile = () => {
   const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
 
   // VFX config per theme
-  const THEME_VFX: Record<string, { label: string; icon: string; cssClass: string; keyframes: string }> = {
-    lime:         { label: "",        icon: "",   cssClass: "",                  keyframes: "" },
-    neon_blue:    { label: "⚡",      icon: "⚡", cssClass: "vfx-neon-blue",    keyframes: `@keyframes vfx-scan { 0%{top:-10%} 100%{top:110%} } @keyframes vfx-flicker { 0%,100%{opacity:0.04} 50%{opacity:0.1} }` },
-    cyber_red:    { label: "🔴",      icon: "🔴", cssClass: "vfx-cyber-red",    keyframes: `@keyframes vfx-glitch { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-3px)} 40%{transform:translateX(2px)} 60%{transform:translateX(-2px)} 80%{transform:translateX(1px)} } @keyframes vfx-pulse-red { 0%,100%{box-shadow:0 0 15px hsl(0,85%,55%,0.3),inset 0 0 20px hsl(0,85%,55%,0.04)} 50%{box-shadow:0 0 30px hsl(0,85%,55%,0.6),inset 0 0 30px hsl(0,85%,55%,0.1)} }` },
-    gold_vip:     { label: "✨",      icon: "✨", cssClass: "vfx-gold",         keyframes: `@keyframes vfx-shimmer { 0%{left:-100%} 100%{left:200%} } @keyframes vfx-gold-glow { 0%,100%{box-shadow:0 0 20px hsl(45,100%,55%,0.25)} 50%{box-shadow:0 0 40px hsl(45,100%,55%,0.5),inset 0 0 30px hsl(45,100%,55%,0.06)} }` },
-    purple_haze:  { label: "🔮",      icon: "🔮", cssClass: "vfx-purple",       keyframes: `@keyframes vfx-float { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-3px) scale(1.005)} } @keyframes vfx-purple-glow { 0%,100%{box-shadow:0 0 20px hsl(275,80%,60%,0.2)} 50%{box-shadow:0 0 40px hsl(275,80%,60%,0.45),inset 0 0 25px hsl(275,80%,60%,0.07)} }` },
-    arctic:       { label: "❄️",      icon: "❄️", cssClass: "vfx-arctic",       keyframes: `@keyframes vfx-freeze { 0%,100%{opacity:0.03} 50%{opacity:0.08} } @keyframes vfx-arctic-glow { 0%,100%{box-shadow:0 0 20px hsl(195,80%,70%,0.2)} 50%{box-shadow:0 0 35px hsl(195,80%,70%,0.4)} }` },
-    matrix:       { label: "💻",      icon: "💻", cssClass: "vfx-matrix",       keyframes: `@keyframes vfx-rain { 0%{transform:translateY(-100%);opacity:0.7} 100%{transform:translateY(100vh);opacity:0} } @keyframes vfx-matrix-glow { 0%,100%{box-shadow:0 0 20px hsl(120,100%,40%,0.25),inset 0 0 15px hsl(120,100%,40%,0.04)} 50%{box-shadow:0 0 40px hsl(120,100%,40%,0.5),inset 0 0 25px hsl(120,100%,40%,0.09)} }` },
-    sunset:       { label: "🌅",      icon: "🌅", cssClass: "vfx-sunset",       keyframes: `@keyframes vfx-ember { 0%{transform:translateY(0) rotate(0deg);opacity:0.6} 100%{transform:translateY(-60px) rotate(180deg);opacity:0} } @keyframes vfx-sunset-glow { 0%,100%{box-shadow:0 0 20px hsl(25,100%,55%,0.2)} 50%{box-shadow:0 0 40px hsl(25,100%,55%,0.45),inset 0 0 20px hsl(25,100%,55%,0.06)} }` },
-  };
-  const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
+  // ─── VFX CONFIG — НОВА КРАСИВА ВЕРСІЯ 2026 ───────────────────────────────
+const THEME_VFX: Record<string, {
+  label: string;
+  cssClass: string;
+  keyframes: string;
+}> = {
+  lime: {
+    label: "",
+    cssClass: "",
+    keyframes: "",
+  },
+
+  neon_blue: {
+    label: "⚡ NEON",
+    cssClass: "vfx-neon-blue",
+    keyframes: `
+      @keyframes neonScan { 0% { transform: translateY(-120%); } 100% { transform: translateY(300%); } }
+      @keyframes neonFlicker { 0%, 100% { opacity: 0.65; } 50% { opacity: 1; } }
+      @keyframes neonGlowPulse { 0%, 100% { box-shadow: 0 0 20px #67e8f9, 0 0 40px #22d3ee; } 50% { box-shadow: 0 0 35px #67e8f9, 0 0 70px #22d3ee; } }
+    `,
+  },
+
+  cyber_red: {
+    label: "⛓️ CYBER",
+    cssClass: "vfx-cyber-red",
+    keyframes: `
+      @keyframes glitch { 
+        0%,100% { transform: translate(0); } 
+        20% { transform: translate(-4px, 3px); } 
+        40% { transform: translate(4px, -3px); } 
+        60% { transform: translate(-3px, 2px); } 
+        80% { transform: translate(3px, -2px); } 
+      }
+      @keyframes redScan { 0% { top: -80%; opacity: 0; } 50% { opacity: 0.6; } 100% { top: 180%; opacity: 0; } }
+      @keyframes redIntenseGlow { 0%,100% { box-shadow: 0 0 25px #ef4444, inset 0 0 30px #b91c1c; } 50% { box-shadow: 0 0 60px #f87171, inset 0 0 50px #ef4444; } }
+    `,
+  },
+
+  gold_vip: {
+    label: "✨ LUXURY",
+    cssClass: "vfx-gold-vip",
+    keyframes: `
+      @keyframes goldShimmer { 0% { background-position: -300% 0; } 100% { background-position: 400% 0; } }
+      @keyframes goldSpark { 0%,100% { transform: scale(0.6) rotate(0deg); opacity: 0.6; } 50% { transform: scale(1.4) rotate(20deg); opacity: 1; } }
+      @keyframes luxuryGlow { 0%,100% { box-shadow: 0 0 30px #fbbf24, 0 0 70px #fcd34d; } 50% { box-shadow: 0 0 55px #fbbf24, 0 0 100px #fcd34d; } }
+    `,
+  },
+
+  purple_haze: {
+    label: "🌌 AURORA",
+    cssClass: "vfx-purple-haze",
+    keyframes: `
+      @keyframes auroraFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+      @keyframes orbFloat { 0%,100% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(15px, -25px) rotate(12deg); } }
+    `,
+  },
+
+  arctic: {
+    label: "❄️ FROST",
+    cssClass: "vfx-arctic",
+    keyframes: `
+      @keyframes snowFall { 0% { transform: translateY(-150px) rotate(0deg); opacity: 0.9; } 100% { transform: translateY(450px) rotate(720deg); opacity: 0; } }
+      @keyframes frostGlow { 0%,100% { box-shadow: 0 0 20px #67e8f9; } 50% { box-shadow: 0 0 45px #bae6fd; } }
+    `,
+  },
+
+  matrix: {
+    label: "⌬ MATRIX",
+    cssClass: "vfx-matrix",
+    keyframes: `
+      @keyframes matrixRain { 
+        0% { transform: translateY(-200%); opacity: 0; } 
+        10% { opacity: 0.85; } 
+        90% { opacity: 0.85; } 
+        100% { transform: translateY(450%); opacity: 0; } 
+      }
+    `,
+  },
+
+  sunset: {
+    label: "🌅 EMBER",
+    cssClass: "vfx-sunset",
+    keyframes: `
+      @keyframes emberRise { 0% { transform: translateY(20px) scale(1); opacity: 0.85; } 100% { transform: translateY(-220px) scale(0.4); opacity: 0; } }
+      @keyframes sunsetPulse { 0%,100% { box-shadow: 0 0 30px #f59e0b, inset 0 0 25px #fb923c; } 50% { box-shadow: 0 0 65px #fb923c, inset 0 0 55px #f59e0b; } }
+    `,
+  },
+};
+
+const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
 
   const handleAdmin = () => {
     if (adminCode === "5319son") { navigate("/admin-panel"); toast.success("Доступ відкрито"); }
