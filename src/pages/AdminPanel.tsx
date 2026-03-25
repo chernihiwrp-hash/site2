@@ -9,7 +9,7 @@ import {
   Link, Image, Type, Radio, UserCheck, Building2, Car, FileText, Gavel,
   MessageSquare, Wallet, ShieldCheck, Zap, RefreshCw, Crown, Lock, Eye,
   EyeOff, Settings, UserCog, Search, Star, Palette,
-  Skull, Flame, Target, BookOpen, Scale, Clock
+  Skull, Flame, Target, BookOpen, Scale
 } from "lucide-react";
 import { toast } from "sonner";
 import { store, supabase, getBalance, addBalance, subtractBalance } from "../lib/store";
@@ -52,12 +52,12 @@ const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
   election: false, documents: false, add_faction: false, voice: false, tokens: false,
   manage_factions: false, debug: false, bans: false,
 };
-
 const DEFAULT_PERMS: Record<TabId, boolean> = {
   sos: true, applications: true, factions: true, licenses: true,
   house_requests: true, news: true, houses: true, wanted: true,
   election: true, documents: true, add_faction: true, voice: true, tokens: true,
-  manage_factions: true, debug: true, bans: true,
+  manage_factions: true,
+  debug: true, bans: true,
 };
 
 const getAdminPerms = (nick: string): Record<TabId, boolean> => {
@@ -66,7 +66,6 @@ const getAdminPerms = (nick: string): Record<TabId, boolean> => {
     return s ? { ...DEFAULT_PERMS, ...JSON.parse(s) } : { ...DEFAULT_PERMS };
   } catch { return { ...DEFAULT_PERMS }; }
 };
-
 const saveAdminPerms = async (nick: string, perms: Record<TabId, boolean>) => {
   localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(perms));
   await supabase.from("admin_perms").upsert(
@@ -79,22 +78,22 @@ const saveAdminPerms = async (nick: string, perms: Record<TabId, boolean>) => {
 type Tab = TabId | "superadmin" | "restrictions";
 
 const TAB_LIST: { id: TabId; label: string; icon: typeof Newspaper; sub: string; danger?: boolean }[] = [
-  { id: "sos", label: "SOS Сигнали", icon: AlertTriangle, sub: "Realtime", danger: true },
-  { id: "applications", label: "Заявки адміністратора", icon: Users, sub: "Заявки" },
-  { id: "factions", label: "Заявки у фракції", icon: Shield, sub: "Заявки" },
-  { id: "licenses", label: "Ліцензії та номери", icon: FileCheck, sub: "Управління" },
-  { id: "house_requests", label: "Купівля будинків", icon: Home, sub: "Управління" },
-  { id: "news", label: "Новини та оновлення", icon: Newspaper, sub: "Управління" },
-  { id: "houses", label: "Управління будинками", icon: Building2, sub: "Управління" },
-  { id: "wanted", label: "Розшук", icon: Crosshair, sub: "Управління", danger: true },
-  { id: "election", label: "Вибори мера", icon: Vote, sub: "Управління" },
-  { id: "documents", label: "Документи", icon: ScrollText, sub: "Управління" },
-  { id: "add_faction", label: "Додати фракцію", icon: ShieldAlert, sub: "Управління" },
-  { id: "voice", label: "Голос міста", icon: Megaphone, sub: "Управління" },
-  { id: "tokens", label: "Токени CR", icon: Coins, sub: "Фінанси" },
-  { id: "manage_factions", label: "Управління фракціями", icon: ShieldAlert, sub: "Фракції" },
-  { id: "bans", label: "Бани гравців", icon: UserX, sub: "Безпека", danger: true },
-  { id: "debug", label: "Діагностика", icon: Settings, sub: "Debug" },
+  { id: "sos",           label: "SOS Сигнали",          icon: AlertTriangle, sub: "Realtime",    danger: true },
+  { id: "applications",  label: "Заявки адміністратора", icon: Users,         sub: "Заявки" },
+  { id: "factions",      label: "Заявки у фракції",      icon: Shield,        sub: "Заявки" },
+  { id: "licenses",      label: "Ліцензії та номери",    icon: FileCheck,     sub: "Управління" },
+  { id: "house_requests",label: "Купівля будинків",       icon: Home,          sub: "Управління" },
+  { id: "news",          label: "Новини та оновлення",   icon: Newspaper,     sub: "Управління" },
+  { id: "houses",        label: "Управління будинками",  icon: Building2,     sub: "Управління" },
+  { id: "wanted",        label: "Розшук",                icon: Crosshair,     sub: "Управління", danger: true },
+  { id: "election",      label: "Вибори мера",           icon: Vote,          sub: "Управління" },
+  { id: "documents",     label: "Документи",             icon: ScrollText,    sub: "Управління" },
+  { id: "add_faction",   label: "Додати фракцію",        icon: ShieldAlert,   sub: "Управління" },
+  { id: "voice",         label: "Голос міста",           icon: Megaphone,     sub: "Управління" },
+  { id: "tokens",        label: "Токени CR",             icon: Coins,         sub: "Фінанси" },
+  { id: "manage_factions",label: "Управління фракціями",   icon: ShieldAlert,   sub: "Фракції" },
+  { id: "bans",            label: "Бани гравців",           icon: UserX,         sub: "Безпека", danger: true },
+  { id: "debug",           label: "Діагностика",            icon: Settings,      sub: "Debug" },
 ];
 
 const inputClass = "w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent";
@@ -110,6 +109,7 @@ const AdminPanel = () => {
 
   useEffect(() => {
     if (superAdmin) return;
+    // Load perms from Supabase
     supabase.from("admin_perms").select("perms").eq("username", normalizeNick(nick)).maybeSingle()
       .then(({ data }) => {
         if (data?.perms) {
@@ -117,6 +117,7 @@ const AdminPanel = () => {
           localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(p));
           setPerms(p);
         } else {
+          // No perms record = no access
           const noPerms = Object.fromEntries(Object.keys(DEFAULT_PERMS).map(k => [k, false])) as Record<TabId, boolean>;
           setPerms(noPerms);
         }
@@ -125,6 +126,7 @@ const AdminPanel = () => {
 
   const allowedTabs = TAB_LIST.filter(t => superAdmin || perms[t.id]);
 
+  // Access denied for non-superadmin with no perms
   if (!superAdmin && !Object.values(perms).some(Boolean)) {
     return (
       <div className="min-h-screen px-4 pt-4 flex flex-col items-center justify-center">
@@ -149,6 +151,7 @@ const AdminPanel = () => {
     );
   }
 
+  // ── TAB CONTENT ──
   if (tab) {
     if (tab === "restrictions") {
       return (
@@ -209,23 +212,22 @@ const AdminPanel = () => {
             <p className="text-[10px] text-muted-foreground">Адмін панель</p>
           </div>
         </div>
-
-        {tab === "sos" && <SosTab />}
-        {tab === "news" && <NewsTab />}
-        {tab === "houses" && <HousesTab />}
-        {tab === "wanted" && <WantedTab />}
-        {tab === "election" && <ElectionTab />}
-        {tab === "documents" && <DocumentsTab />}
-        {tab === "factions" && <FactionAppsTab />}
-        {tab === "applications" && <AdminAppsTab />}
-        {tab === "tokens" && <TokensTab />}
-        {tab === "voice" && <VoiceTab />}
-        {tab === "licenses" && <LicensesTab />}
-        {tab === "house_requests" && <HouseRequestsTab />}
-        {tab === "add_faction" && <AddFactionTab />}
+        {tab === "sos"           && <SosTab />}
+        {tab === "news"          && <NewsTab />}
+        {tab === "houses"        && <HousesTab />}
+        {tab === "wanted"        && <WantedTab />}
+        {tab === "election"      && <ElectionTab />}
+        {tab === "documents"     && <DocumentsTab />}
+        {tab === "factions"      && <FactionAppsTab />}
+        {tab === "applications"  && <AdminAppsTab />}
+        {tab === "tokens"        && <TokensTab />}
+        {tab === "voice"         && <VoiceTab />}
+        {tab === "licenses"      && <LicensesTab />}
+        {tab === "house_requests"&& <HouseRequestsTab />}
+        {tab === "add_faction"   && <AddFactionTab />}
         {tab === "manage_factions" && <ManageFactionsTab />}
-        {tab === "bans" && <BansTab />}
-        {tab === "debug" && <DebugTab />}
+        {tab === "bans"            && <BansTab />}
+        {tab === "debug"           && <DebugTab />}
       </div>
     );
   }
@@ -234,6 +236,7 @@ const AdminPanel = () => {
   return (
     <div className="min-h-screen pb-20 px-4 pt-4">
       <PageHeader title="АДМІН ПАНЕЛЬ" subtitle="Управління сервером" backTo="/profile" />
+
       {superAdmin && (
         <div className="mb-4 animate-fade-in">
           <div className="rounded-2xl px-4 py-3 flex items-center gap-3"
@@ -253,7 +256,10 @@ const AdminPanel = () => {
           </div>
         </div>
       )}
+
+      {/* Restrictions panel button */}
       <RestrictionsButton onOpen={() => setTab("restrictions")} />
+
       <div className="space-y-2 animate-fade-in">
         {allowedTabs.map((t, i) => (
           <button key={t.id} onClick={() => setTab(t.id)} className="w-full animate-slide-up" style={{ animationDelay: `${i * 35}ms` }}>
@@ -272,6 +278,7 @@ const AdminPanel = () => {
             </div>
           </button>
         ))}
+
         {allowedTabs.length === 0 && (
           <div className="text-center py-12 liquid-glass-card rounded-2xl">
             <Lock className="w-8 h-8 text-muted-foreground opacity-20 mx-auto mb-2" />
@@ -281,61 +288,6 @@ const AdminPanel = () => {
         )}
       </div>
     </div>
-  );
-};
-
-// ─── PASSWORD SETTINGS ────────────────────────────────────────────────────────
-const PasswordSettingsBlock = () => {
-  const [current, setCurrent] = useState("");
-  const [newPass, setNewPass] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    supabase.from("server_settings").select("value").eq("key", "registration_password").maybeSingle()
-      .then(({ data }) => { if (data?.value) setCurrent(data.value); });
-  }, []);
-
-  const save = async () => {
-    if (!newPass.trim()) return toast.error("Введіть новий пароль");
-    if (newPass !== confirm) return toast.error("Паролі не співпадають");
-    if (newPass.length < 6) return toast.error("Мінімум 6 символів");
-    setSaving(true);
-    await supabase.from("server_settings").upsert({ key: "registration_password", value: newPass }, { onConflict: "key" });
-    setCurrent(newPass);
-    setNewPass(""); setConfirm("");
-    toast.success("Пароль реєстрації змінено!");
-    setSaving(false);
-  };
-
-  return (
-    <NeonCard glowColor="lime">
-      <div className="flex items-center gap-2 mb-3">
-        <Lock className="w-4 h-4 text-primary" />
-        <span className="text-xs font-bold text-foreground">Пароль реєстрації</span>
-      </div>
-      <div className="flex items-center gap-2 px-3 py-2.5 liquid-glass rounded-xl mb-3">
-        <span className="text-xs text-muted-foreground">Поточний:</span>
-        <span className="text-sm font-mono font-bold text-primary flex-1">{show ? current : "•".repeat(current.length)}</span>
-        <button onClick={() => setShow(!show)} className="text-muted-foreground active:scale-90">
-          {show ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-        </button>
-      </div>
-      <div className="space-y-2">
-        <input value={newPass} onChange={e => setNewPass(e.target.value)}
-          placeholder="Новий пароль (мін. 6 символів)"
-          type="password"
-          className="w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent" />
-        <input value={confirm} onChange={e => setConfirm(e.target.value)}
-          placeholder="Підтвердити пароль"
-          type="password"
-          className="w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent" />
-        <GradientButton variant="green" className="w-full text-xs py-2.5" onClick={save} disabled={saving}>
-          {saving ? "Зберігаю..." : "Змінити пароль"}
-        </GradientButton>
-      </div>
-    </NeonCard>
   );
 };
 
@@ -419,8 +371,6 @@ const SuperAdminTab = () => {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Password settings at top */}
-      <PasswordSettingsBlock />
       <p className="text-xs text-muted-foreground">Керуй доступом кожного адміністратора до розділів панелі.</p>
       <div className="liquid-glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
         <Search className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -664,32 +614,8 @@ const HousesTab = () => {
 
 // ─── HOUSE REQUESTS ───────────────────────────────────────────────────────────
 const HouseRequestsTab = () => {
-  const [requests, setRequests] = useState<(HousePurchaseRequest & { image_url?: string; desc?: string; category?: string })[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    store.getHousePurchaseRequests().then(async (reqs) => {
-      // Load extra house info (desc, category, image)
-      const houseIds = [...new Set(reqs.map(r => r.house_id))];
-      let houseExtras: Record<number, { desc: string; category: string; image_url: string }> = {};
-      if (houseIds.length > 0) {
-        const { data } = await supabase.from("houses").select("id, description, category, image_url").in("id", houseIds);
-        (data || []).forEach((h: Record<string, unknown>) => {
-          houseExtras[h.id as number] = {
-            desc: (h.description as string) || "",
-            category: (h.category as string) || "Люкс",
-            image_url: (h.image_url as string) || "",
-          };
-        });
-      }
-      setRequests(reqs.map(r => ({
-        ...r,
-        image_url: (r as Record<string, unknown>).image_url as string || houseExtras[r.house_id]?.image_url || "",
-        desc: houseExtras[r.house_id]?.desc || "",
-        category: houseExtras[r.house_id]?.category || "Люкс",
-      })));
-      setLoading(false);
-    });
-  }, []);
+  const [requests, setRequests] = useState<HousePurchaseRequest[]>([]);
+  useEffect(() => { store.getHousePurchaseRequests().then(setRequests); }, []);
   const decide = async (r: HousePurchaseRequest, status: "approved" | "rejected") => {
     await store.updateHousePurchaseStatus(r.id, status, r.house_id, r.username);
     setRequests(prev => prev.map(x => x.id === r.id ? { ...x, status } : x));
@@ -699,70 +625,21 @@ const HouseRequestsTab = () => {
   const sl = { pending: "На розгляді", approved: "Схвалено", rejected: "Відхилено" };
   return (
     <div className="space-y-3 animate-fade-in">
-      {loading && <div className="text-center py-8"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}
       <p className="text-xs text-muted-foreground">Заявок: {requests.length}</p>
-      {!loading && requests.length === 0 && <div className="text-center py-10 liquid-glass-card rounded-2xl"><Building2 className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" /><p className="text-xs text-muted-foreground">Немає заявок</p></div>}
+      {requests.length === 0 && <div className="text-center py-10 liquid-glass-card rounded-2xl"><Building2 className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" /><p className="text-xs text-muted-foreground">Немає заявок</p></div>}
       {requests.map(r => (
         <NeonCard key={r.id} glowColor="yellow">
-          {/* House photo banner */}
-          {r.image_url && (
-            <div className="rounded-xl overflow-hidden mb-3 h-28 relative">
-              <img src={r.image_url} alt={r.house_name} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
-                <p className="text-sm font-black text-white drop-shadow">{r.house_name}</p>
-                <span className="text-[10px] font-bold text-yellow-400">{r.house_price?.toLocaleString()}€</span>
-              </div>
-            </div>
-          )}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              {/* Applicant */}
-              <div className="flex items-center gap-2 mb-2">
-                {r.avatar_url ? (
-                  <img src={r.avatar_url} alt={r.username} className="w-7 h-7 rounded-lg object-cover border border-white/10" />
-                ) : (
-                  <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-                    <Users className="w-3.5 h-3.5 text-primary" />
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs font-bold text-foreground">{r.username}</p>
-                  <p className="text-[9px] text-muted-foreground">Покупець</p>
-                </div>
-              </div>
-              {/* House info grid */}
-              <div className="grid grid-cols-2 gap-1 mb-2">
-                {!r.image_url && (
-                  <div className="col-span-2 flex items-center gap-1.5 liquid-glass rounded-lg px-2 py-1">
-                    <Home className="w-3 h-3 text-yellow-400 shrink-0" />
-                    <p className="text-[10px] font-semibold text-foreground truncate">{r.house_name}</p>
-                  </div>
-                )}
-                <div className="flex items-center gap-1.5 liquid-glass rounded-lg px-2 py-1">
-                  <Coins className="w-3 h-3 text-yellow-400 shrink-0" />
-                  <p className="text-[10px] font-bold text-yellow-400">{r.house_price?.toLocaleString()}€</p>
-                </div>
-                <div className="flex items-center gap-1.5 liquid-glass rounded-lg px-2 py-1">
-                  <Clock className="w-3 h-3 text-primary shrink-0" />
-                  <p className="text-[10px] text-foreground">{r.rental_days || 7} днів</p>
-                </div>
-                {r.category && (
-                  <div className="flex items-center gap-1.5 liquid-glass rounded-lg px-2 py-1">
-                    <Building2 className="w-3 h-3 text-muted-foreground shrink-0" />
-                    <p className="text-[10px] text-muted-foreground">{r.category}</p>
-                  </div>
-                )}
-                <div className="flex items-center gap-1.5 liquid-glass rounded-lg px-2 py-1">
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-semibold ${sc[r.status]}`}>{sl[r.status]}</span>
-                </div>
-              </div>
-              {r.desc && <p className="text-[9px] text-muted-foreground italic line-clamp-2">{r.desc}</p>}
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-1.5 mb-1"><Users className="w-3 h-3 text-muted-foreground" /><h4 className="text-xs font-semibold">{r.username}</h4></div>
+              <div className="flex items-center gap-1.5"><Home className="w-3 h-3 text-muted-foreground" /><p className="text-[10px] text-muted-foreground">{r.house_name}</p></div>
+              <div className="flex items-center gap-1.5 mt-0.5"><Coins className="w-3 h-3 text-yellow-400" /><p className="text-[10px] text-yellow-400">{r.house_price?.toLocaleString()}€</p></div>
+              <span className={`text-[9px] px-2 py-0.5 rounded-md mt-1 inline-block ${sc[r.status]}`}>{sl[r.status]}</span>
             </div>
             {r.status === "pending" && (
-              <div className="flex flex-col gap-1 shrink-0">
-                <button onClick={() => decide(r, "approved")} className="p-2 rounded-lg bg-primary/15 text-primary active:scale-95"><Check className="w-3.5 h-3.5" /></button>
-                <button onClick={() => decide(r, "rejected")} className="p-2 rounded-lg bg-destructive/15 text-destructive active:scale-95"><X className="w-3.5 h-3.5" /></button>
+              <div className="flex gap-1 ml-2">
+                <button onClick={() => decide(r, "approved")} className="p-1.5 rounded-lg bg-primary/15 text-primary active:scale-95"><Check className="w-3.5 h-3.5" /></button>
+                <button onClick={() => decide(r, "rejected")} className="p-1.5 rounded-lg bg-destructive/15 text-destructive active:scale-95"><X className="w-3.5 h-3.5" /></button>
               </div>
             )}
           </div>
@@ -773,340 +650,38 @@ const HouseRequestsTab = () => {
 };
 
 // ─── LICENSES ────────────────────────────────────────────────────────────────
-// ─── LICENSE DETAIL MODAL ─────────────────────────────────────────────────────
-const LicenseModal = ({
-  app,
-  onClose,
-  onDecide,
-}: {
-  app: LicenseApplication;
-  onClose: () => void;
-  onDecide: (id: number, status: "approved" | "rejected") => void;
-}) => {
-  const sc = { pending: { bg: "hsl(45 100% 55% / 0.12)", border: "hsl(45 100% 55% / 0.3)", text: "hsl(45 100% 55%)", label: "На розгляді" }, approved: { bg: "hsl(84 81% 44% / 0.1)", border: "hsl(84 81% 44% / 0.3)", text: "hsl(84 81% 44%)", label: "Схвалено" }, rejected: { bg: "hsl(0 70% 50% / 0.1)", border: "hsl(0 70% 50% / 0.3)", text: "hsl(0 70% 50%)", label: "Відхилено" } };
-  const s = sc[app.status] || sc.pending;
-
-  // Parse license type parts (e.g. "Водійські права | B категорія")
-  const parts = app.license_type.split("|").map(p => p.trim());
-  const licenseMain = parts[0] || app.license_type;
-  const licenseExtra = parts.slice(1).join(" · ");
-
-  return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center px-0" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-      <div
-        className="relative w-full max-w-lg rounded-t-3xl overflow-hidden animate-slide-up"
-        style={{
-          background: "linear-gradient(180deg, hsl(0 0% 7%) 0%, hsl(0 0% 4%) 100%)",
-          border: "1px solid hsl(0 0% 100% / 0.1)",
-          borderBottom: "none",
-          boxShadow: "0 -20px 60px hsl(0 0% 0% / 0.6)",
-          maxHeight: "88vh",
-          overflowY: "auto",
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-white/15" />
-        </div>
-
-        {/* Header */}
-        <div className="px-5 pt-2 pb-4 flex items-start justify-between">
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Деталі заявки</p>
-            <h2 className="text-lg font-black text-foreground">{licenseMain}</h2>
-            {licenseExtra && <p className="text-xs text-primary mt-0.5">{licenseExtra}</p>}
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl liquid-glass flex items-center justify-center active:scale-95 mt-1"
-          >
-            <X className="w-4 h-4 text-muted-foreground" />
-          </button>
-        </div>
-
-        {/* Status badge */}
-        <div className="px-5 mb-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold"
-            style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text }}>
-            {app.status === "approved" && <Check className="w-3.5 h-3.5" />}
-            {app.status === "rejected" && <X className="w-3.5 h-3.5" />}
-            {app.status === "pending" && <Clock className="w-3.5 h-3.5" />}
-            {s.label}
-          </div>
-        </div>
-
-        {/* Info cards */}
-        <div className="px-5 space-y-3 mb-5">
-          {/* Applicant */}
-          <div className="liquid-glass-card rounded-2xl p-4">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-3">Заявник</p>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                <Users className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">{app.username}</p>
-                <p className="text-[10px] text-muted-foreground">Гравець серверу</p>
-              </div>
-            </div>
-          </div>
-
-          {/* License details */}
-          <div className="liquid-glass-card rounded-2xl p-4">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-3">Тип ліцензії</p>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                <FileCheck className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">{licenseMain}</p>
-                {licenseExtra && <p className="text-xs text-primary">{licenseExtra}</p>}
-              </div>
-            </div>
-
-            {/* Plate number — shown only in details */}
-            {app.plate_number && (
-              <div className="mt-3 pt-3 border-t border-white/5">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Номерний знак</p>
-                <div className="flex justify-center">
-                  {/* Ukrainian plate render */}
-                  <div style={{
-                    display: "inline-flex", alignItems: "stretch",
-                    borderRadius: 8, border: "2.5px solid #333",
-                    background: "#fff", overflow: "hidden",
-                    height: 36, boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
-                  }}>
-                    <div style={{
-                      display: "flex", flexDirection: "column", alignItems: "center",
-                      justifyContent: "center", width: 22, borderRight: "2px solid #333",
-                      background: "#fff", gap: 2, padding: "0 2px",
-                    }}>
-                      <div style={{ width: 15, height: 10, overflow: "hidden", borderRadius: 2, border: "0.5px solid #ccc" }}>
-                        <div style={{ width: "100%", height: "50%", background: "#005BBB" }} />
-                        <div style={{ width: "100%", height: "50%", background: "#FFD500" }} />
-                      </div>
-                      <span style={{ fontSize: 6, fontWeight: 900, color: "#111", fontFamily: "Arial", lineHeight: 1 }}>UA</span>
-                    </div>
-                    <span style={{
-                      fontFamily: "'Arial Black', Arial, sans-serif",
-                      fontWeight: 900, fontSize: 15, color: "#111",
-                      letterSpacing: "0.1em", padding: "0 12px",
-                      display: "flex", alignItems: "center",
-                      textTransform: "uppercase", whiteSpace: "nowrap",
-                    }}>
-                      {app.plate_number}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Date */}
-          <div className="liquid-glass rounded-2xl px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Дата подачі</span>
-            </div>
-            <span className="text-xs font-medium text-foreground">
-              {new Date(app.created_at).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-            </span>
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        {app.status === "pending" && (
-          <div className="px-5 pb-8 grid grid-cols-2 gap-3">
-            <button
-              onClick={() => { onDecide(app.id, "rejected"); onClose(); }}
-              className="flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95"
-              style={{ background: "hsl(0 70% 50% / 0.12)", border: "1px solid hsl(0 70% 50% / 0.3)", color: "hsl(0 70% 50%)" }}
-            >
-              <X className="w-4 h-4" /> Відхилити
-            </button>
-            <button
-              onClick={() => { onDecide(app.id, "approved"); onClose(); }}
-              className="flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95"
-              style={{ background: "hsl(84 81% 44% / 0.15)", border: "1px solid hsl(84 81% 44% / 0.35)", color: "hsl(84 81% 44%)" }}
-            >
-              <Check className="w-4 h-4" /> Схвалити
-            </button>
-          </div>
-        )}
-        {app.status !== "pending" && (
-          <div className="px-5 pb-8">
-            <button
-              onClick={onClose}
-              className="w-full py-3.5 rounded-2xl font-semibold text-sm liquid-glass text-muted-foreground active:scale-95 transition-all"
-            >
-              Закрити
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ─── LICENSES TAB ─────────────────────────────────────────────────────────────
 const LicensesTab = () => {
   const [apps, setApps] = useState<LicenseApplication[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<LicenseApplication | null>(null);
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("all");
-  const [searchText, setSearchText] = useState("");
-
-  useEffect(() => {
-    store.getLicenseApplications().then(data => { setApps(data); setLoading(false); });
-  }, []);
-
+  useEffect(() => { store.getLicenseApplications().then(setApps); }, []);
   const decide = async (id: number, status: "approved" | "rejected") => {
     await store.updateLicenseStatus(id, status);
     setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
-    toast.success(status === "approved" ? "✅ Ліцензію схвалено!" : "❌ Ліцензію відхилено!");
+    toast.success(status === "approved" ? "Схвалено!" : "Відхилено!");
   };
-
-  const filtered = apps.filter(a => {
-    const matchStatus = filterStatus === "all" || a.status === filterStatus;
-    const matchSearch = !searchText || a.username.toLowerCase().includes(searchText.toLowerCase()) || a.license_type.toLowerCase().includes(searchText.toLowerCase());
-    return matchStatus && matchSearch;
-  });
-
-  const counts = {
-    all: apps.length,
-    pending: apps.filter(a => a.status === "pending").length,
-    approved: apps.filter(a => a.status === "approved").length,
-    rejected: apps.filter(a => a.status === "rejected").length,
-  };
-
-  const statusStyle = {
-    pending:  { dot: "bg-yellow-400",  text: "text-yellow-400",  bg: "bg-yellow-400/10 border-yellow-400/20",  label: "На розгляді" },
-    approved: { dot: "bg-primary",     text: "text-primary",     bg: "bg-primary/10 border-primary/20",         label: "Схвалено" },
-    rejected: { dot: "bg-destructive", text: "text-destructive", bg: "bg-destructive/10 border-destructive/20", label: "Відхилено" },
-  };
-
+  const sc = { pending: "bg-yellow-400/15 text-yellow-400", approved: "bg-primary/15 text-primary", rejected: "bg-destructive/15 text-destructive" };
+  const sl = { pending: "На розгляді", approved: "Схвалено", rejected: "Відхилено" };
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { key: "pending",  label: "Нові",      color: "text-yellow-400", bg: "bg-yellow-400/8 border border-yellow-400/15" },
-          { key: "approved", label: "Схвалено",  color: "text-primary",    bg: "bg-primary/8 border border-primary/15" },
-          { key: "rejected", label: "Відхилено", color: "text-destructive",bg: "bg-destructive/8 border border-destructive/15" },
-        ].map(s => (
-          <button
-            key={s.key}
-            onClick={() => setFilterStatus(filterStatus === s.key as typeof filterStatus ? "all" : s.key as typeof filterStatus)}
-            className={`${s.bg} rounded-2xl py-2.5 text-center transition-all active:scale-95 ${filterStatus === s.key ? "ring-1 ring-white/20" : ""}`}
-          >
-            <p className={`text-lg font-black ${s.color}`}>{counts[s.key as keyof typeof counts]}</p>
-            <p className="text-[9px] text-muted-foreground mt-0.5">{s.label}</p>
-          </button>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          value={searchText}
-          onChange={e => setSearchText(e.target.value)}
-          placeholder="Пошук по нікнейму або типу..."
-          className="w-full liquid-glass rounded-xl pl-9 pr-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent"
-        />
-      </div>
-
-      {/* Filter tabs */}
-      <div className="flex gap-1.5 liquid-glass rounded-2xl p-1">
-        {(["all", "pending", "approved", "rejected"] as const).map(f => (
-          <button
-            key={f}
-            onClick={() => setFilterStatus(f)}
-            className={`flex-1 py-2 rounded-xl text-[10px] font-semibold transition-all ${filterStatus === f ? "bg-primary text-black" : "text-muted-foreground"}`}
-          >
-            {f === "all" ? "Всі" : f === "pending" ? "Нові" : f === "approved" ? "Схвалені" : "Відхилені"}
-          </button>
-        ))}
-      </div>
-
-      {/* Count */}
-      <p className="text-xs text-muted-foreground">Показано: {filtered.length} із {apps.length}</p>
-
-      {loading && (
-        <div className="flex items-center justify-center py-10">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      )}
-
-      {!loading && filtered.length === 0 && (
-        <div className="text-center py-12 liquid-glass-card rounded-2xl">
-          <Car className="w-8 h-8 text-muted-foreground opacity-20 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Немає заявок</p>
-          <p className="text-xs text-muted-foreground/50 mt-1">
-            {searchText ? "Спробуй інший запит" : "Заявки з'являться тут"}
-          </p>
-        </div>
-      )}
-
-      {/* License cards — click opens modal */}
-      <div className="space-y-2">
-        {filtered.map(a => {
-          const ss = statusStyle[a.status];
-          const licMain = a.license_type.split("|")[0]?.trim() || a.license_type;
-          return (
-            <button
-              key={a.id}
-              onClick={() => setSelected(a)}
-              className="w-full text-left active:scale-[0.98] transition-transform"
-            >
-              <div className="liquid-glass-card rounded-2xl px-4 py-3 flex items-center gap-3 hover:border-primary/20 transition-colors">
-                {/* Icon */}
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: "hsl(210 80% 55% / 0.1)", border: "1px solid hsl(210 80% 55% / 0.2)" }}>
-                  {a.plate_number
-                    ? <Car className="w-5 h-5" style={{ color: "hsl(210 80% 55%)" }} />
-                    : <FileCheck className="w-5 h-5" style={{ color: "hsl(84 81% 44%)" }} />
-                  }
-                </div>
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-xs font-bold text-foreground truncate">{a.username}</p>
-                    <span className={`shrink-0 text-[9px] px-1.5 py-0.5 rounded-md font-semibold border ${ss.bg} ${ss.text}`}>
-                      {ss.label}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground truncate">{licMain}</p>
-                  {a.plate_number && (
-                    <p className="text-[9px] font-mono text-yellow-400/70 mt-0.5">🚗 {a.plate_number}</p>
-                  )}
-                </div>
-                {/* Arrow + pending dot */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {a.status === "pending" && (
-                    <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-                  )}
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </div>
+    <div className="space-y-3 animate-fade-in">
+      <p className="text-xs text-muted-foreground">Заявок: {apps.length}</p>
+      {apps.length === 0 && <div className="text-center py-10 liquid-glass-card rounded-2xl"><Car className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" /><p className="text-xs text-muted-foreground">Немає заявок</p></div>}
+      {apps.map(a => (
+        <NeonCard key={a.id} glowColor="green">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-1.5 mb-1"><Users className="w-3 h-3 text-muted-foreground" /><h4 className="text-xs font-semibold">{a.username}</h4></div>
+              <div className="flex items-center gap-1.5"><FileCheck className="w-3 h-3 text-muted-foreground" /><p className="text-[10px] text-muted-foreground">{a.license_type}</p></div>
+              {a.plate_number && <div className="flex items-center gap-1.5 mt-0.5"><Car className="w-3 h-3 text-yellow-400" /><p className="text-[10px] font-mono text-yellow-400">{a.plate_number}</p></div>}
+              <span className={`text-[9px] px-2 py-0.5 rounded-md mt-1 inline-block ${sc[a.status]}`}>{sl[a.status]}</span>
+            </div>
+            {a.status === "pending" && (
+              <div className="flex gap-1 ml-2">
+                <button onClick={() => decide(a.id, "approved")} className="p-1.5 rounded-lg bg-primary/15 text-primary active:scale-95"><Check className="w-3.5 h-3.5" /></button>
+                <button onClick={() => decide(a.id, "rejected")} className="p-1.5 rounded-lg bg-destructive/15 text-destructive active:scale-95"><X className="w-3.5 h-3.5" /></button>
               </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Detail modal */}
-      {selected && (
-        <LicenseModal
-          app={selected}
-          onClose={() => setSelected(null)}
-          onDecide={(id, status) => {
-            decide(id, status);
-            setSelected(null);
-          }}
-        />
-      )}
+            )}
+          </div>
+        </NeonCard>
+      ))}
     </div>
   );
 };
@@ -2184,6 +1759,8 @@ const LeaderAssignmentBlock = ({ factionId, factionName, onAssigned }: { faction
 // ─── MANAGE FACTIONS TAB ─────────────────────────────────────────────────────
 const ManageFactionsTab = () => {
   const [factions, setFactions] = useState<{ id: number; name: string; color: string; section: string; gradient?: string }[]>([]);
+  const [apps, setApps] = useState<FactionApplication[]>([]);
+  const [activeSection, setActiveSection] = useState<"factions" | "apps">("factions");
   const [loading, setLoading] = useState(true);
 
   // Edit faction
@@ -2227,6 +1804,7 @@ const ManageFactionsTab = () => {
       setLoading(false);
     };
     load();
+    store.getFactionApps().then(setApps);
   }, []);
 
   const deleteFaction = async (id: number, name: string) => {
@@ -2279,9 +1857,7 @@ const ManageFactionsTab = () => {
     const faction = factions.find(f => f.id === editingId);
     
     if (editingId > 0) {
-      // DB faction — update all fields in Supabase + sync faction_name in applications
-      const oldFaction = factions.find(f => f.id === editingId);
-      const oldName = oldFaction?.name || "";
+      // DB faction — update all fields in Supabase
       const { error } = await supabase.from("factions").update({
         name: editName.trim(),
         color: editColor,
@@ -2293,12 +1869,6 @@ const ManageFactionsTab = () => {
         questions: editQuestions,
       }).eq("id", editingId);
       if (error) return toast.error("Помилка збереження: " + error.message);
-      // Sync faction_name in all applications if name changed
-      if (oldName && oldName !== editName.trim()) {
-        await supabase.from("faction_applications")
-          .update({ faction_name: editName.trim() })
-          .eq("faction_id", editingId);
-      }
     }
     
     // Static faction — save to Supabase faction_overrides
@@ -2315,24 +1885,26 @@ const ManageFactionsTab = () => {
         questions: editQuestions,
         updated_at: new Date().toISOString(),
       }, { onConflict: "faction_slug" });
-      // Sync faction_name in applications by old static name
-      const oldFaction = factions.find(f => f.id === editingId);
-      if (oldFaction && oldFaction.name !== editName.trim()) {
-        await supabase.from("faction_applications")
-          .update({ faction_name: editName.trim() })
-          .ilike("faction_name", oldFaction.name);
-      }
     }
     
     setFactions(prev => prev.map(f => f.id === editingId ? { ...f, name: editName, color: editColor, section: editSection } : f));
     setEditingId(null);
-    toast.success("Фракцію оновлено! Назва синхронізована в заявках.");
+    toast.success("Фракцію оновлено!");
   };
+
+  const decide = async (id: number, status: "approved" | "rejected") => {
+    await store.updateFactionAppStatus(id, status);
+    const app = apps.find(a => a.id === id);
+    if (app?.nick) store.addNotification(app.nick, `Заявка у ${app.factionName} ${status === "approved" ? "✅ схвалена" : "❌ відхилена"}`);
+    setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    toast.success(status === "approved" ? "Схвалено!" : "Відхилено!");
+  };
+
+  const sc = { review: "bg-yellow-400/15 text-yellow-400", approved: "bg-primary/15 text-primary", rejected: "bg-destructive/15 text-destructive" };
+  const sl = { review: "На розгляді", approved: "Прийнято", rejected: "Відхилено" };
 
   // Edit modal — full customization with tabs
   if (editingId !== null) {
-
-  const saveEdit = async () => {
     const currentFaction = factions.find(f => f.id === editingId);
     const ICON_LIST = [
       { k: "Shield", I: Shield }, { k: "Swords", I: Swords }, { k: "AlertTriangle", I: AlertTriangle },
@@ -2579,46 +2151,78 @@ const ManageFactionsTab = () => {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="liquid-glass-card rounded-2xl px-4 py-3 flex items-center gap-3 mb-1">
-        <ShieldAlert className="w-4 h-4 text-primary" />
-        <p className="text-xs text-muted-foreground">Заявки у фракції — в розділі <span className="text-primary font-semibold">«Заявки у фракції»</span> головного меню</p>
-      </div>
-
-      <div className="space-y-3">
-        {loading && <div className="text-center py-8"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}
-        {!loading && factions.length === 0 && (
-          <div className="text-center py-10 liquid-glass-card rounded-2xl">
-            <ShieldAlert className="w-8 h-8 text-muted-foreground opacity-20 mx-auto mb-2" />
-            <p className="text-xs text-muted-foreground">Немає фракцій в базі</p>
-          </div>
-        )}
-        {factions.map(f => (
-          <NeonCard key={f.id} glowColor="lime">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: f.color + "20", border: `1px solid ${f.color}40` }}>
-                  <Shield className="w-5 h-5" style={{ color: f.color }} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{f.name}</p>
-                  <p className="text-[10px] text-muted-foreground">{f.section === "main" ? "Державна" : "Кримінальна"}</p>
-                </div>
-              </div>
-              <div className="flex gap-1.5">
-                <button onClick={() => openEdit(f)}
-                  className="p-1.5 rounded-lg liquid-glass text-primary active:scale-95">
-                  <Settings className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={() => deleteFaction(f.id, f.name)}
-                  className="p-1.5 rounded-lg liquid-glass text-destructive active:scale-95">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </NeonCard>
+      <div className="flex gap-2">
+        {([
+          { id: "factions", label: "Фракції" },
+          { id: "apps", label: `Заявки (${apps.filter(a => a.status === "review").length})` },
+        ] as const).map(t => (
+          <button key={t.id} onClick={() => setActiveSection(t.id)}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-all ${activeSection === t.id ? "bg-primary/20 border-primary/30 text-primary" : "liquid-glass text-muted-foreground"}`}>
+            {t.label}
+          </button>
         ))}
       </div>
+
+      {activeSection === "factions" && (
+        <div className="space-y-3">
+          {loading && <div className="text-center py-8"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}
+          {!loading && factions.length === 0 && (
+            <div className="text-center py-10 liquid-glass-card rounded-2xl">
+              <ShieldAlert className="w-8 h-8 text-muted-foreground opacity-20 mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">Немає фракцій в базі</p>
+            </div>
+          )}
+          {factions.map(f => (
+            <NeonCard key={f.id} glowColor="lime">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: f.color + "20", border: `1px solid ${f.color}40` }}>
+                    <Shield className="w-5 h-5" style={{ color: f.color }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{f.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{f.section === "main" ? "Державна" : "Кримінальна"}</p>
+                  </div>
+                </div>
+                <div className="flex gap-1.5">
+                  <button onClick={() => openEdit(f)}
+                    className="p-1.5 rounded-lg liquid-glass text-primary active:scale-95">
+                    <Settings className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => deleteFaction(f.id, f.name)}
+                    className="p-1.5 rounded-lg liquid-glass text-destructive active:scale-95">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </NeonCard>
+          ))}
+        </div>
+      )}
+
+      {activeSection === "apps" && (
+        <div className="space-y-3">
+          {apps.length === 0 && <div className="text-center py-10 liquid-glass-card rounded-2xl"><Shield className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" /><p className="text-xs text-muted-foreground">Немає заявок</p></div>}
+          {apps.map(a => (
+            <NeonCard key={a.id} glowColor="green">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1"><Users className="w-3 h-3 text-primary" /><h4 className="text-xs font-bold">{a.nick}</h4><span className={`text-[9px] px-1.5 py-0.5 rounded-md ${sc[a.status]}`}>{sl[a.status]}</span></div>
+                  <div className="flex items-center gap-1.5"><Shield className="w-3 h-3 text-muted-foreground" /><p className="text-[10px] text-primary">{a.factionName}</p></div>
+                  {a.message && <p className="text-[10px] text-muted-foreground mt-1 italic">"{a.message.slice(0, 80)}..."</p>}
+                </div>
+                {a.status === "review" && (
+                  <div className="flex gap-1 ml-2 shrink-0">
+                    <button onClick={() => decide(a.id, "approved")} className="p-1.5 rounded-lg bg-primary/15 text-primary active:scale-95"><Check className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => decide(a.id, "rejected")} className="p-1.5 rounded-lg bg-destructive/15 text-destructive active:scale-95"><X className="w-3.5 h-3.5" /></button>
+                  </div>
+                )}
+              </div>
+            </NeonCard>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -2673,19 +2277,9 @@ const BansTab = () => {
     if (!searchUser.trim()) return;
     setSearching(true);
     setFoundUser(null);
-    // Шукаємо по ніку
-    const { data } = await supabase
-      .from("users")
-      .select("username, telegram_id")
-      .ilike("username", searchUser.trim())
-      .maybeSingle();
-    if (data) {
-      setFoundUser(data as { telegram_id: string; username: string });
-      setBanNick(data.username);
-    } else {
-      // Якщо не знайдено — можна ввести вручну нік або TG ID
-      toast.error("Гравця не знайдено в базі — введи нік вручну нижче");
-    }
+    const { data } = await supabase.from("users").select("username, telegram_id").ilike("username", searchUser.trim()).maybeSingle();
+    if (data) { setFoundUser(data as { telegram_id: string; username: string }); setBanNick(data.username); }
+    else toast.error("Гравця не знайдено");
     setSearching(false);
   };
 
@@ -2697,9 +2291,7 @@ const BansTab = () => {
     const expiresAt = permanent ? null : new Date(Date.now() + (selectedDur?.ms || 0)).toISOString();
     const adminNick = localStorage.getItem("crp_nick") || "admin";
 
-    // Якщо є foundUser — баним по telegram_id (надійніше)
-    // Якщо ні — баним по ніку
-    const { error } = await supabase.from("bans").insert({
+    await supabase.from("bans").insert({
       identifier: foundUser?.telegram_id || banNick.trim(),
       type: foundUser?.telegram_id ? "telegram_id" : "username",
       reason: banReason,
@@ -2708,14 +2300,10 @@ const BansTab = () => {
       is_permanent: permanent,
     });
 
-    if (error) { toast.error("Помилка: " + error.message); setSaving(false); return; }
-
-    // Повідомлення гравцю якщо є в базі
-    try {
-      await store.addNotification(banNick.trim(),
-        `⛔ Ви отримали бан${permanent ? " назавжди" : ` на ${selectedDur?.label}`}. Причина: ${banReason}`
-      );
-    } catch { /* ignore if user not found */ }
+    // Notify player
+    await store.addNotification(banNick.trim(),
+      `⛔ Ви отримали бан${permanent ? " назавжди" : ` на ${selectedDur?.label}`}. Причина: ${banReason}`
+    );
 
     toast.success(`${banNick} заблоковано!`);
     setBanNick(""); setBanReason(""); setBanDuration("7d");
@@ -2726,7 +2314,7 @@ const BansTab = () => {
 
   const removeBan = async (id: number, nick: string) => {
     await supabase.from("bans").delete().eq("id", id);
-    await store.addNotification(nick, " Ваш бан був знятий адміністрацією");
+    await store.addNotification(nick, "✅ Ваш бан був знятий адміністрацією");
     toast.success("Бан знятий!");
     loadBans();
   };
