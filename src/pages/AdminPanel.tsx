@@ -52,12 +52,12 @@ const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
   election: false, documents: false, add_faction: false, voice: false, tokens: false,
   manage_factions: false, debug: false, bans: false,
 };
+
 const DEFAULT_PERMS: Record<TabId, boolean> = {
   sos: true, applications: true, factions: true, licenses: true,
   house_requests: true, news: true, houses: true, wanted: true,
   election: true, documents: true, add_faction: true, voice: true, tokens: true,
-  manage_factions: true,
-  debug: true, bans: true,
+  manage_factions: true, debug: true, bans: true,
 };
 
 const getAdminPerms = (nick: string): Record<TabId, boolean> => {
@@ -66,6 +66,7 @@ const getAdminPerms = (nick: string): Record<TabId, boolean> => {
     return s ? { ...DEFAULT_PERMS, ...JSON.parse(s) } : { ...DEFAULT_PERMS };
   } catch { return { ...DEFAULT_PERMS }; }
 };
+
 const saveAdminPerms = async (nick: string, perms: Record<TabId, boolean>) => {
   localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(perms));
   await supabase.from("admin_perms").upsert(
@@ -78,22 +79,22 @@ const saveAdminPerms = async (nick: string, perms: Record<TabId, boolean>) => {
 type Tab = TabId | "superadmin" | "restrictions";
 
 const TAB_LIST: { id: TabId; label: string; icon: typeof Newspaper; sub: string; danger?: boolean }[] = [
-  { id: "sos",           label: "SOS Сигнали",          icon: AlertTriangle, sub: "Realtime",    danger: true },
-  { id: "applications",  label: "Заявки адміністратора", icon: Users,         sub: "Заявки" },
-  { id: "factions",      label: "Заявки у фракції",      icon: Shield,        sub: "Заявки" },
-  { id: "licenses",      label: "Ліцензії та номери",    icon: FileCheck,     sub: "Управління" },
-  { id: "house_requests",label: "Купівля будинків",       icon: Home,          sub: "Управління" },
-  { id: "news",          label: "Новини та оновлення",   icon: Newspaper,     sub: "Управління" },
-  { id: "houses",        label: "Управління будинками",  icon: Building2,     sub: "Управління" },
-  { id: "wanted",        label: "Розшук",                icon: Crosshair,     sub: "Управління", danger: true },
-  { id: "election",      label: "Вибори мера",           icon: Vote,          sub: "Управління" },
-  { id: "documents",     label: "Документи",             icon: ScrollText,    sub: "Управління" },
-  { id: "add_faction",   label: "Додати фракцію",        icon: ShieldAlert,   sub: "Управління" },
-  { id: "voice",         label: "Голос міста",           icon: Megaphone,     sub: "Управління" },
-  { id: "tokens",        label: "Токени CR",             icon: Coins,         sub: "Фінанси" },
-  { id: "manage_factions",label: "Управління фракціями",   icon: ShieldAlert,   sub: "Фракції" },
-  { id: "bans",            label: "Бани гравців",           icon: UserX,         sub: "Безпека", danger: true },
-  { id: "debug",           label: "Діагностика",            icon: Settings,      sub: "Debug" },
+  { id: "sos", label: "SOS Сигнали", icon: AlertTriangle, sub: "Realtime", danger: true },
+  { id: "applications", label: "Заявки адміністратора", icon: Users, sub: "Заявки" },
+  { id: "factions", label: "Заявки у фракції", icon: Shield, sub: "Заявки" },
+  { id: "licenses", label: "Ліцензії та номери", icon: FileCheck, sub: "Управління" },
+  { id: "house_requests", label: "Купівля будинків", icon: Home, sub: "Управління" },
+  { id: "news", label: "Новини та оновлення", icon: Newspaper, sub: "Управління" },
+  { id: "houses", label: "Управління будинками", icon: Building2, sub: "Управління" },
+  { id: "wanted", label: "Розшук", icon: Crosshair, sub: "Управління", danger: true },
+  { id: "election", label: "Вибори мера", icon: Vote, sub: "Управління" },
+  { id: "documents", label: "Документи", icon: ScrollText, sub: "Управління" },
+  { id: "add_faction", label: "Додати фракцію", icon: ShieldAlert, sub: "Управління" },
+  { id: "voice", label: "Голос міста", icon: Megaphone, sub: "Управління" },
+  { id: "tokens", label: "Токени CR", icon: Coins, sub: "Фінанси" },
+  { id: "manage_factions", label: "Управління фракціями", icon: ShieldAlert, sub: "Фракції" },
+  { id: "bans", label: "Бани гравців", icon: UserX, sub: "Безпека", danger: true },
+  { id: "debug", label: "Діагностика", icon: Settings, sub: "Debug" },
 ];
 
 const inputClass = "w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent";
@@ -109,7 +110,6 @@ const AdminPanel = () => {
 
   useEffect(() => {
     if (superAdmin) return;
-    // Load perms from Supabase
     supabase.from("admin_perms").select("perms").eq("username", normalizeNick(nick)).maybeSingle()
       .then(({ data }) => {
         if (data?.perms) {
@@ -117,7 +117,6 @@ const AdminPanel = () => {
           localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(p));
           setPerms(p);
         } else {
-          // No perms record = no access
           const noPerms = Object.fromEntries(Object.keys(DEFAULT_PERMS).map(k => [k, false])) as Record<TabId, boolean>;
           setPerms(noPerms);
         }
@@ -126,7 +125,6 @@ const AdminPanel = () => {
 
   const allowedTabs = TAB_LIST.filter(t => superAdmin || perms[t.id]);
 
-  // Access denied for non-superadmin with no perms
   if (!superAdmin && !Object.values(perms).some(Boolean)) {
     return (
       <div className="min-h-screen px-4 pt-4 flex flex-col items-center justify-center">
@@ -151,7 +149,6 @@ const AdminPanel = () => {
     );
   }
 
-  // ── TAB CONTENT ──
   if (tab) {
     if (tab === "restrictions") {
       return (
@@ -212,22 +209,23 @@ const AdminPanel = () => {
             <p className="text-[10px] text-muted-foreground">Адмін панель</p>
           </div>
         </div>
-        {tab === "sos"           && <SosTab />}
-        {tab === "news"          && <NewsTab />}
-        {tab === "houses"        && <HousesTab />}
-        {tab === "wanted"        && <WantedTab />}
-        {tab === "election"      && <ElectionTab />}
-        {tab === "documents"     && <DocumentsTab />}
-        {tab === "factions"      && <FactionAppsTab />}
-        {tab === "applications"  && <AdminAppsTab />}
-        {tab === "tokens"        && <TokensTab />}
-        {tab === "voice"         && <VoiceTab />}
-        {tab === "licenses"      && <LicensesTab />}
-        {tab === "house_requests"&& <HouseRequestsTab />}
-        {tab === "add_faction"   && <AddFactionTab />}
+
+        {tab === "sos" && <SosTab />}
+        {tab === "news" && <NewsTab />}
+        {tab === "houses" && <HousesTab />}
+        {tab === "wanted" && <WantedTab />}
+        {tab === "election" && <ElectionTab />}
+        {tab === "documents" && <DocumentsTab />}
+        {tab === "factions" && <FactionAppsTab />}
+        {tab === "applications" && <AdminAppsTab />}
+        {tab === "tokens" && <TokensTab />}
+        {tab === "voice" && <VoiceTab />}
+        {tab === "licenses" && <LicensesTab />}
+        {tab === "house_requests" && <HouseRequestsTab />}
+        {tab === "add_faction" && <AddFactionTab />}
         {tab === "manage_factions" && <ManageFactionsTab />}
-        {tab === "bans"            && <BansTab />}
-        {tab === "debug"           && <DebugTab />}
+        {tab === "bans" && <BansTab />}
+        {tab === "debug" && <DebugTab />}
       </div>
     );
   }
@@ -236,7 +234,6 @@ const AdminPanel = () => {
   return (
     <div className="min-h-screen pb-20 px-4 pt-4">
       <PageHeader title="АДМІН ПАНЕЛЬ" subtitle="Управління сервером" backTo="/profile" />
-
       {superAdmin && (
         <div className="mb-4 animate-fade-in">
           <div className="rounded-2xl px-4 py-3 flex items-center gap-3"
@@ -256,10 +253,7 @@ const AdminPanel = () => {
           </div>
         </div>
       )}
-
-      {/* Restrictions panel button */}
       <RestrictionsButton onOpen={() => setTab("restrictions")} />
-
       <div className="space-y-2 animate-fade-in">
         {allowedTabs.map((t, i) => (
           <button key={t.id} onClick={() => setTab(t.id)} className="w-full animate-slide-up" style={{ animationDelay: `${i * 35}ms` }}>
@@ -278,7 +272,6 @@ const AdminPanel = () => {
             </div>
           </button>
         ))}
-
         {allowedTabs.length === 0 && (
           <div className="text-center py-12 liquid-glass-card rounded-2xl">
             <Lock className="w-8 h-8 text-muted-foreground opacity-20 mx-auto mb-2" />
@@ -2733,7 +2726,7 @@ const BansTab = () => {
 
   const removeBan = async (id: number, nick: string) => {
     await supabase.from("bans").delete().eq("id", id);
-    await store.addNotification(nick, "✅ Ваш бан був знятий адміністрацією");
+    await store.addNotification(nick, " Ваш бан був знятий адміністрацією");
     toast.success("Бан знятий!");
     loadBans();
   };
