@@ -257,115 +257,210 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
         </div>
       )}
 
-      {/* ═══ PASSPORT CARD ═══ */}
-      <div className="mb-4 animate-fade-in">
-        {/* VFX keyframes injected per theme */}
+            {/* ═══ PASSPORT CARD — БОМБА VFX 2026 ═══ */}
+      <div className="mb-4 animate-fade-in group">
+        {/* Inject keyframes */}
         {vfx.keyframes && <style>{vfx.keyframes}</style>}
 
-        <div className="rounded-2xl overflow-hidden relative select-none"
-           {/* Background Layer */}
-  <div className="absolute inset-0">
-    <img 
-      src="https://i.ibb.co/NbX6ZNs/images-2.jpg" 
-      alt="" 
-      className="w-full h-full object-cover opacity-30" 
-    />
-    <div className="absolute inset-0 bg-gradient-to-br from-black/95 via-black/80 to-black/95" />
-  </div>
-
-  {/* Main Glass Card with strong glassmorphism */}
-  <div className="absolute inset-0 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl" />
-
-  {/* VFX Container */}
-  <div className={`absolute inset-0 pointer-events-none overflow-hidden rounded-2xl ${vfx.cssClass}`} />
-
-  {/* ────── THEME-SPECIFIC VFX ────── */}
-
-  {/* Neon Blue */}
-  {themeId === "neon_blue" && (
-    <>
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/10 to-transparent animate-[neonScan_3.5s_linear_infinite]" />
-      <div className="absolute inset-0 border border-cyan-400/40 animate-[neonFlicker_2s_ease-in-out_infinite]" />
-    </>
-  )}
-
-  {/* Cyber Red */}
-  {themeId === "cyber_red" && (
-    <>
-      <div className="absolute inset-0 border-2 border-red-500/50 animate-[glitch_0.4s_linear_infinite]" />
-      <div className="absolute inset-x-0 h-px bg-red-400/60 animate-[redScan_1.8s_linear_infinite]" />
-    </>
-  )}
-
-  {/* Gold VIP */}
-  {themeId === "gold_vip" && (
-    <>
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/50 to-transparent bg-[length:300%_100%] animate-[goldShimmer_2.8s_linear_infinite]" />
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div
-          key={i}
-          className="absolute text-3xl text-amber-300 animate-[goldSpark_1.6s_ease-in-out_infinite]"
-          style={{ left: `${12 + i * 11}%`, top: `${15 + (i % 4) * 18}%`, animationDelay: `${i * 0.2}s` }}
+        <div 
+          className="rounded-2xl overflow-hidden relative select-none group-hover:scale-[1.015] transition-transform duration-700"
+          style={{
+            border: "1px solid hsl(0 0% 100% / 0.15)",
+            boxShadow: "0 10px 50px hsl(0 0% 0% / 0.65)",
+          }}
         >
-          ✨
+          {/* Background Image + Overlay */}
+          <div className="absolute inset-0">
+            <img
+              src="https://i.ibb.co/NbX6ZNs/images-2.jpg"
+              alt=""
+              className="w-full h-full object-cover opacity-30"
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-black/95 via-black/85 to-black/95" />
+          </div>
+
+          {/* Glassmorphism Layer */}
+          <div className="absolute inset-0 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl" />
+
+          {/* VFX Container */}
+          <div className={`absolute inset-0 pointer-events-none overflow-hidden rounded-2xl ${vfx.cssClass}`} />
+
+          {/* Neon Blue */}
+          {themeId === "neon_blue" && (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/15 to-transparent animate-[neonScan_3.2s_linear_infinite]" />
+              <div className="absolute inset-0 border border-cyan-400/30 animate-[neonFlicker_2.2s_ease-in-out_infinite]" />
+            </>
+          )}
+
+          {/* Cyber Red */}
+          {themeId === "cyber_red" && (
+            <>
+              <div className="absolute inset-0 border-2 border-red-500/60 animate-[glitch_0.45s_linear_infinite]" />
+              <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-red-400 to-transparent animate-[redScan_1.6s_linear_infinite]" />
+            </>
+          )}
+
+          {/* Gold VIP */}
+          {themeId === "gold_vip" && (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/60 to-transparent bg-[length:280%_100%] animate-[goldShimmer_2.5s_linear_infinite]" />
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute text-3xl text-amber-200 animate-[goldSpark_1.7s_ease-in-out_infinite]"
+                  style={{
+                    left: `${10 + i * 11}%`,
+                    top: `${18 + (i % 3) * 22}%`,
+                    animationDelay: `${i * 180}ms`,
+                  }}
+                >
+                  ✨
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* Purple Haze */}
+          {themeId === "purple_haze" && (
+            <div className="absolute inset-0 bg-[radial-gradient(at_35%_25%,#c026d3_10%,#6b21a8_50%,transparent_80%)] bg-[length:200%_200%] animate-[auroraFlow_13s_linear_infinite]" />
+          )}
+
+          {/* Arctic Snow */}
+          {themeId === "arctic" && (
+            Array.from({ length: 18 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute text-sky-100/90 text-xl animate-[snowFall_6s_linear_infinite]"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDuration: `${4.5 + Math.random() * 8}s`,
+                  animationDelay: `-${Math.random() * 12}s`,
+                }}
+              >
+                ❄
+              </div>
+            ))
+          )}
+
+          {/* Matrix Rain */}
+          {themeId === "matrix" && (
+            Array.from({ length: 10 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute font-mono text-xs text-emerald-400/75 tracking-[2px] animate-[matrixRain_1.8s_linear_infinite]"
+                style={{
+                  left: `${8 + i * 9}%`,
+                  animationDelay: `-${i * 0.22}s`,
+                }}
+              >
+                {["01","10","11","00","101","110","001","111"][i % 8]}
+              </div>
+            ))
+          )}
+
+          {/* Sunset Embers */}
+          {themeId === "sunset" && (
+            Array.from({ length: 9 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1.5 h-1.5 bg-orange-400 rounded-full animate-[emberRise_2.4s_ease-out_infinite]"
+                style={{
+                  left: `${15 + i * 8}%`,
+                  bottom: "-10px",
+                  animationDelay: `-${i * 0.3}s`,
+                  boxShadow: "0 0 16px #fb923c",
+                }}
+              />
+            ))
+          )}
+
+          {/* Trident Watermark */}
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 w-32 h-36 pointer-events-none opacity-10">
+            <Trident />
+          </div>
+
+          {/* ────── ПАСПОРТНИЙ КОНТЕНТ ────── */}
+          {/* Header strip */}
+          <div className="relative flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.07)" }}>
+            <div>
+              <p className="text-[7px] text-muted-foreground/50 tracking-[0.3em] uppercase">Удостоверение</p>
+              <p className="text-[8px] text-muted-foreground/70 tracking-[0.15em] font-semibold uppercase">Chernihiv RP</p>
+            </div>
+            <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
+          </div>
+
+          {/* Main row */}
+          <div className="relative px-4 py-3 flex items-start gap-3">
+            <div className="w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0" style={{ border: "1.5px solid hsl(0 0% 100% / 0.15)" }}>
+              {tgUser?.photo_url ? (
+                <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
+                  <User className="w-8 h-8 text-primary/30" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
+              <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
+              {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
+              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <CheckCircle className="w-3 h-3 text-primary shrink-0" />
+                <span className="text-xs text-primary font-semibold">Верифіковано</span>
+                <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Coins className="w-3 h-3 text-yellow-400/70" />
+                <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom stats */}
+          <div className="relative px-4 pb-3 grid grid-cols-2 gap-2">
+            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
+              style={{
+                background: activeFaction ? "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--secondary) / 0.08))" : "hsl(0 0% 100% / 0.05)",
+                border: activeFaction ? "1px solid hsl(var(--primary) / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)",
+              }}>
+              <Shield className="w-3 h-3 shrink-0" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 40%)" }} />
+              <div>
+                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Фракція</p>
+                <p className="text-[10px] font-medium truncate" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 60%)" }}>
+                  {activeFaction || (pendingFaction ? `${pendingFaction}...` : "Немає")}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
+              style={{
+                background: firstHouse ? "hsl(142 71% 45% / 0.1)" : "hsl(0 0% 100% / 0.05)",
+                border: firstHouse ? "1px solid hsl(142 71% 45% / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)",
+              }}>
+              <Home className="w-3 h-3 shrink-0" style={{
+                color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 40%)",
+                filter: firstHouse ? "drop-shadow(0 0 4px hsl(142 71% 45% / 0.8))" : "none",
+              }} />
+              <div>
+                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Дім</p>
+                <p className="text-[10px] font-medium truncate" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 60%)" }}>
+                  {firstHouse?.name || "Немає"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Machine line */}
+          <div className="relative px-4 py-1.5" style={{ borderTop: "1px solid hsl(0 0% 100% / 0.05)", background: "hsl(0 0% 100% / 0.02)" }}>
+            <p className="text-[6px] text-muted-foreground/20 font-mono tracking-widest text-center truncate">
+              CHERNIHIV RP &lt;&lt; {nick.toUpperCase()} &lt;&lt; {uid.slice(-8)}
+            </p>
+          </div>
         </div>
-      ))}
-    </>
-  )}
-
-  {/* Purple Haze (Aurora) */}
-  {themeId === "purple_haze" && (
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_30%,#c026d3_0%,#7e22ce_40%,transparent_70%)] bg-[length:180%_180%] animate-[auroraFlow_14s_linear_infinite]" />
-  )}
-
-  {/* Arctic (Snow) */}
-  {themeId === "arctic" && (
-    Array.from({ length: 18 }).map((_, i) => (
-      <div
-        key={i}
-        className="absolute text-white/80 text-2xl animate-[snowFall_7s_linear_infinite]"
-        style={{
-          left: `${Math.random() * 100}%`,
-          animationDuration: `${5 + Math.random() * 9}s`,
-          animationDelay: `-${Math.random() * 10}s`,
-        }}
-      >
-        ❄
       </div>
-    ))
-  )}
-
-  {/* Matrix */}
-  {themeId === "matrix" && (
-    Array.from({ length: 10 }).map((_, i) => (
-      <div
-        key={i}
-        className="absolute font-mono text-[10px] text-emerald-400/80 tracking-[3px] animate-[matrixRain_1.9s_linear_infinite]"
-        style={{
-          left: `${8 + i * 9}%`,
-          animationDelay: `-${i * 0.25}s`,
-        }}
-      >
-        {["01","10","11","00","101","110","001","111"][i % 8]}
-      </div>
-    ))
-  )}
-
-  {/* Sunset (Embers) */}
-  {themeId === "sunset" && (
-    Array.from({ length: 9 }).map((_, i) => (
-      <div
-        key={i}
-        className="absolute w-1.5 h-1.5 bg-orange-400 rounded-full animate-[emberRise_2.2s_ease-out_infinite]"
-        style={{
-          left: `${18 + i * 8}%`,
-          bottom: "-15px",
-          animationDelay: `-${i * 0.35}s`,
-          boxShadow: "0 0 14px #fb923c",
-        }}
-      />
-    ))
-  )}
 
   {/* Hover Boost Layer (працює на всіх темах) */}
   <div className="absolute inset-0 border border-white/10 rounded-2xl transition-all duration-700 group-hover:border-white/30 group-hover:scale-[1.015]" />
