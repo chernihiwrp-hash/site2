@@ -20,13 +20,29 @@ const CityVoice = () => {
   }, []);
 
   const handleLike = async (id: number) => {
-    setIdeas(prev => prev.map(i => i.id === id ? { ...i, likes: i.likes + 1 } : i));
-  };
+  try {
+    await store.incrementCityVoiceLikes(id);     // зберігаємо в БД
+    
+    // Після збереження заново завантажуємо всі дані з бази
+    const updatedIdeas = await store.getCityVoice();
+    setIdeas(updatedIdeas);                      // оновлюємо екран
+  } catch (error) {
+    console.error("Помилка лайку:", error);
+    toast.error("Не вдалося поставити лайк");
+  }
+};
 
-  const handleDislike = async (id: number) => {
-    setIdeas(prev => prev.map(i => i.id === id ? { ...i, dislikes: i.dislikes + 1 } : i));
-  };
-
+const handleDislike = async (id: number) => {
+  try {
+    await store.incrementCityVoiceDislikes(id);  // зберігаємо в БД
+    
+    const updatedIdeas = await store.getCityVoice();
+    setIdeas(updatedIdeas);
+  } catch (error) {
+    console.error("Помилка дизлайку:", error);
+    toast.error("Не вдалося поставити дизлайк");
+  }
+};
   const submit = async () => {
     if (!message.trim()) return toast.error("Напишіть повідомлення");
     setSending(true);
