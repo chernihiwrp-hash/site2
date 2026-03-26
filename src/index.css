@@ -244,3 +244,18 @@
 .id-card-animated {
   animation: id-card-glow 3s ease-in-out infinite;
 }
+
+/* Вставляй в конец файла */
+body {
+  background-color: #050505 !important; /* Принудительно ставим черный фон */
+  color: white;
+  margin: 0;
+  padding: 0;
+}
+
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
