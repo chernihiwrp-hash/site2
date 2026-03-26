@@ -104,17 +104,123 @@ const Profile = () => {
   const passportBg = document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))";
   const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
   // VFX config per theme
-  const THEME_VFX: Record<string, { label: string; icon: string; cssClass: string; keyframes: string }> = {
-    lime: { label: "", icon: "", cssClass: "", keyframes: "" },
-    neon_blue: { label: "⚡", icon: "⚡", cssClass: "vfx-neon-blue", keyframes: @keyframes vfx-scan { 0%{top:-10%} 100%{top:110%} } @keyframes vfx-flicker { 0%,100%{opacity:0.04} 50%{opacity:0.1} } },
-    cyber_red: { label: "🔴", icon: "🔴", cssClass: "vfx-cyber-red", keyframes: @keyframes vfx-glitch { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-3px)} 40%{transform:translateX(2px)} 60%{transform:translateX(-2px)} 80%{transform:translateX(1px)} } @keyframes vfx-pulse-red { 0%,100%{box-shadow:0 0 15px hsl(0,85%,55%,0.3),inset 0 0 20px hsl(0,85%,55%,0.04)} 50%{box-shadow:0 0 30px hsl(0,85%,55%,0.6),inset 0 0 30px hsl(0,85%,55%,0.1)} } },
-    gold_vip: { label: "✨", icon: "✨", cssClass: "vfx-gold", keyframes: @keyframes vfx-shimmer { 0%{left:-100%} 100%{left:200%} } @keyframes vfx-gold-glow { 0%,100%{box-shadow:0 0 20px hsl(45,100%,55%,0.25)} 50%{box-shadow:0 0 40px hsl(45,100%,55%,0.5),inset 0 0 30px hsl(45,100%,55%,0.06)} } },
-    purple_haze: { label: "🔮", icon: "🔮", cssClass: "vfx-purple", keyframes: @keyframes vfx-float { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-3px) scale(1.005)} } @keyframes vfx-purple-glow { 0%,100%{box-shadow:0 0 20px hsl(275,80%,60%,0.2)} 50%{box-shadow:0 0 40px hsl(275,80%,60%,0.45),inset 0 0 25px hsl(275,80%,60%,0.07)} } },
-    arctic: { label: "❄️", icon: "❄️", cssClass: "vfx-arctic", keyframes: @keyframes vfx-freeze { 0%,100%{opacity:0.03} 50%{opacity:0.08} } @keyframes vfx-arctic-glow { 0%,100%{box-shadow:0 0 20px hsl(195,80%,70%,0.2)} 50%{box-shadow:0 0 35px hsl(195,80%,70%,0.4)} } },
-    matrix: { label: "💻", icon: "💻", cssClass: "vfx-matrix", keyframes: @keyframes vfx-rain { 0%{transform:translateY(-100%);opacity:0.7} 100%{transform:translateY(100vh);opacity:0} } @keyframes vfx-matrix-glow { 0%,100%{box-shadow:0 0 20px hsl(120,100%,40%,0.25),inset 0 0 15px hsl(120,100%,40%,0.04)} 50%{box-shadow:0 0 40px hsl(120,100%,40%,0.5),inset 0 0 25px hsl(120,100%,40%,0.09)} } },
-    sunset: { label: "🌅", icon: "🌅", cssClass: "vfx-sunset", keyframes: @keyframes vfx-ember { 0%{transform:translateY(0) rotate(0deg);opacity:0.6} 100%{transform:translateY(-60px) rotate(180deg);opacity:0} } @keyframes vfx-sunset-glow { 0%,100%{box-shadow:0 0 20px hsl(25,100%,55%,0.2)} 50%{box-shadow:0 0 40px hsl(25,100%,55%,0.45),inset 0 0 20px hsl(25,100%,55%,0.06)} } },
-  };
-  const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
+// ─── SIMPLE GLOW PARTICLES + GRADIENTS ─────────────────────────────
+const THEME_VFX: Record<string, {
+  label: string;
+  cssClass: string;
+  particleClass: string;
+  particleColor: string;
+  keyframes: string;
+}> = {
+  // ❌ БЕЗ ПАРТИКЛОВ
+  lime: {
+    label: "",
+    cssClass: "",
+    particleClass: "",
+    particleColor: "transparent",
+    keyframes: "",
+  },
+
+  neon_blue: {
+    label: "NEON",
+    cssClass: "bg-gradient-to-br from-blue-500/10 via-cyan-400/20 to-blue-600/10",
+    particleClass: "",
+    particleColor: "#67e8f9",
+    keyframes: `
+      @keyframes particle-float {
+        0%,100% { transform: translateY(0) scale(0.6); opacity: 0.6; }
+        50% { transform: translateY(-15px) scale(0.9); opacity: 1; }
+      }
+    `,
+  },
+
+  cyber_red: {
+    label: "DEMON",
+    cssClass: "bg-gradient-to-br from-red-600/20 via-rose-500/15 to-red-700/10",
+    particleClass: "",
+    particleColor: "#f87171",
+    keyframes: `
+      @keyframes particle-float {
+        0%,100% { transform: translateY(0) scale(0.5); opacity: 0.5; }
+        50% { transform: translateY(-18px) scale(0.8); opacity: 1; }
+      }
+    `,
+  },
+
+  gold_vip: {
+    label: "LUXURY",
+    cssClass: "bg-gradient-to-br from-amber-400/20 via-yellow-300/15 to-amber-500/10",
+    particleClass: "",
+    particleColor: "#fcd34d",
+    keyframes: `
+      @keyframes particle-float {
+        0%,100% { transform: translate(0,0) scale(0.6); opacity: 0.6; }
+        50% { transform: translate(6px,-20px) scale(1); opacity: 1; }
+      }
+    `,
+  },
+
+  // ✨ ЗВЁЗДЫ
+  purple_haze: {
+    label: "NEBULA",
+    cssClass: "bg-gradient-to-br from-purple-600/20 via-violet-500/15 to-fuchsia-600/10",
+    particleClass: "",
+    particleColor: "#c084fc",
+    keyframes: `
+      @keyframes particle-float {
+        0%,100% { transform: translateY(0) scale(0.3); opacity: 0.3; }
+        50% { transform: translateY(-10px) scale(1); opacity: 1; }
+      }
+
+      @keyframes star-blink {
+        0%,100% { opacity: 0.2; transform: scale(0.5); }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+    `,
+  },
+
+  arctic: {
+    label: "FROST",
+    cssClass: "bg-gradient-to-br from-sky-400/20 via-cyan-300/15 to-blue-400/10",
+    particleClass: "",
+    particleColor: "#bae6fd",
+    keyframes: `
+      @keyframes particle-float {
+        0%,100% { transform: translateY(0) scale(0.5); opacity: 0.5; }
+        50% { transform: translateY(-25px) scale(0.7); opacity: 1; }
+      }
+    `,
+  },
+
+  matrix: {
+    label: "MATRIX",
+    cssClass: "bg-gradient-to-br from-emerald-900/30 via-black/40 to-emerald-800/20",
+    particleClass: "",
+    particleColor: "#4ade80",
+    keyframes: `
+      @keyframes particle-float {
+        0%,100% { transform: translateY(0) scale(0.5); opacity: 0.4; }
+        50% { transform: translateY(-12px) scale(0.7); opacity: 1; }
+      }
+    `,
+  },
+
+  sunset: {
+    label: "SUNSET",
+    cssClass: "bg-gradient-to-br from-orange-500/20 via-rose-400/15 to-amber-500/10",
+    particleClass: "",
+    particleColor: "#fb923c",
+    keyframes: `
+      @keyframes particle-float {
+        0%,100% { transform: translateY(0) scale(0.6); opacity: 0.6; }
+        50% { transform: translateY(-15px) scale(0.9); opacity: 1; }
+      }
+    `,
+  },
+};
+
+const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
+  
   const handleAdmin = () => {
     if (adminCode === "5319son") { navigate("/admin-panel"); toast.success("Доступ відкрито"); }
     else toast.error("Невірний код");
