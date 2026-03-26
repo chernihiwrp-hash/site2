@@ -219,7 +219,7 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
       {/* Not Telegram */}
       {!isTg && (
         <div className="mb-4 rounded-2xl p-4 liquid-glass animate-fade-in id-card-animated" style={{
-          border: 1px solid ${passportBorder},
+          border: `1px solid ${passportBorder}`,
           transition: "border 0.6s ease, box-shadow 0.6s ease"
         }}>
           <div className="flex items-center gap-3">
