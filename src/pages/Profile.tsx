@@ -457,9 +457,6 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
 
         </div> {/* Это закрытие <div className="rounded-2xl overflow-hidden relative... */}
       </div> {/* Это закрытие <div className="mb-4 animate-fade-in group"> */}
-
-        </div>
-      </div>
       {/* Діяльність */}
       <div className="mb-2">
         <button onClick={() => setShowActivity(!showActivity)}
