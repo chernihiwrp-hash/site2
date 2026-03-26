@@ -445,34 +445,59 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
                     <div key={h.id as number} className="rounded-xl overflow-hidden"
                       style={{ background: "hsl(142 71% 45% / 0.05)", border: `1px solid hsl(142 71% 45% / ${isPending ? "0.1" : "0.25"})` }}>
                       {photo ? (
-                        <div className="relative h-32 overflow-hidden">
-                          <img src={photo} alt={h.name as string} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-                          {isPending && (
-                            <div className="absolute top-2 right-2 px-2 py-0.5 rounded-lg text-[9px] font-bold"
-                              style={{ background: "hsl(45 100% 55% / 0.2)", border: "1px solid hsl(45 100% 55% / 0.4)", color: "hsl(45 100% 55%)" }}>
-                              НА РОЗГЛЯДІ
-                            </div>
-                          )}
-                          <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
-                            <div>
-                              <p className="text-sm font-black text-white drop-shadow">{h.name as string}</p>
-                              {rentalDays && <p className="text-[9px] text-white/60">{rentalDays} днів</p>}
-                            </div>
-                            <span className="text-[10px] font-bold text-yellow-400">{(h.price as number).toLocaleString()}€</span>
-                          </div>
-                          {!isPending && rentalDays && (
-                          <div className="absolute bottom-12 left-3 right-3">
-                            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-primary shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
-                                style={{ width: `${getRentProgress(rentalDays)}%` }} 
-                              />
-                            </div>
-                          </div>
-                        )}
-                        </div>
-                      ) : (
+  <div className="relative h-40 overflow-hidden"> {/* Увеличил высоту до 40 для красоты */}
+    <img src={photo} alt={h.name as string} className="w-full h-full object-cover" />
+    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
+    
+    {isPending && (
+      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-lg text-[9px] font-bold"
+        style={{ background: "hsl(45 100% 55% / 0.2)", border: "1px solid hsl(45 100% 55% / 0.4)", color: "hsl(45 100% 55%)" }}>
+        НА РОЗГЛЯДІ
+      </div>
+    )}
+
+    {/* Блок информации: Название и Цена (подняты выше) */}
+    <div className="absolute bottom-14 left-3 right-3 flex items-end justify-between">
+      <div>
+        <p className="text-sm font-black text-white drop-shadow-md">{h.name as string}</p>
+        <p className="text-[9px] text-white/50 uppercase tracking-tighter">Власність</p>
+      </div>
+      <span className="text-[10px] font-bold text-yellow-400 bg-black/40 px-2 py-0.5 rounded border border-white/5">
+        {(h.price as number).toLocaleString()}€
+      </span>
+    </div>
+
+    {/* НОВЫЙ БЛОК: ТАЙМЕР ИЛИ ПРЕДУПРЕЖДЕНИЕ */}
+    {!isPending && (
+      <div className="absolute bottom-2 left-3 right-3">
+        {rentalDays && rentalDays > 0 ? (
+          /* Кнопка-виджет с временем */
+          <div className="flex items-center justify-between bg-white/5 backdrop-blur-md rounded-lg px-2 py-1.5 border border-white/10 animate-fade-in">
+            <div className="flex items-center gap-2">
+              <div className="relative flex items-center justify-center">
+                <Clock size={12} className="text-primary animate-pulse z-10" />
+                <div className="absolute inset-0 bg-primary/20 blur-sm rounded-full animate-ping" />
+              </div>
+              <span className="text-[8px] uppercase font-bold text-white/40">До виселення:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-black text-white">{Math.floor(rentalDays)}<span className="text-[7px] text-white/40 ml-0.5">ДН</span></span>
+              <div className="w-px h-3 bg-white/10" />
+              <span className="text-[11px] font-black text-primary">{Math.round((rentalDays % 1) * 24)}<span className="text-[7px] text-primary/60 ml-0.5">ГОД</span></span>
+            </div>
+          </div>
+        ) : (
+          /* АЛЕРТ: ВРЕМЯ ВЫШЛО */
+          <div className="bg-destructive/20 border border-destructive/50 backdrop-blur-md rounded-lg p-2 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+            <p className="text-[9px] text-white font-bold leading-tight text-center uppercase">
+              час на аренду вийшов оплатите аренду или ваш дом будет вернут в продажу
+            </p>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+) : (
                         <div className="flex items-center gap-3 p-3">
                           <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
                             style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
