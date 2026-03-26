@@ -1,22 +1,28 @@
-const proxyHandler = (table: string) => {
+import { createClient } from "@supabase/supabase-js";
 
+const supabaseUrl = "https://kafivvwxqulxmkpyqinz.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthZml2dnd4cXVseG1rcHlxaW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTgyNDIsImV4cCI6MjA4OTg3NDI0Mn0.HD_Gxn5UIVxov0-7U4aVhtYXhGvYTsVqLlycE5ctBpg"; 
+
+const _supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+
+const proxyHandler = (table: string) => {
   let chain: { method: string; args: any[] }[] = [];
 
   const proxy: any = new Proxy({}, {
     get(target, prop: string) {
- 
+      
       return (...args: any[]) => {
         chain.push({ method: prop, args });
-
-        return proxy;
+        return proxy; 
       };
     },
-   
+
     then(onFullfilled: any, onRejected: any) {
       return fetch('/api/proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table, chain }) 
+        body: JSON.stringify({ table, chain })
       })
       .then(res => res.json())
       .then(onFullfilled)
@@ -26,6 +32,13 @@ const proxyHandler = (table: string) => {
 
   return proxy;
 };
+
+
+export const supabase = {
+  ..._supabase,
+  from: (table: string) => proxyHandler(table),
+};
+
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 export type NewsItem = {
   id: number; title: string; text: string; date: string;
