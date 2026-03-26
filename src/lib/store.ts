@@ -366,44 +366,63 @@ export const store = {
   setCityVoice: (_: CityVoiceItem[]) => {},
 
     // ── CITY VOICE LIKES / DISLIKES ───────────────────────────────────────────
-  incrementCityVoiceLikes: async (id: number) => {
-    const { data, error } = await supabase
-      .from("city_voice")
-      .select("likes")
-      .eq("id", id)
-      .single();
+incrementCityVoiceLikes: async (id: number) => {
+  // 1. Проверка в localStorage
+  const votes = JSON.parse(localStorage.getItem("city_voice_votes") || "{}");
+  if (votes[id]) {
+    throw new Error("Ви вже проголосували");
+  }
 
-    if (error) throw error;
+  const { data, error } = await supabase
+    .from("city_voice")
+    .select("likes")
+    .eq("id", id)
+    .single();
 
-    const newLikes = ((data?.likes as number) || 0) + 1;
+  if (error) throw error;
 
-    const { error: updateError } = await supabase
-      .from("city_voice")
-      .update({ likes: newLikes })
-      .eq("id", id);
+  const newLikes = ((data?.likes as number) || 0) + 1;
 
-    if (updateError) throw updateError;
-  },
+  const { error: updateError } = await supabase
+    .from("city_voice")
+    .update({ likes: newLikes })
+    .eq("id", id);
 
-  incrementCityVoiceDislikes: async (id: number) => {
-    const { data, error } = await supabase
-      .from("city_voice")
-      .select("dislikes")
-      .eq("id", id)
-      .single();
+  if (updateError) throw updateError;
 
-    if (error) throw error;
+  // 2. Записываем голос, чтобы нельзя было кликнуть еще раз
+  votes[id] = "like";
+  localStorage.setItem("city_voice_votes", JSON.stringify(votes));
+},
 
-    const newDislikes = ((data?.dislikes as number) || 0) + 1;
+incrementCityVoiceDislikes: async (id: number) => {
+  // 1. Проверка в localStorage
+  const votes = JSON.parse(localStorage.getItem("city_voice_votes") || "{}");
+  if (votes[id]) {
+    throw new Error("Ви вже проголосували");
+  }
 
-    const { error: updateError } = await supabase
-      .from("city_voice")
-      .update({ dislikes: newDislikes })
-      .eq("id", id);
+  const { data, error } = await supabase
+    .from("city_voice")
+    .select("dislikes")
+    .eq("id", id)
+    .single();
 
-    if (updateError) throw updateError;
-  },
+  if (error) throw error;
 
+  const newDislikes = ((data?.dislikes as number) || 0) + 1;
+
+  const { error: updateError } = await supabase
+    .from("city_voice")
+    .update({ dislikes: newDislikes })
+    .eq("id", id);
+
+  if (updateError) throw updateError;
+
+  // 2. Записываем голос
+  votes[id] = "dislike";
+  localStorage.setItem("city_voice_votes", JSON.stringify(votes));
+},
   // ── MAYOR ELECTION ────────────────────────────────────────────────────────
   getCandidates: async (): Promise<MayorCandidate[]> => {
     const { data } = await supabase.from("mayor_election").select("*").order("votes", { ascending: false });
