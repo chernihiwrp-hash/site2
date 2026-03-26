@@ -103,119 +103,68 @@ const Profile = () => {
   }, []);
   const passportBg = document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))";
   const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
-  // VFX config per theme
-// ─── SIMPLE GLOW PARTICLES + GRADIENTS ─────────────────────────────
+// ─── VFX CONFIG — ЧАСТИЦІ ТІЛЬКИ ДЕ ТРЕБА ─────────────────────────────
 const THEME_VFX: Record<string, {
   label: string;
   cssClass: string;
-  particleClass: string;
-  particleColor: string;
+  hasParticles: boolean;
+  particleColor?: string;
   keyframes: string;
 }> = {
-  // ❌ БЕЗ ПАРТИКЛОВ
-  lime: {
-    label: "",
-    cssClass: "",
-    particleClass: "",
-    particleColor: "transparent",
-    keyframes: "",
-  },
+  lime: { label: "", cssClass: "", hasParticles: false, keyframes: "" },
 
   neon_blue: {
     label: "NEON",
-    cssClass: "bg-gradient-to-br from-blue-500/10 via-cyan-400/20 to-blue-600/10",
-    particleClass: "",
+    cssClass: "bg-gradient-to-br from-blue-500/10 via-cyan-400/25 to-blue-600/10",
+    hasParticles: true,
     particleColor: "#67e8f9",
-    keyframes: `
-      @keyframes particle-float {
-        0%,100% { transform: translateY(0) scale(0.6); opacity: 0.6; }
-        50% { transform: translateY(-15px) scale(0.9); opacity: 1; }
-      }
-    `,
+    keyframes: `@keyframes particle-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-35px) scale(1.4); } }`,
   },
 
   cyber_red: {
     label: "DEMON",
     cssClass: "bg-gradient-to-br from-red-600/20 via-rose-500/15 to-red-700/10",
-    particleClass: "",
+    hasParticles: true,
     particleColor: "#f87171",
-    keyframes: `
-      @keyframes particle-float {
-        0%,100% { transform: translateY(0) scale(0.5); opacity: 0.5; }
-        50% { transform: translateY(-18px) scale(0.8); opacity: 1; }
-      }
-    `,
+    keyframes: `@keyframes particle-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-40px) scale(0.7); } }`,
   },
 
   gold_vip: {
     label: "LUXURY",
-    cssClass: "bg-gradient-to-br from-amber-400/20 via-yellow-300/15 to-amber-500/10",
-    particleClass: "",
+    cssClass: "bg-gradient-to-br from-amber-400/20 via-yellow-300/20 to-amber-500/10",
+    hasParticles: true,
     particleColor: "#fcd34d",
-    keyframes: `
-      @keyframes particle-float {
-        0%,100% { transform: translate(0,0) scale(0.6); opacity: 0.6; }
-        50% { transform: translate(6px,-20px) scale(1); opacity: 1; }
-      }
-    `,
+    keyframes: `@keyframes particle-float { 0%, 100% { transform: translate(0,0) scale(1); } 50% { transform: translate(12px, -38px) scale(1.5); } }`,
   },
 
-  // ✨ ЗВЁЗДЫ
   purple_haze: {
     label: "NEBULA",
     cssClass: "bg-gradient-to-br from-purple-600/20 via-violet-500/15 to-fuchsia-600/10",
-    particleClass: "",
+    hasParticles: true,
     particleColor: "#c084fc",
-    keyframes: `
-      @keyframes particle-float {
-        0%,100% { transform: translateY(0) scale(0.3); opacity: 0.3; }
-        50% { transform: translateY(-10px) scale(1); opacity: 1; }
-      }
-
-      @keyframes star-blink {
-        0%,100% { opacity: 0.2; transform: scale(0.5); }
-        50% { opacity: 1; transform: scale(1.2); }
-      }
-    `,
+    keyframes: `@keyframes particle-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-30px); } }`,
   },
 
   arctic: {
     label: "FROST",
     cssClass: "bg-gradient-to-br from-sky-400/20 via-cyan-300/15 to-blue-400/10",
-    particleClass: "",
-    particleColor: "#bae6fd",
-    keyframes: `
-      @keyframes particle-float {
-        0%,100% { transform: translateY(0) scale(0.5); opacity: 0.5; }
-        50% { transform: translateY(-25px) scale(0.7); opacity: 1; }
-      }
-    `,
+    hasParticles: false,
+    keyframes: "",
   },
 
   matrix: {
     label: "MATRIX",
-    cssClass: "bg-gradient-to-br from-emerald-900/30 via-black/40 to-emerald-800/20",
-    particleClass: "",
-    particleColor: "#4ade80",
-    keyframes: `
-      @keyframes particle-float {
-        0%,100% { transform: translateY(0) scale(0.5); opacity: 0.4; }
-        50% { transform: translateY(-12px) scale(0.7); opacity: 1; }
-      }
-    `,
+    cssClass: "bg-gradient-to-br from-emerald-900/30 via-black/50 to-emerald-800/20",
+    hasParticles: false,
+    keyframes: "",
   },
 
   sunset: {
     label: "SUNSET",
     cssClass: "bg-gradient-to-br from-orange-500/20 via-rose-400/15 to-amber-500/10",
-    particleClass: "",
+    hasParticles: true,
     particleColor: "#fb923c",
-    keyframes: `
-      @keyframes particle-float {
-        0%,100% { transform: translateY(0) scale(0.6); opacity: 0.6; }
-        50% { transform: translateY(-15px) scale(0.9); opacity: 1; }
-      }
-    `,
+    keyframes: `@keyframes particle-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-32px) scale(1.2); } }`,
   },
 };
 
@@ -282,233 +231,140 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
           </div>
         </div>
       )}
-      {/* ═══ PASSPORT CARD ═══ */}
-      <div className="mb-4 animate-fade-in">
-        {/* VFX keyframes injected per theme */}
-        {vfx.keyframes && <style>{vfx.keyframes}</style>}
-        <div className="rounded-2xl overflow-hidden relative select-none"
-          style={{
-            border: "1px solid hsl(0 0% 100% / 0.12)",
-            boxShadow: "0 8px 32px hsl(0 0% 0% / 0.5)",
-            // Theme-driven glow animation on card
-            animation: themeId !== "lime" ? ${ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;themeId === "cyber_red" ? "vfx-pulse-red" : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;themeId === "gold_vip" ? "vfx-gold-glow" : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;themeId === "purple_haze" ? "vfx-purple-glow" : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;themeId === "arctic" ? "vfx-arctic-glow" : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;themeId === "matrix" ? "vfx-matrix-glow" : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;themeId === "sunset" ? "vfx-sunset-glow" : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;themeId === "neon_blue" ? "none" : "none" &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} 2.5s ease-in-out infinite : undefined,
-          }}>
-          {/* BG image */}
-          <div className="absolute inset-0">
-            <img
-              src="https://i.ibb.co/NbX6ZNs/images-2.jpg"
-              alt=""
-              className="w-full h-full object-cover"
-              style={{ opacity: 0.18 }}
-              onError={e => { e.currentTarget.style.display = "none"; }}
-            />
-            <div className="absolute inset-0" style={{
-              background: passportBg || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))",
-              transition: "background 0.6s ease"
-            }} />
-            {/* Theme color accent overlay */}
-            <div className="absolute inset-0 rounded-2xl" style={{
-              background: radial-gradient(ellipse 80% 50% at 50% 100%, hsl(var(--primary) / 0.08) 0%, transparent 70%),
-              transition: "background 0.6s ease"
-            }} />
-          </div>
-          {/* ── VFX OVERLAYS ─────────────────────────── */}
-          {/* Neon Blue: scanline */}
-          {themeId === "neon_blue" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              <div style={{
-                position: "absolute", left: 0, right: 0, height: "3px",
-                background: "linear-gradient(90deg, transparent, hsl(210,100%,55%,0.5), transparent)",
-                animation: "vfx-scan 3s linear infinite",
-              }} />
-              <div style={{
-                position: "absolute", inset: 0,
-                backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 3px, hsl(210,100%,55%,0.03) 3px, hsl(210,100%,55%,0.03) 4px)",
-                animation: "vfx-flicker 4s ease-in-out infinite",
-              }} />
-            </div>
-          )}
-          {/* Cyber Red: glitch border + scanline */}
-          {themeId === "cyber_red" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              <div style={{
-                position: "absolute", inset: 0,
-                border: "1px solid hsl(0,85%,55%,0.35)",
-                borderRadius: "1rem",
-                animation: "vfx-glitch 5s ease-in-out infinite",
-              }} />
-              <div style={{
-                position: "absolute", left: 0, right: 0, height: "2px",
-                background: "linear-gradient(90deg, transparent, hsl(0,85%,55%,0.6), transparent)",
-                animation: "vfx-scan 4s linear infinite",
-              }} />
-            </div>
-          )}
-          {/* Gold VIP: shimmer streak */}
-          {themeId === "gold_vip" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              <div style={{
-                position: "absolute", top: 0, bottom: 0, width: "60px",
-                background: "linear-gradient(90deg, transparent, hsl(45,100%,75%,0.25), transparent)",
-                animation: "vfx-shimmer 3.5s ease-in-out infinite",
-              }} />
-              {/* corner sparkles */}
-              {["top-2 left-2","top-2 right-2","bottom-2 left-2","bottom-2 right-2"].map((pos,i) => (
-                <div key={i} className={absolute ${pos} text-[10px]}
-                  style={{ opacity: 0.6, animation: vfx-flicker ${2+i*0.4}s ease-in-out infinite }}>✦</div>
-              ))}
-            </div>
-          )}
-          {/* Purple Haze: float animation on whole card inner + particle orbs */}
-          {themeId === "purple_haze" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              {[...Array(4)].map((_,i) => (
-                <div key={i} style={{
-                  position: "absolute",
-                  width: 6+i*2, height: 6+i*2,
-                  borderRadius: "50%",
-                  background: hsl(275,80%,70%,${0.3+i*0.1}),
-                  boxShadow: 0 0 8px hsl(275,80%,60%,0.6),
-                  left: ${20+i*20}%, top: ${30+i*15}%,
-                  animation: vfx-float ${2.5+i*0.5}s ease-in-out infinite,
-                  animationDelay: ${i*0.4}s,
-                }} />
-              ))}
-            </div>
-          )}
-          {/* Arctic: frost flakes */}
-          {themeId === "arctic" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              {["❄","❅","❆","❄","❅"].map((flake,i) => (
-                <div key={i} style={{
-                  position: "absolute",
-                  left: ${10+i*18}%, top: ${10+i*12}%,
-                  fontSize: 10+i*2, color: "hsl(195,80%,85%)",
-                  opacity: 0.35,
-                  animation: vfx-freeze ${3+i*0.6}s ease-in-out infinite,
-                  animationDelay: ${i*0.3}s,
-                }}>{flake}</div>
-              ))}
-            </div>
-          )}
-          {/* Matrix: falling code drops */}
-          {themeId === "matrix" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              {["01","10","11","00","10"].map((bit,i) => (
-                <div key={i} style={{
-                  position: "absolute",
-                  left: ${12+i*18}%,
-                  fontFamily: "monospace", fontSize: 9,
-                  color: "hsl(120,100%,50%)",
-                  opacity: 0.55,
-                  animation: vfx-rain ${2.5+i*0.5}s linear infinite,
-                  animationDelay: ${i*0.6}s,
-                }}>{bit}</div>
-              ))}
-            </div>
-          )}
-          {/* Sunset: ember sparks */}
-          {themeId === "sunset" && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl" style={{ zIndex: 2 }}>
-              {[...Array(5)].map((_,i) => (
-                <div key={i} style={{
-                  position: "absolute",
-                  bottom: ${5+i*8}%, left: ${15+i*16}%,
-                  width: 5, height: 5,
-                  borderRadius: "50%",
-                  background: hsl(${20+i*6},100%,65%),
-                  boxShadow: 0 0 6px hsl(25,100%,55%,0.8),
-                  animation: vfx-ember ${1.8+i*0.4}s ease-out infinite,
-                  animationDelay: ${i*0.5}s,
-                }} />
-              ))}
-            </div>
-          )}
-          {/* Trident watermark */}
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 w-24 h-28 pointer-events-none">
-            <Trident />
-          </div>
-          {/* Header strip */}
-          <div className="relative flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.07)" }}>
-            <div>
-              <p className="text-[7px] text-muted-foreground/50 tracking-[0.3em] uppercase">Удостоверение</p>
-              <p className="text-[8px] text-muted-foreground/70 tracking-[0.15em] font-semibold uppercase">Chernihiv RP</p>
-            </div>
-            <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
-          </div>
-          {/* Main row */}
-          <div className="relative px-4 py-3 flex items-start gap-3">
-            <div className="w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0" style={{ border: "1.5px solid hsl(0 0% 100% / 0.15)" }}>
-              {tgUser?.photo_url ? (
-                <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
-                  <User className="w-8 h-8 text-primary/30" />
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
-              <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
-              {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <CheckCircle className="w-3 h-3 text-primary shrink-0" />
-                <span className="text-xs text-primary font-semibold">Верифіковано</span>
-                <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Coins className="w-3 h-3 text-yellow-400/70" />
-                <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
-              </div>
-            </div>
-          </div>
-          {/* Bottom stats */}
-          <div className="relative px-4 pb-3 grid grid-cols-2 gap-2">
-            {/* Faction with gradient */}
-            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{
-                background: activeFaction
-                  ? "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--secondary) / 0.08))"
-                  : "hsl(0 0% 100% / 0.05)",
-                border: activeFaction
-                  ? "1px solid hsl(var(--primary) / 0.25)"
-                  : "1px solid hsl(0 0% 100% / 0.07)",
-              }}>
-              <Shield className="w-3 h-3 shrink-0" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 40%)" }} />
-              <div>
-                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Фракція</p>
-                <p className="text-[10px] font-medium truncate" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 60%)" }}>
-                  {activeFaction || (pendingFaction ? ${pendingFaction}... : "Немає")}
-                </p>
-              </div>
-            </div>
-            {/* House */}
-            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{
-                background: firstHouse ? "hsl(142 71% 45% / 0.1)" : "hsl(0 0% 100% / 0.05)",
-                border: firstHouse ? "1px solid hsl(142 71% 45% / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)",
-              }}>
-              <Home className="w-3 h-3 shrink-0" style={{
-                color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 40%)",
-                filter: firstHouse ? "drop-shadow(0 0 4px hsl(142 71% 45% / 0.8))" : "none",
-              }} />
-              <div>
-                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Дім</p>
-                <p className="text-[10px] font-medium truncate" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 60%)" }}>
-                  {firstHouse?.name || "Немає"}
-                </p>
-              </div>
-            </div>
-          </div>
-          {/* Machine line */}
-          <div className="relative px-4 py-1.5" style={{ borderTop: "1px solid hsl(0 0% 100% / 0.05)", background: "hsl(0 0% 100% / 0.02)" }}>
-            <p className="text-[6px] text-muted-foreground/20 font-mono tracking-widest text-center truncate">
-              CHERNIHIV RP << {nick.toUpperCase()} << {uid.slice(-8)}
-            </p>
-          </div>
-        </div>
-      </div>
+
+      {/* ═══ PASSPORT CARD — GLOW PARTICLES ═══ */}
+      <div className="mb-4 animate-fade-in group">
+        {vfx.keyframes && <style>{vfx.keyframes}</style>}
+
+        <div 
+          className="rounded-2xl overflow-hidden relative select-none group-hover:scale-[1.01] transition-transform duration-700"
+          style={{
+            border: "1px solid hsl(0 0% 100% / 0.15)",
+            boxShadow: "0 10px 50px hsl(0 0% 0% / 0.65)",
+          }}
+        >
+          {/* Background Image */}
+          <div className="absolute inset-0">
+            <img
+              src="https://i.ibb.co/NbX6ZNs/images-2.jpg"
+              alt=""
+              className="w-full h-full object-cover opacity-25"
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-black/90 via-black/80 to-black/90" />
+          </div>
+
+          {/* Glass Base */}
+          <div className="absolute inset-0 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl" />
+
+          {/* Dynamic Gradient */}
+          <div className={`absolute inset-0 ${vfx.cssClass}`} />
+
+          {/* Glow Particles — тільки якщо hasParticles: true */}
+          {vfx.hasParticles && vfx.particleColor && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {Array.from({ length: 16 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-1.5 h-1.5 rounded-full animate-particle-float"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    animationDelay: `-${Math.random() * 10}s`,
+                    background: vfx.particleColor,
+                    boxShadow: `0 0 10px ${vfx.particleColor}, 0 0 20px ${vfx.particleColor}, 0 0 30px ${vfx.particleColor}`,
+                    opacity: 0.6 + Math.random() * 0.4,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Trident Watermark */}
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 w-28 h-32 pointer-events-none opacity-10">
+            <Trident />
+          </div>
+
+          {/* Header strip */}
+          <div className="relative flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.07)" }}>
+            <div>
+              <p className="text-[7px] text-muted-foreground/50 tracking-[0.3em] uppercase">Удостоверение</p>
+              <p className="text-[8px] text-muted-foreground/70 tracking-[0.15em] font-semibold uppercase">Chernihiv RP</p>
+            </div>
+            <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
+          </div>
+
+          {/* Main row */}
+          <div className="relative px-4 py-3 flex items-start gap-3">
+            <div className="w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0" style={{ border: "1.5px solid hsl(0 0% 100% / 0.15)" }}>
+              {tgUser?.photo_url ? (
+                <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
+                  <User className="w-8 h-8 text-primary/30" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
+              <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
+              {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
+              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <CheckCircle className="w-3 h-3 text-primary shrink-0" />
+                <span className="text-xs text-primary font-semibold">Верифіковано</span>
+                <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Coins className="w-3 h-3 text-yellow-400/70" />
+                <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom stats */}
+          <div className="relative px-4 pb-3 grid grid-cols-2 gap-2">
+            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
+              style={{
+                background: activeFaction ? "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--secondary) / 0.08))" : "hsl(0 0% 100% / 0.05)",
+                border: activeFaction ? "1px solid hsl(var(--primary) / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)",
+              }}>
+              <Shield className="w-3 h-3 shrink-0" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 40%)" }} />
+              <div>
+                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Фракція</p>
+                <p className="text-[10px] font-medium truncate" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 60%)" }}>
+                  {activeFaction || (pendingFaction ? `${pendingFaction}...` : "Немає")}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
+              style={{
+                background: firstHouse ? "hsl(142 71% 45% / 0.1)" : "hsl(0 0% 100% / 0.05)",
+                border: firstHouse ? "1px solid hsl(142 71% 45% / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)",
+              }}>
+              <Home className="w-3 h-3 shrink-0" style={{
+                color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 40%)",
+                filter: firstHouse ? "drop-shadow(0 0 4px hsl(142 71% 45% / 0.8))" : "none",
+              }} />
+              <div>
+                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Дім</p>
+                <p className="text-[10px] font-medium truncate" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 60%)" }}>
+                  {firstHouse?.name || "Немає"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Machine line */}
+          <div className="relative px-4 py-1.5" style={{ borderTop: "1px solid hsl(0 0% 100% / 0.05)", background: "hsl(0 0% 100% / 0.02)" }}>
+            <p className="text-[6px] text-muted-foreground/20 font-mono tracking-widest text-center truncate">
+              CHERNIHIV RP &lt;&lt; {nick.toUpperCase()} &lt;&lt; {uid.slice(-8)}
+            </p>
+          </div>
+        </div>
+      </div>
+        
       {/* Діяльність */}
       <div className="mb-2">
         <button onClick={() => setShowActivity(!showActivity)}
