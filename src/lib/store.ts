@@ -21,6 +21,11 @@ const proxyHandler = (table: string) => {
   });
 };
 
+export const supabase = {
+  ..._supabase, 
+  from: (table: string) => proxyHandler(table), 
+};
+
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 export type NewsItem = {
   id: number; title: string; text: string; date: string;
