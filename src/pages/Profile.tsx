@@ -389,7 +389,7 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
                       <Shield className="w-3.5 h-3.5 text-primary" />
                       <span className="text-xs text-foreground">{a.faction_name}</span>
                     </div>
-                    <span className={text-[10px] font-semibold ${statusColors[a.status] || "text-muted-foreground"}}>
+                    <span className={`text-[10px] font-semibold ${statusColors[a.status] || "text-muted-foreground"}`}>
                       {statusLabels[a.status] || a.status}
                     </span>
                   </div>
