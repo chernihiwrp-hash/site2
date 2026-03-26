@@ -181,6 +181,14 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
   const regDate = new Date().toLocaleDateString("uk-UA");
   const activeFaction = profileData.factionApps.find(a => a.status === "approved")?.faction_name || null;
   const pendingFaction = profileData.factionApps.find(a => a.status === "pending")?.faction_name || null;
+  const getRentProgress = (days: number | undefined) => {
+  
+    if (!days) return 0;
+  // Рассчитываем процент (максимум 24 дня)
+  const progress = (days / 24) * 100;
+  return Math.min(Math.max(progress, 5), 100); // Чтобы полоска не была совсем 0%
+};
+  
   const firstHouse = profileData.houses[0] || null;
   return (
     <div className="min-h-screen pb-24 px-4 pt-4">
@@ -448,6 +456,16 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
                             </div>
                             <span className="text-[10px] font-bold text-yellow-400">{(h.price as number).toLocaleString()}€</span>
                           </div>
+                          {!isPending && rentalDays && (
+                          <div className="absolute bottom-12 left-3 right-3">
+                            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-primary shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
+                                style={{ width: `${getRentProgress(rentalDays)}%` }} 
+                              />
+                            </div>
+                          </div>
+                        )}
                         </div>
                       ) : (
                         <div className="flex items-center gap-3 p-3">
