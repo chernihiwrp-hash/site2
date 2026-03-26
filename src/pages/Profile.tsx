@@ -170,9 +170,14 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
     else toast.error("Невірний код");
     setAdminCode(""); setShowAdminInput(false);
   };
-  const name = tgUser ? ${tgUser.first_name}${tgUser.last_name ? " " + tgUser.last_name : ""} : nick;
-  const uid = tgUser ? String(tgUser.id) : "000001";
-  const uname = tgUser?.username ? @${tgUser.username} : null;
+  // Было: ${tgUser.first_name}...
+// Стало: `...`
+const name = tgUser ? `${tgUser.first_name}${tgUser.last_name ? " " + tgUser.last_name : ""}` : nick;
+const uid = tgUser ? String(tgUser.id) : "000001";
+
+// Было: @${tgUser.username}
+// Стало: `@${tgUser.username}`
+const uname = tgUser?.username ? `@${tgUser.username}` : null;
   const regDate = new Date().toLocaleDateString("uk-UA");
   const activeFaction = profileData.factionApps.find(a => a.status === "approved")?.faction_name || null;
   const pendingFaction = profileData.factionApps.find(a => a.status === "pending")?.faction_name || null;
