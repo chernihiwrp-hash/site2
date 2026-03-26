@@ -430,7 +430,7 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
                   const rentalDays = h.rental_days as number | undefined;
                   return (
                     <div key={h.id as number} className="rounded-xl overflow-hidden"
-                      style={{ background: "hsl(142 71% 45% / 0.05)", border: 1px solid hsl(142 71% 45% / ${isPending ? "0.1" : "0.25"}) }}>
+                      style={{ background: "hsl(142 71% 45% / 0.05)", border: `1px solid hsl(142 71% 45% / ${isPending ? "0.1" : "0.25"})` }}>
                       {photo ? (
                         <div className="relative h-32 overflow-hidden">
                           <img src={photo} alt={h.name as string} className="w-full h-full object-cover" />
