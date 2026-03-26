@@ -369,9 +369,94 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
           <div className="absolute right-6 top-1/2 -translate-y-1/2 w-32 h-36 pointer-events-none opacity-10">
             <Trident />
           </div>
+           {/* ——— ОСНОВНОЙ КОНТЕНТ КАРТОЧКИ (ВСТАВЛЯТЬ СЮДА) ——— */}
+          <div className="relative z-20 p-5 flex flex-col h-full min-h-[200px] justify-between">
+            
+            {/* Верхняя панель: Заголовок и Статус */}
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-4 bg-primary rounded-full shadow-[0_0_10px_hsl(var(--primary))]" />
+                <span className="text-[10px] font-black tracking-[3px] text-white/90 uppercase italic">
+                  Identity Card
+                </span>
+              </div>
+              <div className="flex flex-col items-end">
+                <div className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 backdrop-blur-xl">
+                  <span className="text-[9px] font-black text-primary tracking-widest uppercase">Citizen</span>
+                </div>
+              </div>
+            </div>
 
-          {/* Тут починається твій основний контент паспорта (Header strip, Main row, Bottom stats тощо) */}
-          {/* ... встав сюди весь свій старий вміст картки (від <div className="relative flex items-center..."> і нижче) ... */}
+            {/* Средняя часть: Фото и Данные */}
+            <div className="flex items-center gap-6 mt-4">
+              {/* Рамка для фото */}
+              <div className="relative">
+                <div className="absolute -inset-1.5 bg-gradient-to-tr from-primary/30 to-transparent rounded-2xl blur-md opacity-40" />
+                <div className="relative w-22 h-26 rounded-xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-md">
+                  {tgUser?.photo_url ? (
+                    <img src={tgUser.photo_url} alt="User" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-white/5 to-transparent">
+                      <User className="w-12 h-12 text-white/10" />
+                    </div>
+                  )}
+                  {/* Эффект сканирования на фото */}
+                  <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_2px,3px_100%]" />
+                </div>
+              </div>
+
+              {/* Сетка данных */}
+              <div className="flex-1 space-y-3">
+                <div>
+                  <p className="text-[8px] font-bold text-white/30 uppercase tracking-[2px]">Surname / Name</p>
+                  <p className="text-lg font-black text-white leading-none tracking-tight drop-shadow-lg">
+                    {name.toUpperCase()}
+                  </p>
+                </div>
+                
+                <div className="flex gap-6">
+                  <div>
+                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-[2px]">Document ID</p>
+                    <p className="text-xs font-mono font-bold text-primary">UA-{uid}</p>
+                  </div>
+                  {uname && (
+                    <div>
+                      <p className="text-[8px] font-bold text-white/30 uppercase tracking-[2px]">Handle</p>
+                      <p className="text-xs font-bold text-white/80">{uname}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Нижняя часть: Орган выдачи и подпись */}
+            <div className="flex justify-between items-end mt-4 pt-3 border-t border-white/10">
+              <div className="flex gap-5">
+                <div className="flex flex-col">
+                  <span className="text-[7px] font-black text-white/20 uppercase tracking-tighter">Issuing Authority</span>
+                  <span className="text-[9px] font-bold text-white/70">ZHOTOMER GOVERNMENT</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[7px] font-black text-white/20 uppercase tracking-tighter">Registered</span>
+                  <span className="text-[9px] font-bold text-white/70">{regDate}</span>
+                </div>
+              </div>
+              
+              {/* Декоративный штрих-код (реагирует на ховер всей карточки) */}
+              <div className="flex flex-col items-end opacity-50 group-hover:opacity-100 transition-opacity duration-500">
+                <div className="h-5 w-24 bg-white/5 rounded flex gap-0.5 items-end justify-center px-1.5 py-0.5 border border-white/5">
+                   {Array.from({length: 16}).map((_, i) => (
+                     <div key={i} className="bg-primary/60 w-[1px] rounded-full" style={{ height: `${30 + Math.random() * 70}%` }} />
+                   ))}
+                </div>
+                <span className="text-[6px] font-mono mt-1 tracking-widest text-white/40 uppercase font-bold">Secure_Link_ID</span>
+              </div>
+            </div>
+          </div>
+          {/* ——— КОНЕЦ ВСТАВКИ ——— */}
+
+        </div> {/* Это закрытие <div className="rounded-2xl overflow-hidden relative... */}
+      </div> {/* Это закрытие <div className="mb-4 animate-fade-in group"> */}
 
         </div>
       </div>
@@ -490,7 +575,7 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
           /* АЛЕРТ: ВРЕМЯ ВЫШЛО */
           <div className="bg-destructive/20 border border-destructive/50 backdrop-blur-md rounded-lg p-2 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.2)]">
             <p className="text-[9px] text-white font-bold leading-tight text-center uppercase">
-              час на аренду вийшов оплатите аренду или ваш дом будет вернут в продажу
+              час на аренду вийшов ваш будинок повернено у продаж
             </p>
           </div>
         )}
