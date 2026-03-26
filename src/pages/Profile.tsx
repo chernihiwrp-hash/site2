@@ -189,7 +189,7 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
         <h1 className="font-display text-xl font-bold tracking-wider neon-text-lime">ПРОФІЛЬ</h1>
         <div className="flex items-center gap-2">
           <button onClick={loadData} disabled={refreshing} className="w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all">
-            <RefreshCw className={w-4 h-4 text-muted-foreground ${refreshing ? "animate-spin" : ""}} />
+          <RefreshCw className={`w-4 h-4 text-muted-foreground ${refreshing ? "animate-spin" : ""}`} />
           </button>
           <button onClick={() => setShowNotifs(!showNotifs)} className="relative w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all">
             <Bell className="w-4 h-4 text-primary" />
