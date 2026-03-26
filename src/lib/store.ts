@@ -1,19 +1,22 @@
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = "https://kafivvwxqulxmkpyqinz.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthZml2dnd4cXVseG1rcHlxaW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTgyNDIsImV4cCI6MjA4OTg3NDI0Mn0.HD_Gxn5UIVxov0-7U4aVhtYXhGvYTsVqLlycE5ctBpg"; 
+
+
+const _supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+
 const proxyHandler = (table: string) => {
-  return new Proxy(_supabase.from(table), {
+  return new Proxy(_supabase.from(table), { 
     get(target: any, prop: string) {
- 
       if (['insert', 'update', 'delete', 'select'].includes(prop)) {
         return (...args: any[]) => {
           return fetch('/api/proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ table, method: prop, args })
-          })
-          .then(res => res.json())
-          .then(data => {
-            
-             return data; 
-          });
+          }).then(res => res.json());
         };
       }
       return target[prop];
@@ -21,9 +24,10 @@ const proxyHandler = (table: string) => {
   });
 };
 
+// 3. ЕКСПОРТУЄМО ГОЛОВНИЙ SUPABASE ДЛЯ ВСЬОГО САЙТУ
 export const supabase = {
-  ..._supabase, 
-  from: (table: string) => proxyHandler(table), 
+  ..._supabase,
+  from: (table: string) => proxyHandler(table),
 };
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
