@@ -1,36 +1,25 @@
-import { createClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = "https://kafivvwxqulxmkpyqinz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthZml2dnd4cXVseG1rcHlxaW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTgyNDIsImV4cCI6MjA4OTg3NDI0Mn0.HD_Gxn5UIVxov0-7U4aVhtYXhGvYTsVqLlycE5ctBpg";
-
-// 1. Створюємо звичайний клієнт (для читання він ок)
-const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// 2. ФУНКЦІЯ-МАГІЯ: Перехоплюємо запити і шлемо їх на Vercel Proxy
 const proxyHandler = (table: string) => {
   return new Proxy(_supabase.from(table), {
     get(target: any, prop: string) {
-      // Якщо це метод запису (insert, update, delete) — шлемо на наш сервер
-      if (['insert', 'update', 'delete'].includes(prop)) {
+ 
+      if (['insert', 'update', 'delete', 'select'].includes(prop)) {
         return (...args: any[]) => {
           return fetch('/api/proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ table, method: prop, args })
-          }).then(res => res.json());
+          })
+          .then(res => res.json())
+          .then(data => {
+            
+             return data; 
+          });
         };
       }
-      // Якщо це select або фільтри (eq, order) — залишаємо як є
       return target[prop];
     }
   });
 };
-
-// 3. ПІДМІНА: Тепер supabase.from() завжди буде використовувати проксі
-export const supabase = {
-  ..._supabase,
-  from: (table: string) => proxyHandler(table)
-} as any;
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 export type NewsItem = {
