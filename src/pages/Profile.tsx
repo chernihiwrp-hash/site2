@@ -90,86 +90,81 @@ const Profile = () => {
         }
       });
   }, [nick]);
-  // Theme reactive state for passport + VFX
-  const [themeId, setThemeId] = useState(() =>
-    document.documentElement.getAttribute("data-theme-id") || "lime"
-  );
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setThemeId(document.documentElement.getAttribute("data-theme-id") || "lime");
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme-id"] });
-    return () => observer.disconnect();
-  }, []);
-  const passportBg = document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))";
-  const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
-// ─── VFX CONFIG — ЧАСТИЦІ ТІЛЬКИ ДЕ ТРЕБА ─────────────────────────────
+  // ─── VFX CONFIG — БОМБА 2026 (ГЛАЗ НЕ СВОДИТЬ) ─────────────────────────────
 const THEME_VFX: Record<string, {
   label: string;
   cssClass: string;
-  hasParticles: boolean;
-  particleColor?: string;
   keyframes: string;
 }> = {
-  lime: { label: "", cssClass: "", hasParticles: false, keyframes: "" },
+  lime: { label: "", cssClass: "", keyframes: "" },
 
   neon_blue: {
-    label: "NEON",
-    cssClass: "bg-gradient-to-br from-blue-500/10 via-cyan-400/25 to-blue-600/10",
-    hasParticles: true,
-    particleColor: "#67e8f9",
-    keyframes: `@keyframes particle-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-35px) scale(1.4); } }`,
+    label: "NEON CORE",
+    cssClass: "vfx-neon-blue",
+    keyframes: `
+      @keyframes neonScan { 0% { transform: translateY(-150%); } 100% { transform: translateY(350%); } }
+      @keyframes neonFlicker { 0%,100% { opacity: 0.75; } 50% { opacity: 1; } }
+      @keyframes neonPulse { 0%,100% { box-shadow: 0 0 25px #67e8f9, 0 0 50px #22d3ee, 0 0 80px #06b6d4; } 50% { box-shadow: 0 0 40px #67e8f9, 0 0 90px #22d3ee, 0 0 120px #06b6d4; } }
+    `,
   },
 
   cyber_red: {
-    label: "DEMON",
-    cssClass: "bg-gradient-to-br from-red-600/20 via-rose-500/15 to-red-700/10",
-    hasParticles: true,
-    particleColor: "#f87171",
-    keyframes: `@keyframes particle-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-40px) scale(0.7); } }`,
+    label: "GLITCH PROTOCOL",
+    cssClass: "vfx-cyber-red",
+    keyframes: `
+      @keyframes glitch { 0%,100% { transform: translate(0); } 20% { transform: translate(-5px,4px); } 40% { transform: translate(5px,-4px); } 60% { transform: translate(-4px,3px); } 80% { transform: translate(4px,-3px); } }
+      @keyframes redScan { 0% { top: -100%; opacity: 0; } 50% { opacity: 0.7; } 100% { top: 200%; opacity: 0; } }
+      @keyframes redCoreGlow { 0%,100% { box-shadow: 0 0 30px #ef4444, inset 0 0 40px #b91c1c; } 50% { box-shadow: 0 0 70px #f87171, inset 0 0 70px #ef4444; } }
+    `,
   },
 
   gold_vip: {
-    label: "LUXURY",
-    cssClass: "bg-gradient-to-br from-amber-400/20 via-yellow-300/20 to-amber-500/10",
-    hasParticles: true,
-    particleColor: "#fcd34d",
-    keyframes: `@keyframes particle-float { 0%, 100% { transform: translate(0,0) scale(1); } 50% { transform: translate(12px, -38px) scale(1.5); } }`,
+    label: "LUXURY ELITE",
+    cssClass: "vfx-gold-vip",
+    keyframes: `
+      @keyframes goldShimmer { 0% { background-position: -400% 0; } 100% { background-position: 500% 0; } }
+      @keyframes goldSpark { 0%,100% { transform: scale(0.7) rotate(0deg); opacity: 0.7; } 50% { transform: scale(1.6) rotate(25deg); opacity: 1; } }
+      @keyframes luxuryPulse { 0%,100% { box-shadow: 0 0 35px #fbbf24, 0 0 80px #fcd34d, 0 0 110px #facc15; } 50% { box-shadow: 0 0 60px #fbbf24, 0 0 110px #fcd34d, 0 0 140px #facc15; } }
+    `,
   },
 
   purple_haze: {
-    label: "NEBULA",
-    cssClass: "bg-gradient-to-br from-purple-600/20 via-violet-500/15 to-fuchsia-600/10",
-    hasParticles: true,
-    particleColor: "#c084fc",
-    keyframes: `@keyframes particle-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-30px); } }`,
+    label: "AURORA VOID",
+    cssClass: "vfx-purple-haze",
+    keyframes: `
+      @keyframes auroraFlow { 0% { background-position: 0% 50%; } 50% { background-position: 120% 50%; } 100% { background-position: 0% 50%; } }
+      @keyframes orbFloat { 0%,100% { transform: translate(0,0) rotate(0deg); } 50% { transform: translate(25px,-35px) rotate(15deg); } }
+    `,
   },
 
   arctic: {
-    label: "FROST",
-    cssClass: "bg-gradient-to-br from-sky-400/20 via-cyan-300/15 to-blue-400/10",
-    hasParticles: false,
-    keyframes: "",
+    label: "FROST REALM",
+    cssClass: "vfx-arctic",
+    keyframes: `
+      @keyframes snowFall { 0% { transform: translateY(-180px) rotate(0deg); opacity: 0.95; } 100% { transform: translateY(500px) rotate(1080deg); opacity: 0; } }
+      @keyframes frostGlow { 0%,100% { box-shadow: 0 0 25px #bae6fd; } 50% { box-shadow: 0 0 65px #e0f2fe; } }
+    `,
   },
 
   matrix: {
-    label: "MATRIX",
-    cssClass: "bg-gradient-to-br from-emerald-900/30 via-black/50 to-emerald-800/20",
-    hasParticles: false,
-    keyframes: "",
+    label: "DIGITAL RAIN",
+    cssClass: "vfx-matrix",
+    keyframes: `
+      @keyframes matrixRain { 0% { transform: translateY(-250%); opacity: 0; } 8% { opacity: 0.9; } 92% { opacity: 0.9; } 100% { transform: translateY(500%); opacity: 0; } }
+    `,
   },
 
   sunset: {
-    label: "SUNSET",
-    cssClass: "bg-gradient-to-br from-orange-500/20 via-rose-400/15 to-amber-500/10",
-    hasParticles: true,
-    particleColor: "#fb923c",
-    keyframes: `@keyframes particle-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-32px) scale(1.2); } }`,
+    label: "EMBER HORIZON",
+    cssClass: "vfx-sunset",
+    keyframes: `
+      @keyframes emberRise { 0% { transform: translateY(30px) scale(1.1); opacity: 0.9; } 100% { transform: translateY(-280px) scale(0.3); opacity: 0; } }
+      @keyframes sunsetPulse { 0%,100% { box-shadow: 0 0 35px #f59e0b, inset 0 0 40px #fb923c; } 50% { box-shadow: 0 0 75px #fb923c, inset 0 0 70px #f59e0b; } }
+    `,
   },
 };
 
 const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
-  
   const handleAdmin = () => {
     if (adminCode === "5319son") { navigate("/admin-panel"); toast.success("Доступ відкрито"); }
     else toast.error("Невірний код");
@@ -231,140 +226,137 @@ const vfx = THEME_VFX[themeId] || THEME_VFX.lime;
           </div>
         </div>
       )}
-
-      {/* ═══ PASSPORT CARD — GLOW PARTICLES ═══ */}
+            {/* ═══ PASSPORT CARD — БОМБА VFX 2026 ═══ */}
       <div className="mb-4 animate-fade-in group">
+        {/* Inject keyframes for the current theme */}
         {vfx.keyframes && <style>{vfx.keyframes}</style>}
 
         <div 
-          className="rounded-2xl overflow-hidden relative select-none group-hover:scale-[1.01] transition-transform duration-700"
+          className="rounded-2xl overflow-hidden relative select-none group-hover:scale-[1.015] transition-transform duration-700"
           style={{
             border: "1px solid hsl(0 0% 100% / 0.15)",
             boxShadow: "0 10px 50px hsl(0 0% 0% / 0.65)",
           }}
         >
-          {/* Background Image */}
+          {/* Background Image + Dark Overlay */}
           <div className="absolute inset-0">
             <img
               src="https://i.ibb.co/NbX6ZNs/images-2.jpg"
               alt=""
-              className="w-full h-full object-cover opacity-25"
+              className="w-full h-full object-cover opacity-30"
               onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
-            <div className="absolute inset-0 bg-gradient-to-br from-black/90 via-black/80 to-black/90" />
+            <div className="absolute inset-0 bg-gradient-to-br from-black/95 via-black/85 to-black/95" />
           </div>
 
-          {/* Glass Base */}
-          <div className="absolute inset-0 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl" />
+          {/* Glassmorphism Base Layer */}
+          <div className="absolute inset-0 bg-white/5 backdrop-blur-2xl" />
 
-          {/* Dynamic Gradient */}
-          <div className={`absolute inset-0 ${vfx.cssClass}`} />
+          {/* VFX Container */}
+          <div className={`absolute inset-0 pointer-events-none overflow-hidden rounded-2xl ${vfx.cssClass}`} />
 
-          {/* Glow Particles — тільки якщо hasParticles: true */}
-          {vfx.hasParticles && vfx.particleColor && (
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              {Array.from({ length: 16 }).map((_, i) => (
+          {/* ────── THEME VFX LAYERS ────── */}
+
+          {/* Neon Blue */}
+          {themeId === "neon_blue" && (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/15 to-transparent animate-[neonScan_3.2s_linear_infinite]" />
+              <div className="absolute inset-0 border border-cyan-400/30 animate-[neonFlicker_2.2s_ease-in-out_infinite]" />
+            </>
+          )}
+
+          {/* Cyber Red */}
+          {themeId === "cyber_red" && (
+            <>
+              <div className="absolute inset-0 border-2 border-red-500/60 animate-[glitch_0.45s_linear_infinite]" />
+              <div className="absolute inset-x-4 h-px bg-gradient-to-r from-transparent via-red-400 to-transparent animate-[redScan_1.6s_linear_infinite]" />
+            </>
+          )}
+
+          {/* Gold VIP */}
+          {themeId === "gold_vip" && (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-300/60 to-transparent bg-[length:280%_100%] animate-[goldShimmer_2.5s_linear_infinite]" />
+              {Array.from({ length: 8 }).map((_, i) => (
                 <div
                   key={i}
-                  className="absolute w-1.5 h-1.5 rounded-full animate-particle-float"
+                  className="absolute text-3xl text-amber-200 drop-shadow animate-[goldSpark_1.7s_ease-in-out_infinite]"
                   style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                    animationDelay: `-${Math.random() * 10}s`,
-                    background: vfx.particleColor,
-                    boxShadow: `0 0 10px ${vfx.particleColor}, 0 0 20px ${vfx.particleColor}, 0 0 30px ${vfx.particleColor}`,
-                    opacity: 0.6 + Math.random() * 0.4,
+                    left: `${10 + i * 11}%`,
+                    top: `${18 + (i % 3) * 22}%`,
+                    animationDelay: `${i * 180}ms`,
                   }}
-                />
+                >
+                  ✨
+                </div>
               ))}
-            </div>
+            </>
+          )}
+
+          {/* Purple Haze Aurora */}
+          {themeId === "purple_haze" && (
+            <div className="absolute inset-0 bg-[radial-gradient(at_35%_25%,#c026d3_10%,#6b21a8_50%,transparent_80%)] bg-[length:200%_200%] animate-[auroraFlow_13s_linear_infinite]" />
+          )}
+
+          {/* Arctic Snow */}
+          {themeId === "arctic" && (
+            Array.from({ length: 20 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute text-sky-100/90 text-xl animate-[snowFall_6s_linear_infinite]"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDuration: `${4.5 + Math.random() * 8}s`,
+                  animationDelay: `-${Math.random() * 12}s`,
+                }}
+              >
+                ❄
+              </div>
+            ))
+          )}
+
+          {/* Matrix Rain */}
+          {themeId === "matrix" && (
+            Array.from({ length: 12 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute font-mono text-xs text-emerald-400/75 tracking-[2px] animate-[matrixRain_1.8s_linear_infinite]"
+                style={{
+                  left: `${6 + i * 8}%`,
+                  animationDelay: `-${i * 0.22}s`,
+                }}
+              >
+                {["01","10","11","00","101","110","001","111"][i % 8]}
+              </div>
+            ))
+          )}
+
+          {/* Sunset Embers */}
+          {themeId === "sunset" && (
+            Array.from({ length: 10 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-2 h-2 bg-orange-400 rounded-full animate-[emberRise_2.4s_ease-out_infinite]"
+                style={{
+                  left: `${15 + i * 7.5}%`,
+                  bottom: "-10px",
+                  animationDelay: `-${i * 0.3}s`,
+                  boxShadow: "0 0 16px #fb923c",
+                }}
+              />
+            ))
           )}
 
           {/* Trident Watermark */}
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 w-28 h-32 pointer-events-none opacity-10">
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 w-32 h-36 pointer-events-none opacity-10">
             <Trident />
           </div>
 
-          {/* Header strip */}
-          <div className="relative flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.07)" }}>
-            <div>
-              <p className="text-[7px] text-muted-foreground/50 tracking-[0.3em] uppercase">Удостоверение</p>
-              <p className="text-[8px] text-muted-foreground/70 tracking-[0.15em] font-semibold uppercase">Chernihiv RP</p>
-            </div>
-            <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
-          </div>
+          {/* Тут починається твій основний контент паспорта (Header strip, Main row, Bottom stats тощо) */}
+          {/* ... встав сюди весь свій старий вміст картки (від <div className="relative flex items-center..."> і нижче) ... */}
 
-          {/* Main row */}
-          <div className="relative px-4 py-3 flex items-start gap-3">
-            <div className="w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0" style={{ border: "1.5px solid hsl(0 0% 100% / 0.15)" }}>
-              {tgUser?.photo_url ? (
-                <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
-                  <User className="w-8 h-8 text-primary/30" />
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
-              <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
-              {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <CheckCircle className="w-3 h-3 text-primary shrink-0" />
-                <span className="text-xs text-primary font-semibold">Верифіковано</span>
-                <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Coins className="w-3 h-3 text-yellow-400/70" />
-                <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom stats */}
-          <div className="relative px-4 pb-3 grid grid-cols-2 gap-2">
-            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{
-                background: activeFaction ? "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--secondary) / 0.08))" : "hsl(0 0% 100% / 0.05)",
-                border: activeFaction ? "1px solid hsl(var(--primary) / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)",
-              }}>
-              <Shield className="w-3 h-3 shrink-0" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 40%)" }} />
-              <div>
-                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Фракція</p>
-                <p className="text-[10px] font-medium truncate" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 60%)" }}>
-                  {activeFaction || (pendingFaction ? `${pendingFaction}...` : "Немає")}
-                </p>
-              </div>
-            </div>
-
-            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{
-                background: firstHouse ? "hsl(142 71% 45% / 0.1)" : "hsl(0 0% 100% / 0.05)",
-                border: firstHouse ? "1px solid hsl(142 71% 45% / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)",
-              }}>
-              <Home className="w-3 h-3 shrink-0" style={{
-                color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 40%)",
-                filter: firstHouse ? "drop-shadow(0 0 4px hsl(142 71% 45% / 0.8))" : "none",
-              }} />
-              <div>
-                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Дім</p>
-                <p className="text-[10px] font-medium truncate" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 60%)" }}>
-                  {firstHouse?.name || "Немає"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Machine line */}
-          <div className="relative px-4 py-1.5" style={{ borderTop: "1px solid hsl(0 0% 100% / 0.05)", background: "hsl(0 0% 100% / 0.02)" }}>
-            <p className="text-[6px] text-muted-foreground/20 font-mono tracking-widest text-center truncate">
-              CHERNIHIV RP &lt;&lt; {nick.toUpperCase()} &lt;&lt; {uid.slice(-8)}
-            </p>
-          </div>
         </div>
       </div>
-        
       {/* Діяльність */}
       <div className="mb-2">
         <button onClick={() => setShowActivity(!showActivity)}
