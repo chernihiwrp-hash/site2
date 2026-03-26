@@ -33,6 +33,9 @@ const statusLabels: Record<string, string> = {
 };
 const Profile = () => {
   const navigate = useNavigate();
+
+  const themeId = localStorage.getItem("profile_theme") || "lime";
+  
   const [showAdminInput, setShowAdminInput] = useState(false);
   const [adminCode, setAdminCode] = useState("");
   const [isApprovedAdmin, setIsApprovedAdmin] = useState(false);
