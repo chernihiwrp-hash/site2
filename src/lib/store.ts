@@ -602,10 +602,21 @@ incrementCityVoiceDislikes: async (id: number) => {
       }));
     }
 
-    const allHouses = [
-      ...ownedHouses.map(h => ({ ...h, rental_days: undefined, pending: false })),
-      ...extraHouses,
-    ];
+    // 1. Создаем карту (словарь) дней аренды: house_id -> rental_days
+const rentalMap: Record<number, number> = {};
+(purchaseRes.data || []).forEach((p: any) => {
+  rentalMap[p.house_id] = p.rental_days;
+});
+
+// 2. Собираем финальный список, подставляя дни из карты
+const allHouses = [
+  ...ownedHouses.map(h => ({ 
+    ...h, 
+    rental_days: rentalMap[h.id] || 7, // Берем из карты или 7 по дефолту
+    pending: false 
+  })),
+  ...extraHouses,
+];
 
     return {
       houses: allHouses,
