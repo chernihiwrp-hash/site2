@@ -373,7 +373,7 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
             <div className="text-left">
               <p className="text-sm font-medium">Моя діяльність</p>
               <p className="text-[10px] text-muted-foreground">
-                {activeFaction ? Фракція: ${activeFaction} : pendingFaction ? Очікує: ${pendingFaction} : "Немає активної діяльності"}
+                {activeFaction ? `Фракція: ${activeFaction}` : pendingFaction ? `Очікує: ${pendingFaction}` : "Немає активної діяльності"
               </p>
             </div>
           </div>
