@@ -34,6 +34,11 @@ const statusLabels: Record<string, string> = {
 const Profile = () => {
   const navigate = useNavigate();
 
+  // --- ОБЪЯВЛЯЕМ ПРОПУЩЕННЫЕ ПЕРЕМЕННЫЕ ТУТ ---
+  const themeId = localStorage.getItem("profile_theme") || "lime"; 
+  const passportBorder = "hsl(var(--primary) / 0.2)"; // Цвет границы для карточки
+  // --------------------------------------------
+
   const themeId = localStorage.getItem("profile_theme") || "lime";
   
   const [showAdminInput, setShowAdminInput] = useState(false);
