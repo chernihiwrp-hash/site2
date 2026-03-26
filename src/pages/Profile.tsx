@@ -208,7 +208,7 @@ const uname = tgUser?.username ? `@${tgUser.username}` : null;
             ? <p className="text-xs text-muted-foreground text-center py-2">Немає сповіщень</p>
             : <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {notifications.slice(0, 8).map(n => (
-                  <div key={n.id} className={text-[10px] p-2 rounded-xl ${n.read ? "text-muted-foreground" : "text-foreground bg-primary/8 border border-primary/12"}}>
+                  <div key={n.id} className={`text-[10px] p-2 rounded-xl ${n.read ? "text-muted-foreground" : "text-foreground bg-primary/8 border border-primary/12"}`}>
                     <p>{n.text}</p><span className="text-[8px] text-muted-foreground">{n.date}</span>
                   </div>
                 ))}
