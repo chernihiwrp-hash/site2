@@ -38,10 +38,7 @@ const Profile = () => {
   const themeId = localStorage.getItem("profile_theme") || "lime"; 
   const passportBorder = "hsl(var(--primary) / 0.2)"; // Цвет границы для карточки
   // --------------------------------------------
-
-  const themeId = localStorage.getItem("profile_theme") || "lime";
-  
-  const [showAdminInput, setShowAdminInput] = useState(false);
+  const [showAdminInput, setShowAdminInput] = useState(false);
   const [adminCode, setAdminCode] = useState("");
   const [isApprovedAdmin, setIsApprovedAdmin] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
