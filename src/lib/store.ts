@@ -9,28 +9,41 @@ const _supabase = createClient(supabaseUrl, supabaseAnonKey);
 const proxyHandler = (table: string) => {
   let chain: { method: string; args: any[] }[] = [];
 
-  const proxy: any = new Proxy({}, {
-    get(target, prop: string) {
-      
-      return (...args: any[]) => {
-        chain.push({ method: prop, args });
-        return proxy; 
-      };
-    },
+  const proxy: any = {
 
-    then(onFullfilled: any, onRejected: any) {
+    then(onFulfilled: any, onRejected: any) {
+      console.log(` Запит до таблиці ${table}:`, chain);
+      
       return fetch('/api/proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ table, chain })
       })
-      .then(res => res.json())
-      .then(onFullfilled)
-      .catch(onRejected);
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+
+        return onFulfilled({ data, error: null });
+      })
+      .catch(err => {
+        console.error(" Proxy Error:", err);
+        return onRejected ? onRejected(err) : onFulfilled({ data: null, error: err });
+      });
+    }
+  };
+
+  return new Proxy(proxy, {
+    get(target, prop: string) {
+      if (prop === 'then') return target.then.bind(target);
+      
+      return (...args: any[]) => {
+        chain.push({ method: prop, args });
+        return proxy; 
+      };
     }
   });
-
-  return proxy;
 };
 
 
