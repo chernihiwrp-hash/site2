@@ -105,10 +105,12 @@ export const store = {
   setNews: (_: NewsItem[]) => {},
 
   // ── HOUSES ────────────────────────────────────────────────────────────────
-  getHouses: async (): Promise<HouseItem[]> => {
-    const { data } = await supabase.from("houses").select("*").order("created_at", { ascending: false });
-    if (!data) return [];
-    return data.map((r: Record<string, unknown>) => ({
+  getHouses: async (username?: string): Promise<HouseItem[]> => {
+    // 1. Отримуємо всі будинки
+    const { data: housesData } = await supabase.from("houses").select("*").order("created_at", { ascending: false });
+    if (!housesData) return [];
+
+    const allHouses = housesData.map((r: Record<string, unknown>) => ({
       id: r.id as number,
       name: r.name as string,
       price: r.price as number,
@@ -117,24 +119,49 @@ export const store = {
       owner: (r.owner_username as string) || null,
       image: (r.image_url as string) || undefined,
       photos: r.image_url ? [r.image_url as string] : [],
+      rental_days: 0, 
     }));
+
+    // 2. Якщо передано username, шукаємо дні оренди в схвалених заявках
+    if (username) {
+      const { data: requests } = await supabase
+        .from("house_purchase_requests")
+        .select("house_id, rental_days")
+        .eq("username", username)
+        .eq("status", "approved");
+
+      if (requests && requests.length > 0) {
+        const rentalMap = new Map(requests.map(req => [req.house_id, req.rental_days]));
+        return allHouses.map(h => ({
+          ...h,
+          rental_days: rentalMap.get(h.id) || 0
+        }));
+      }
+    }
+
+    return allHouses;
   },
+
   addHouse: async (name: string, desc: string, price: number, imageUrl?: string, category = "Люкс") => {
     await supabase.from("houses").insert({
       name, description: desc, price,
       image_url: imageUrl || null, category, is_for_sale: true,
     });
   },
+
   deleteHouse: async (id: number) => { await supabase.from("houses").delete().eq("id", id); },
+
   updateHouse: async (id: number, updates: { name?: string; price?: number; desc?: string; imageUrl?: string }) => {
     await supabase.from("houses").update({
       name: updates.name, price: updates.price,
       description: updates.desc, image_url: updates.imageUrl,
     }).eq("id", id);
   },
+
   toggleHouseOwner: async (id: number, owner: string | null) => {
     await supabase.from("houses").update({ owner_username: owner, is_for_sale: !owner }).eq("id", id);
   },
+
   setHouses: (_: HouseItem[]) => {},
 
   // ── HOUSE PURCHASE ────────────────────────────────────────────────────────
@@ -145,9 +172,10 @@ export const store = {
       status: "pending",
       rental_days: rentalDays || 7,
     });
-    if (error) console.error("submitHousePurchase error:", error.message, error.details, error.hint);
+    if (error) console.error("submitHousePurchase error:", error.message);
     return !error;
   },
+
   getHousePurchaseRequests: async (): Promise<HousePurchaseRequest[]> => {
     const { data } = await supabase.from("house_purchase_requests").select("*").order("created_at", { ascending: false });
     if (!data) return [];
@@ -159,16 +187,24 @@ export const store = {
       house_price: (r.house_price as number) || 0,
       status: r.status as "pending" | "approved" | "rejected",
       created_at: r.created_at as string,
+      rental_days: (r.rental_days as number) || 7, // додаємо сюди теж
     }));
   },
+
   updateHousePurchaseStatus: async (id: number, status: "approved" | "rejected", houseId?: number, username?: string) => {
+    // Оновлюємо статус заявки
     await supabase.from("house_purchase_requests").update({ status }).eq("id", id);
+    
+    // Якщо схвалено — оновлюємо власника будинку
     if (status === "approved" && houseId && username) {
-      await supabase.from("houses").update({ owner_username: username, is_for_sale: false }).eq("id", houseId);
+      await supabase.from("houses").update({ 
+        owner_username: username, 
+        is_for_sale: false 
+      }).eq("id", houseId);
+      
       store.addNotification(`Ваша заявка на будинок схвалена!`);
     }
   },
-
   // ── WANTED ────────────────────────────────────────────────────────────────
   getWanted: async (): Promise<WantedPerson[]> => {
     const { data } = await supabase.from("wanted").select("*").eq("status", "active").order("created_at", { ascending: false });
