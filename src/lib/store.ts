@@ -420,51 +420,72 @@ export const store = {
 
   // ── TOKENS / BALANCE ──────────────────────────────────────────────────────
   giveTokens: async (nick: string, amount: number): Promise<boolean> => {
-    // Читаємо поточний баланс з Supabase
     const { data: user } = await supabase
       .from("users").select("balance").ilike("username", nick).maybeSingle();
+    
     const currentBalance = (user?.balance as number) || 0;
     const newBalance = currentBalance + amount;
-    // Записуємо новий баланс в Supabase
+
     const { error } = await supabase
       .from("users").update({ balance: newBalance }).ilike("username", nick);
+
     if (error) { console.error("giveTokens error:", error); return false; }
-    // Оновлюємо localStorage гравця (якщо він на цьому пристрої)
+
     setBalance(nick, newBalance);
     await store.addNotification(nick, `Вам нараховано ${amount} CR від адміністрації!`);
     return true;
   },
+
   takeTokens: async (nick: string, amount: number): Promise<boolean> => {
-    // Читаємо поточний баланс з Supabase
     const { data: user } = await supabase
       .from("users").select("balance").ilike("username", nick).maybeSingle();
+
     const currentBalance = (user?.balance as number) || 0;
     if (currentBalance < amount) return false;
+
     const newBalance = currentBalance - amount;
-    // Записуємо новий баланс в Supabase
+
     const { error } = await supabase
       .from("users").update({ balance: newBalance }).ilike("username", nick);
+
     if (error) { console.error("takeTokens error:", error); return false; }
-    // Оновлюємо localStorage гравця (якщо він на цьому пристрої)
+
     setBalance(nick, newBalance);
-    await store.addNotification(nick, `У вас знято ${amount} CR адміністрацією.`);
+ 
+    await store.addNotification(nick, `З вашого балансу списано ${amount} CR.`);
     return true;
   },
 
-  // ── NOTIFICATIONS ─────────────────────────────────────────────────────────
-  getNotifications: async (username: string): Promise<Notification[]> => {
-    const { data } = await supabase.from("notifications").select("*").ilike("username", username).order("created_at", { ascending: false }).limit(50);
-    if (!data) return [];
-    return data.map((r: Record<string, unknown>) => ({ id: r.id as number, text: r.text as string, date: new Date(r.created_at as string).toLocaleDateString("uk-UA"), read: r.read as boolean }));
+  // ── THEMES ────────────────────────────────────────────────────────────────
+  getOwnedThemes: async (nick: string): Promise<string[]> => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("owned_themes")
+      .ilike("username", nick)
+      .maybeSingle();
+    
+    if (error || !data || !data.owned_themes) {
+      return ["lime"]; 
+    }
+    return data.owned_themes;
   },
-  markNotificationsRead: async (username: string) => {
-    await supabase.from("notifications").update({ read: true }).ilike("username", username).eq("read", false);
-  },
-  addNotification: async (username: string, text: string) => {
-    await supabase.from("notifications").insert({ username, text, read: false });
-  },
-  setNotifications: (_: Notification[]) => {},
 
+  saveBoughtTheme: async (nick: string, themeId: string) => {
+    const currentThemes = await store.getOwnedThemes(nick);
+    if (!currentThemes.includes(themeId)) {
+      const newThemes = [...currentThemes, themeId];
+      
+      const { error } = await supabase
+        .from("users")
+        .update({ owned_themes: newThemes })
+        .ilike("username", nick);
+        
+      if (!error) {
+     
+        localStorage.setItem(`crp_owned_themes_${nick.toLowerCase()}`, JSON.stringify(newThemes));
+      }
+    }
+  },
   // ── PULSE CITY ────────────────────────────────────────────────────────────
   getPulse: async (): Promise<{ citizens: number; houses: number; factions: number }> => {
     const [usersRes, housesRes, factionsRes] = await Promise.all([
