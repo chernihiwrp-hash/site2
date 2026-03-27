@@ -1,49 +1,41 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = "https://kafivvwxqulxmkpyqinz.supabase.co";
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthZml2dnd4cXVseG1rcHlxaW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTgyNDIsImV4cCI6MjA4OTg3NDI0Mn0.HD_Gxn5UIVxov0-7U4aVhtYXhGvYTsVqLlycE5ctBpg"; 
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthZml2dnd4cXVseG1rcHlxaW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4NTU0NjAsImV4cCI6MjA1NDQzMTQ2MH0.твій_ключ"; 
 
 const _supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-
 const proxyHandler = (table: string) => {
-  let chain: { method: string; args: any[] }[] = [];
+  const chain: { method: string; args: any[] }[] = [];
 
-  const proxy: any = {
-
-    then(onFulfilled: any, onRejected: any) {
-      console.log(` Запит до таблиці ${table}:`, chain);
-      
-      return fetch('/api/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table, chain })
-      })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-
-        return onFulfilled({ data, error: null });
-      })
-      .catch(err => {
-        console.error(" Proxy Error:", err);
-        return onRejected ? onRejected(err) : onFulfilled({ data: null, error: err });
-      });
-    }
-  };
-
-  return new Proxy(proxy, {
+  const requestProxy: any = new Proxy(() => {}, {
     get(target, prop: string) {
-      if (prop === 'then') return target.then.bind(target);
-      
+
+      if (prop === 'then') {
+        return (onFulfilled: any, onRejected: any) => {
+          return fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ table, chain })
+          })
+          .then(res => {
+            if (!res.ok) throw new Error("Proxy fetch failed");
+            return res.json();
+          })
+          .then(data => onFulfilled({ data, error: null }))
+          .catch(err => onRejected ? onRejected(err) : onFulfilled({ data: null, error: err }));
+        };
+      }
+
+
       return (...args: any[]) => {
         chain.push({ method: prop, args });
-        return proxy; 
+        return requestProxy; 
       };
     }
   });
+
+  return requestProxy;
 };
 
 
@@ -51,6 +43,7 @@ export const supabase = {
   ..._supabase,
   from: (table: string) => proxyHandler(table),
 };
+
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 export type NewsItem = {
