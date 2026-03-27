@@ -540,12 +540,34 @@ export const store = {
   // ── PROFILE DATA ──────────────────────────────────────────────────────────
   getPlayerProfile: async (nick: string) => {
     const [houseRes, factionRes, licRes] = await Promise.all([
-      supabase.from("houses").select("id, name, price").eq("owner_username", nick),
+   
+      supabase
+        .from("house_purchase_requests")
+        .select(`
+          id,
+          rental_days,
+          houses (
+            name, 
+            price, 
+            image_url
+          )
+        `)
+        .eq("username", nick)
+        .eq("status", "approved"),
+
       supabase.from("faction_applications").select("faction_name, status").eq("username", nick).order("created_at", { ascending: false }),
       supabase.from("license_applications").select("id, license_type, plate_number, status").eq("username", nick).eq("status", "approved"),
     ]);
+
     return {
-      houses: (houseRes.data || []) as { id: number; name: string; price: number }[],
+ 
+      houses: (houseRes.data || []).map((h: any) => ({
+        id: h.id,
+        name: h.houses?.name || "Вилла",
+        price: h.houses?.price || 0,
+        rental_days: h.rental_days || 7,
+        image: h.houses?.image_url 
+      })),
       factionApps: (factionRes.data || []) as { faction_name: string; status: string }[],
       licenses: (licRes.data || []) as { id: number; license_type: string; plate_number: string | null; status: string }[],
     };
