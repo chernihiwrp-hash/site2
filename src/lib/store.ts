@@ -1,49 +1,8 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = "https://kafivvwxqulxmkpyqinz.supabase.co";
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthZml2dnd4cXVseG1rcHlxaW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4NTU0NjAsImV4cCI6MjA1NDQzMTQ2MH0.твій_ключ"; 
-
-const _supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-const proxyHandler = (table: string) => {
-  const chain: { method: string; args: any[] }[] = [];
-
-  const requestProxy: any = new Proxy(() => {}, {
-    get(target, prop: string) {
-
-      if (prop === 'then') {
-        return (onFulfilled: any, onRejected: any) => {
-          return fetch('/api/proxy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ table, chain })
-          })
-          .then(res => {
-            if (!res.ok) throw new Error("Proxy fetch failed");
-            return res.json();
-          })
-          .then(data => onFulfilled({ data, error: null }))
-          .catch(err => onRejected ? onRejected(err) : onFulfilled({ data: null, error: err }));
-        };
-      }
-
-
-      return (...args: any[]) => {
-        chain.push({ method: prop, args });
-        return requestProxy; 
-      };
-    }
-  });
-
-  return requestProxy;
-};
-
-
-export const supabase = {
-  ..._supabase,
-  from: (table: string) => proxyHandler(table),
-};
-
+const SUPABASE_URL = "https://kafivvwxqulxmkpyqinz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthZml2dnd4cXVseG1rcHlxaW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTgyNDIsImV4cCI6MjA4OTg3NDI0Mn0.HD_Gxn5UIVxov0-7U4aVhtYXhGvYTsVqLlycE5ctBpg";
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 export type NewsItem = {
@@ -86,7 +45,6 @@ export type LicenseApplication = {
 export type HousePurchaseRequest = {
   id: number; house_id: number; username: string;
   house_name?: string; house_price?: number;
-  rental_days?: number; avatar_url?: string;
   status: "pending" | "approved" | "rejected"; created_at: string;
 };
 export type FactionDB = {
@@ -191,51 +149,23 @@ export const store = {
     return !error;
   },
   getHousePurchaseRequests: async (): Promise<HousePurchaseRequest[]> => {
-    const { data } = await supabase
-      .from("house_purchase_requests")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data } = await supabase.from("house_purchase_requests").select("*").order("created_at", { ascending: false });
     if (!data) return [];
-
-    // Load house info and user avatars
-    const houseIds = [...new Set(data.map((r: Record<string, unknown>) => r.house_id as number))];
-    const usernames = [...new Set(data.map((r: Record<string, unknown>) => r.username as string))];
-
-    const [housesRes, usersRes] = await Promise.all([
-      supabase.from("houses").select("id, name, price, image_url").in("id", houseIds),
-      supabase.from("users").select("username, avatar_url").in("username", usernames),
-    ]);
-
-    const houseMap: Record<number, { name: string; price: number; image_url: string }> = {};
-    (housesRes.data || []).forEach((h: Record<string, unknown>) => {
-      houseMap[h.id as number] = { name: h.name as string, price: h.price as number, image_url: (h.image_url as string) || "" };
-    });
-    const userMap: Record<string, string> = {};
-    (usersRes.data || []).forEach((u: Record<string, unknown>) => {
-      userMap[(u.username as string).toLowerCase()] = (u.avatar_url as string) || "";
-    });
-
-    return data.map((r: Record<string, unknown>) => {
-      const h = houseMap[r.house_id as number];
-      return {
-        id: r.id as number,
-        house_id: r.house_id as number,
-        username: r.username as string,
-        house_name: h?.name || (r.house_name as string) || "",
-        house_price: h?.price || (r.house_price as number) || 0,
-        rental_days: (r.rental_days as number) || 7,
-        avatar_url: userMap[(r.username as string).toLowerCase()] || "",
-        status: r.status as "pending" | "approved" | "rejected",
-        created_at: r.created_at as string,
-        image_url: h?.image_url || "",
-      } as HousePurchaseRequest & { image_url: string };
-    });
+    return data.map((r: Record<string, unknown>) => ({
+      id: r.id as number,
+      house_id: r.house_id as number,
+      username: r.username as string,
+      house_name: (r.house_name as string) || "",
+      house_price: (r.house_price as number) || 0,
+      status: r.status as "pending" | "approved" | "rejected",
+      created_at: r.created_at as string,
+    }));
   },
   updateHousePurchaseStatus: async (id: number, status: "approved" | "rejected", houseId?: number, username?: string) => {
     await supabase.from("house_purchase_requests").update({ status }).eq("id", id);
     if (status === "approved" && houseId && username) {
       await supabase.from("houses").update({ owner_username: username, is_for_sale: false }).eq("id", houseId);
-      if (username) store.addNotification(username, `✅ Заявку на будинок схвалено! Оренда активна.`);
+      store.addNotification(`Ваша заявка на будинок схвалена!`);
     }
   },
 
@@ -303,7 +233,7 @@ export const store = {
       faction_id: factionIdNum,
       faction_name: app.factionName,
       username: app.nick,
-      status: "review",
+      status: "pending",
       form_data: {
         nick: app.nick,
         roblox: app.roblox,
@@ -369,7 +299,7 @@ export const store = {
     });
   },
   submitAdminApp: async (app: Omit<AdminApplication, "id" | "status" | "date">) => {
-    const { data, error } = await supabase.from("admin_applications").insert({ username: app.nick, status: "review", form_data: app }).select();
+    const { data, error } = await supabase.from("admin_applications").insert({ username: app.nick, status: "pending", form_data: app }).select();
     if (error) {
       console.error("submitAdminApp ERROR:", JSON.stringify(error, null, 2));
       alert("Помилка Supabase: " + error.message + "\nCode: " + error.code + "\nDetails: " + error.details);
@@ -406,64 +336,6 @@ export const store = {
   deleteCityVoice: async (id: number) => { await supabase.from("city_voice").delete().eq("id", id); },
   setCityVoice: (_: CityVoiceItem[]) => {},
 
-    // ── CITY VOICE LIKES / DISLIKES ───────────────────────────────────────────
-incrementCityVoiceLikes: async (id: number) => {
-  // 1. Проверка в localStorage
-  const votes = JSON.parse(localStorage.getItem("city_voice_votes") || "{}");
-  if (votes[id]) {
-    throw new Error("Ви вже проголосували");
-  }
-
-  const { data, error } = await supabase
-    .from("city_voice")
-    .select("likes")
-    .eq("id", id)
-    .single();
-
-  if (error) throw error;
-
-  const newLikes = ((data?.likes as number) || 0) + 1;
-
-  const { error: updateError } = await supabase
-    .from("city_voice")
-    .update({ likes: newLikes })
-    .eq("id", id);
-
-  if (updateError) throw updateError;
-
-  // 2. Записываем голос, чтобы нельзя было кликнуть еще раз
-  votes[id] = "like";
-  localStorage.setItem("city_voice_votes", JSON.stringify(votes));
-},
-
-incrementCityVoiceDislikes: async (id: number) => {
-  // 1. Проверка в localStorage
-  const votes = JSON.parse(localStorage.getItem("city_voice_votes") || "{}");
-  if (votes[id]) {
-    throw new Error("Ви вже проголосували");
-  }
-
-  const { data, error } = await supabase
-    .from("city_voice")
-    .select("dislikes")
-    .eq("id", id)
-    .single();
-
-  if (error) throw error;
-
-  const newDislikes = ((data?.dislikes as number) || 0) + 1;
-
-  const { error: updateError } = await supabase
-    .from("city_voice")
-    .update({ dislikes: newDislikes })
-    .eq("id", id);
-
-  if (updateError) throw updateError;
-
-  // 2. Записываем голос
-  votes[id] = "dislike";
-  localStorage.setItem("city_voice_votes", JSON.stringify(votes));
-},
   // ── MAYOR ELECTION ────────────────────────────────────────────────────────
   getCandidates: async (): Promise<MayorCandidate[]> => {
     const { data } = await supabase.from("mayor_election").select("*").order("votes", { ascending: false });
@@ -610,57 +482,13 @@ incrementCityVoiceDislikes: async (id: number) => {
 
   // ── PROFILE DATA ──────────────────────────────────────────────────────────
   getPlayerProfile: async (nick: string) => {
-    const [houseRes, purchaseRes, factionRes, licRes] = await Promise.all([
-      // Owned houses (admin approved)
-      supabase.from("houses").select("id, name, price, image_url").eq("owner_username", nick),
-      // Purchased houses from requests (pending or approved)
-      supabase.from("house_purchase_requests")
-        .select("house_id, rental_days, status")
-        .ilike("username", nick)
-        .in("status", ["pending", "approved"]),
-      supabase.from("faction_applications").select("faction_name, status").ilike("username", nick).order("created_at", { ascending: false }),
-      supabase.from("license_applications").select("id, license_type, plate_number, status").ilike("username", nick).eq("status", "approved"),
+    const [houseRes, factionRes, licRes] = await Promise.all([
+      supabase.from("houses").select("id, name, price").eq("owner_username", nick),
+      supabase.from("faction_applications").select("faction_name, status").eq("username", nick).order("created_at", { ascending: false }),
+      supabase.from("license_applications").select("id, license_type, plate_number, status").eq("username", nick).eq("status", "approved"),
     ]);
-
-    // Merge owned houses and requested houses
-    const ownedHouses = (houseRes.data || []) as { id: number; name: string; price: number; image_url?: string }[];
-    const ownedIds = new Set(ownedHouses.map(h => h.id));
-
-    // Load house details for purchased ones not yet in owned
-    const purchasedIds = (purchaseRes.data || [])
-      .map((p: Record<string, unknown>) => p.house_id as number)
-      .filter(id => !ownedIds.has(id));
-
-    let extraHouses: { id: number; name: string; price: number; image_url?: string; rental_days?: number; pending?: boolean }[] = [];
-    if (purchasedIds.length > 0) {
-      const { data: hData } = await supabase.from("houses").select("id, name, price, image_url").in("id", purchasedIds);
-      const purchaseMap: Record<number, Record<string, unknown>> = {};
-      (purchaseRes.data || []).forEach((p: Record<string, unknown>) => { purchaseMap[p.house_id as number] = p; });
-      extraHouses = (hData || []).map((h: Record<string, unknown>) => ({
-        id: h.id as number, name: h.name as string, price: h.price as number, image_url: (h.image_url as string) || undefined,
-        rental_days: purchaseMap[h.id as number]?.rental_days as number || 7,
-        pending: purchaseMap[h.id as number]?.status === "pending",
-      }));
-    }
-
-    // 1. Создаем карту (словарь) дней аренды: house_id -> rental_days
-const rentalMap: Record<number, number> = {};
-(purchaseRes.data || []).forEach((p: any) => {
-  rentalMap[p.house_id] = p.rental_days;
-});
-
-// 2. Собираем финальный список, подставляя дни из карты
-const allHouses = [
-  ...ownedHouses.map(h => ({ 
-    ...h, 
-    rental_days: rentalMap[h.id] || 7, // Берем из карты или 7 по дефолту
-    pending: false 
-  })),
-  ...extraHouses,
-];
-
     return {
-      houses: allHouses,
+      houses: (houseRes.data || []) as { id: number; name: string; price: number }[],
       factionApps: (factionRes.data || []) as { faction_name: string; status: string }[],
       licenses: (licRes.data || []) as { id: number; license_type: string; plate_number: string | null; status: string }[],
     };
