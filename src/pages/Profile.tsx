@@ -24,7 +24,14 @@ const Trident = () => (
 );
 
 type ProfileData = {
-  houses: { id: number; name: string; price: number }[];
+  houses: { 
+    id: number; 
+    name: string; 
+    price: number; 
+    image?: string;  
+    rental_days?: number; 
+    photos?: string[];    
+  }[];
   factionApps: { faction_name: string; status: string }[];
   licenses: { id: number; license_type: string; plate_number: string | null; status: string }[];
 };
@@ -340,58 +347,53 @@ const Profile = () => {
         )}
       </div>
 
-      {/* Дома */}
-      <div className="mb-2">
-        <div className="liquid-glass-card rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: "hsl(142 71% 45% / 0.12)", border: "1px solid hsl(142 71% 45% / 0.25)", boxShadow: "0 0 12px hsl(142 71% 45% / 0.2)" }}>
-                <Home className="w-4 h-4" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
-              </div>
-              <p className="text-sm font-medium">Мої дома</p>
-            </div>
-            <button onClick={() => navigate("/houses")} className="text-[10px] text-primary flex items-center gap-0.5">
-              Переглянути <ChevronRight className="w-3 h-3" />
-            </button>
+      {profileData.houses.map(h => {
+  const photo = h.photos?.find((p: string) => p.startsWith("http")) || h.image;
+  return (
+    <div key={h.id} className="rounded-xl overflow-hidden"
+      style={{ background: "hsl(142 71% 45% / 0.05)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
+      
+      {photo && (
+        <div className="relative h-28 overflow-hidden">
+          <img src={photo} alt={h.name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          
+          {/* ТАЙМЕР ПОВЕРХ ФОТО */}
+          <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10">
+            <Clock className="w-3 h-3 text-primary" />
+            <span className="text-[10px] font-bold text-white">{h.rental_days || 0} ДН.</span>
           </div>
-          <div className="px-4 py-3">
-            {profileData.houses.length > 0 ? (
-              <div className="space-y-2">
-                {profileData.houses.map(h => {
-                  const photo = h.photos?.find((p: string) => p.startsWith("http")) || h.image;
-                  return (
-                    <div key={h.id} className="rounded-xl overflow-hidden"
-                      style={{ background: "hsl(142 71% 45% / 0.05)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
-                      {photo && (
-                        <div className="relative h-28 overflow-hidden">
-                          <img src={photo} alt={h.name} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                          <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
-                            <p className="text-sm font-black text-white drop-shadow">{h.name}</p>
-                            <span className="text-[10px] font-bold text-yellow-400">{h.price.toLocaleString()}€</span>
-                          </div>
-                        </div>
-                      )}
-                      {!photo && (
-                        <div className="flex items-center gap-3 p-3">
-                          <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
-                            style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
-                            <Home className="w-5 h-5" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-foreground">{h.name}</p>
-                            <p className="text-[10px] text-yellow-400 font-bold">{h.price.toLocaleString()}€</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+
+          <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
+            <p className="text-sm font-black text-white drop-shadow">{h.name}</p>
+            <span className="text-[10px] font-bold text-yellow-400">{h.price.toLocaleString()}€</span>
+          </div>
+        </div>
+      )}
+
+      {!photo && (
+        <div className="flex items-center gap-3 p-3">
+          <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
+            style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
+            <Home className="w-5 h-5" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
+          </div>
+          <div className="flex-1">
+            <div className="flex justify-between items-start">
+              <p className="text-xs font-semibold text-foreground">{h.name}</p>
+              
+              {/* ТАЙМЕР ДЛЯ КАРТОЧКИ БЕЗ ФОТО */}
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-primary" />
+                <span className="text-[10px] text-primary font-bold">{h.rental_days || 0} дн.</span>
               </div>
-            ) : (
-              <div className="relative overflow-hidden rounded-xl p-4 flex items-center gap-4"
-                style={{ background: "linear-gradient(135deg, hsl(142 71% 45% / 0.06), hsl(142 71% 45% / 0.02))", border: "1px solid hsl(142 71% 45% / 0.15)" }}>
+            </div>
+            <p className="text-[10px] text-yellow-400 font-bold">{h.price.toLocaleString()}€</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+})}
                 {/* Glow orb */}
                 <div className="absolute right-0 top-0 w-24 h-24 rounded-full pointer-events-none"
                   style={{ background: "radial-gradient(circle, hsl(142 71% 45% / 0.15) 0%, transparent 70%)", transform: "translate(30%, -30%)" }} />
