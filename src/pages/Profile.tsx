@@ -489,79 +489,92 @@ const loadData = useCallback(async () => {
           </div>
         </div>
       </div>
-{/* ═══ ЯРУС 1: ЛІЦЕНЗІЇ ═══ */}
-      <div className="mb-10 animate-fade-in">
-        <div className="flex items-center gap-2 mb-4 px-1">
-          <Shield className="w-4 h-4 text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.8)]" />
-          <h2 className="text-[10px] font-black tracking-[0.3em] uppercase opacity-80">Державні ліцензії</h2>
-        </div>
+{/* ═══ СПИСОК МАЙНА ТА ЛІЦЕНЗІЙ (Новий стиль) ═══ */}
+      <div className="space-y-6 animate-fade-in mb-10">
+        {[
+          // ГЕНЕРАЦІЯ ЛІЦЕНЗІЙ (Approved, без номерів)
+          ...(profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any) => ({
+            id: `lic-${item.id}`,
+            type: 'license',
+            icon: <Shield className="w-7 h-7 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]" />,
+            topText: "Документ підтверджено",
+            mainContent: item.license_type, // Рядок типу "G36, METAL BAT..."
+          })) || []),
 
-        <div className="grid grid-cols-1 gap-4">
-          {profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any) => (
-            <div key={item.id} className="relative w-full h-[100px] rounded-2xl p-[1.5px] overflow-hidden shadow-2xl"
-                 style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(var(--primary),0.4) 100%)" }}>
-              <div className="absolute inset-[1px] rounded-[15px] overflow-hidden" style={{ background: passportBg }}>
+          // ГЕНЕРАЦІЯ МАШИН
+          ...((profileData as any).cars || []).map((car: any) => ({
+            id: `car-${car.id}`,
+            type: 'car',
+            icon: <Car className="w-7 h-7 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]" />,
+            topText: "Транспортний засіб",
+            model: car.car_model || "Транспорт",
+            plate: car.plate_number
+          }))
+        ].map((card: any) => (
+          
+          /* ─── ЕЛЕМЕНТ СПИСКУ (КАРТКА) ─── */
+          <div key={card.id} className="relative w-full rounded-2xl p-[1px] overflow-hidden shadow-2xl transition-all hover:scale-[1.01]"
+               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(var(--primary),0.5) 100%)" }}>
+            
+            {/* Внутрішнє тіло картки */}
+            <div className="absolute inset-[1px] rounded-[15px] overflow-hidden" style={{ background: passportBg }}>
+              
+              {/* ДЕКОР ТА СВІЧЕННЯ */}
+              <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] pointer-events-none" />
+              {/* Супер Glow знизу */}
+              <div className="absolute inset-x-0 bottom-0 h-full pointer-events-none" 
+                   style={{ background: `radial-gradient(circle at 50% 150%, rgba(var(--primary), 0.7) 0%, transparent 80%)` }} />
+              {/* Глянець зверху */}
+              <div className="absolute inset-x-0 top-0 h-1/2 bg-white/5 blur-sm rounded-t-[15px] pointer-events-none" />
+
+              {/* КОНТЕНТ */}
+              <div className="relative z-10 flex items-center px-6 py-6 gap-6 min-h-[120px]">
                 
-                {/* СИЛЬНЫЙ GLOW СНИЗУ */}
-                <div className="absolute inset-x-0 bottom-0 h-full pointer-events-none" 
-                     style={{ background: `radial-gradient(circle at 50% 140%, rgba(var(--primary), 0.7) 0%, transparent 75%)` }} />
-
-                <div className="relative z-10 h-full flex items-center px-6 gap-5">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0">
-                    <Shield className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex flex-col">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Документ підтверджено</p>
-                    <p className="text-sm font-black uppercase tracking-tight text-white italic">
-                      {item.license_type?.split('|')[0].trim() || "Ліцензія"}
-                    </p>
-                  </div>
-                  <div className="ml-auto opacity-10"><Trident /></div>
+                {/* Іконка в рамці */}
+                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner shrink-0 relative">
+                  <div className="absolute inset-0 rounded-2xl bg-primary/5 blur-[2px]" />
+                  {card.icon}
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* ═══ ЯРУС 2: ТРАНСПОРТНИЙ ПАРК ═══ */}
-      <div className="mb-10 animate-fade-in">
-        <div className="flex items-center gap-2 mb-4 px-1">
-          <Car className="w-4 h-4 text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.8)]" />
-          <h2 className="text-[10px] font-black tracking-[0.3em] uppercase opacity-80">Транспортні засоби</h2>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4">
-          {((profileData as any).cars || []).map((car: any) => (
-            <div key={car.id} className="relative w-full h-[110px] rounded-2xl p-[1.5px] overflow-hidden shadow-2xl"
-                 style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(var(--primary),0.4) 100%)" }}>
-              <div className="absolute inset-[1px] rounded-[15px] overflow-hidden" style={{ background: passportBg }}>
-                
-                {/* СИЛЬНЫЙ GLOW СНИЗУ */}
-                <div className="absolute inset-x-0 bottom-0 h-full pointer-events-none" 
-                     style={{ background: `radial-gradient(circle at 50% 140%, rgba(var(--primary), 0.7) 0%, transparent 75%)` }} />
-
-                <div className="relative z-10 h-full flex items-center px-6 gap-5">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0">
-                    <Car className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1 leading-none">Власність</p>
-                    <p className="text-sm font-black uppercase tracking-tight text-white italic truncate mb-2">
-                      {car.car_model || "Транспорт"}
-                    </p>
-                    
-                    {/* Номерной знак ВНУТРИ прямоугольника */}
-                    <div className="inline-block scale-90 origin-left">
-                       <PlateBadge plate={car.plate_number} />
+                {/* Основна інфо */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mb-1.5">{card.topText}</p>
+                  
+                  {/* ВМІСТ ДЛЯ ЛІЦЕНЗІЙ (Тэги) */}
+                  {card.type === 'license' && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {card.mainContent.split(',').map((tag: string, index: number) => (
+                        <div key={index} className="px-3 py-1 rounded-md border border-primary/20 bg-primary/5 shadow-[0_0_10px_rgba(var(--primary),0.3)] hover:border-primary transition-colors">
+                          <span className="text-[11px] font-black uppercase tracking-tight text-primary italic whitespace-nowrap">
+                            {tag.trim()}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                  <div className="opacity-10 shrink-0"><Trident /></div>
+                  )}
+
+                  {/* ВМІСТ ДЛЯ МАШИН (Авто + Великий номер) */}
+                  {card.type === 'car' && (
+                    <div className="flex items-center justify-between gap-4 pt-1">
+                      <div>
+                        <p className="text-xl font-black text-white italic tracking-tighter leading-none mb-2">АВТО</p>
+                        <p className="text-[11px] text-muted-foreground uppercase tracking-tight truncate opacity-80">{card.model}</p>
+                      </div>
+                      
+                      {/* ЗБІЛЬШЕНИЙ НОМЕРНИЙ ЗНАК */}
+                      <div className="shrink-0 scale-125 origin-right">
+                         <PlateBadge plate={card.plate} />
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Маленький водяний знак Trident */}
+                <div className="opacity-10 shrink-0"><Trident /></div>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
       {/* Кнопка адмін панелі — тільки для прийнятих адмінів */}
       {isApprovedAdmin && (
