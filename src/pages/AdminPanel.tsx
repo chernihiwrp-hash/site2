@@ -2404,103 +2404,140 @@ useEffect(() => {
   };
 
 return (
-  <div className="space-y-4 animate-fade-in">
-    {/* 1. ПЕРЕМИКАЧ (Він у тебе вже є і працює) */}
-    <div className="flex gap-2">...</div>
-
-    {/* 2. ТВОЯ СТАРА СЕКЦІЯ ФРАКЦІЙ (Яку ми ніби "загубили") */}
-    {activeSection === "factions" && (
-      <div className="grid gap-3">
-        {/* ВСТАВ СЮДИ СВІЙ СТАРИЙ КОД ВИВОДУ ФРАКЦІЙ */}
-        {/* (той, де був список фракцій, бюджет, налаштування тощо) */}
-      </div>
-    )}
-
-    {/* 3. НОВА СЕКЦІЯ СКЛАДУ (З аватарками) */}
-    {activeSection === "players" && (
-      <>
-        {/* ПОШУК */}
-        <div className="relative">...</div>
-        
-        {/* СПИСОК ГРАВЦІВ */}
-        <div className="grid gap-2.5">
-           {filteredPlayers.map((p) => (
-  <div key={p.id} className="liquid-glass border-white/5 rounded-2xl p-3 flex items-center justify-between group transition-all hover:border-primary/20">
-    <div className="flex items-center gap-3.5">
-      {/* Контейнер Аватарки */}
-      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
-        {p.avatar_url ? (
-          <img 
-            src={p.avatar_url} 
-            alt="" 
-            className="w-full h-full object-cover" 
-            onError={(e) => (e.currentTarget.style.display = 'none')} 
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-primary/5 text-primary/40 font-black text-sm uppercase">
-            {p.username?.charAt(0)}
-          </div>
-        )}
+    <div className="space-y-4 animate-fade-in">
+      {/* 1. ПЕРЕМИКАЧ ВКЛАДОК */}
+      <div className="flex gap-2 p-1.5 liquid-glass rounded-2xl border border-white/5">
+        <button
+          onClick={() => setActiveSection("factions")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            activeSection === "factions" 
+              ? "bg-primary text-black shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)]" 
+              : "text-muted-foreground hover:text-white"
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" /> Керування
+        </button>
+        <button
+          onClick={() => setActiveSection("players")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            activeSection === "players" 
+              ? "bg-primary text-black shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)]" 
+              : "text-muted-foreground hover:text-white"
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" /> Склад
+        </button>
       </div>
 
-      {/* Текстова інформація */}
-      <div className="flex flex-col">
-        <span className="text-sm font-bold text-white tracking-tight leading-tight">
-          {p.username}
-        </span>
-        <span className="text-[10px] font-medium text-primary/60 uppercase tracking-[0.15em] mt-0.5">
-          {p.faction_name || "Громадянин"}
-        </span>
-      </div>
-    </div>
-
-    {/* Кнопка Kick */}
-    <button 
-      onClick={() => openKickModal(p.id, p.username)}
-      className="p-2.5 bg-destructive/5 text-destructive/40 hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 rounded-xl transition-all active:scale-90"
-    >
-      <UserMinus className="w-4 h-4" />
-    </button>
-  </div>
-))}
+      {/* 2. СЕКЦІЯ КЕРУВАННЯ ФРАКЦІЯМИ */}
+      {activeSection === "factions" && (
+        <div className="grid gap-3">
+          {factions.map((f) => (
+            <div key={f.id} className="liquid-glass border-white/5 rounded-2xl p-4 flex items-center justify-between group">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${f.color}20`, border: `1px solid ${f.color}40` }}>
+                  <Shield className="w-5 h-5" style={{ color: f.color }} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">{f.name}</h3>
+                  <p className="text-[10px] text-muted-foreground">ID: {f.id}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => openEdit(f)} className="p-2 rounded-lg bg-white/5 text-muted-foreground hover:text-primary transition-colors">
+                  <Settings className="w-4 h-4" />
+                </button>
+                <button onClick={() => deleteFaction(f.id, f.name)} className="p-2 rounded-lg bg-destructive/5 text-destructive/50 hover:text-destructive transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+          
+          <GradientButton onClick={() => { setEditingId(null); setEditName(""); setEditDesc(""); setEditActiveTab("basic"); }} className="w-full py-4 mt-2">
+            <Plus className="w-4 h-4 mr-2" /> Створити фракцію
+          </GradientButton>
         </div>
-      </>
-    )}
+      )}
 
-    {/* 4. МОДАЛКА (Confirm Kick) */}
-    {/* 4. МОДАЛКА ПІДТВЕРДЖЕННЯ (Confirm Kick) */}
+      {/* 3. СЕКЦІЯ СКЛАДУ (Твій "Склад" замість заявок) */}
+      {activeSection === "players" && (
+        <div className="space-y-3">
+          {/* ПОШУК */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input 
+              type="text" 
+              placeholder="Пошук гравця або фракції..." 
+              className={inputCls}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="grid gap-2.5">
+            {filteredPlayers.length > 0 ? (
+              filteredPlayers.map((p) => (
+                <div key={p.id} className="liquid-glass border-white/5 rounded-2xl p-3 flex items-center justify-between group transition-all hover:border-primary/20">
+                  <div className="flex items-center gap-3.5">
+                    {/* Аватарка */}
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                      {p.avatar_url ? (
+                        <img src={p.avatar_url} className="w-full h-full object-cover" alt="" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-primary/5 text-primary/40 font-black text-sm uppercase">
+                          {p.username?.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    {/* Інфо */}
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-white leading-tight">{p.username}</span>
+                      <span className="text-[10px] font-medium text-primary/60 uppercase tracking-widest mt-0.5">
+                        {p.faction_name}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Кнопка Вигнати */}
+                  <button 
+                    onClick={() => openKickModal(p.id, p.username)}
+                    className="p-2.5 bg-destructive/5 text-destructive/40 hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 rounded-xl transition-all active:scale-90"
+                  >
+                    <UserMinus className="w-4 h-4" />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-10 opacity-30">Гравців не знайдено</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 4. МОДАЛКА ПІДТВЕРДЖЕННЯ ВИГНАННЯ */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="w-full max-w-[280px] liquid-glass border-primary/20 rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-[280px] liquid-glass border-primary/20 rounded-[2.5rem] p-8 text-center animate-in zoom-in-95">
             <div className="w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto mb-4">
               <UserX className="w-8 h-8 text-destructive" />
             </div>
             <h3 className="text-base font-black uppercase tracking-widest mb-2 text-white">Звільнення</h3>
-            <p className="text-[11px] text-muted-foreground mb-6 leading-relaxed">
+            <p className="text-[11px] text-muted-foreground mb-6">
               Вигнати <span className="text-primary font-bold">{playerToKick?.username}</span> зі складу?
             </p>
             <div className="grid grid-cols-2 gap-3 w-full">
-              <button 
-                onClick={() => setIsModalOpen(false)} 
-                className="py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all text-white"
-              >
-                Назад
-              </button>
-              <button 
-                onClick={confirmKick} 
-                disabled={isProcessing}
-                className="py-3.5 rounded-2xl bg-destructive text-white text-[9px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(239,68,68,0.4)] active:scale-95 transition-all flex items-center justify-center"
-              >
+              <button onClick={() => setIsModalOpen(false)} className="py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[9px] font-black uppercase text-white">Назад</button>
+              <button onClick={confirmKick} disabled={isProcessing} className="py-3.5 rounded-2xl bg-destructive text-white text-[9px] font-black uppercase shadow-[0_0_20px_rgba(239,68,68,0.4)]">
                 {isProcessing ? "..." : "Kick"}
               </button>
             </div>
           </div>
         </div>
       )}
-</div>
+    </div>
   );
 };
-
 // ─── BANS TAB ─────────────────────────────────────────────────────────────────
 const BansTab = () => {
   const [bans, setBans] = useState<{
