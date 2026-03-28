@@ -2431,34 +2431,88 @@ return (
 
       {/* 2. СЕКЦІЯ КЕРУВАННЯ ФРАКЦІЯМИ */}
       {activeSection === "factions" && (
-        <div className="grid gap-3">
-          {factions.map((f) => (
-            <div key={f.id} className="liquid-glass border-white/5 rounded-2xl p-4 flex items-center justify-between group">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${f.color}20`, border: `1px solid ${f.color}40` }}>
-                  <Shield className="w-5 h-5" style={{ color: f.color }} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">{f.name}</h3>
-                  <p className="text-[10px] text-muted-foreground">ID: {f.id}</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => openEdit(f)} className="p-2 rounded-lg bg-white/5 text-muted-foreground hover:text-primary transition-colors">
-                  <Settings className="w-4 h-4" />
-                </button>
-                <button onClick={() => deleteFaction(f.id, f.name)} className="p-2 rounded-lg bg-destructive/5 text-destructive/50 hover:text-destructive transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+  <div className="grid gap-4 animate-in slide-in-from-bottom-4 duration-500">
+    {factions.map((f) => (
+      <div 
+        key={f.id} 
+        className="group relative overflow-hidden liquid-glass border border-white/5 rounded-[2.5rem] p-5 transition-all hover:border-primary/30 hover:shadow-[0_0_40px_rgba(var(--primary-rgb),0.15)]"
+      >
+        {/* Фоновий градієнт при наведенні */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-5">
+            {/* Контейнер іконки з неоновим шаром */}
+            <div className="relative">
+              <div 
+                className="absolute inset-0 blur-xl opacity-30 group-hover:opacity-60 transition-opacity" 
+                style={{ backgroundColor: f.color || '#22c55e' }} 
+              />
+              <div 
+                className="relative w-16 h-16 rounded-[1.25rem] flex items-center justify-center border backdrop-blur-2xl transition-transform group-hover:scale-105 duration-300"
+                style={{ 
+                  backgroundColor: `${f.color}10`, 
+                  borderColor: `${f.color}30` 
+                }}
+              >
+                <Shield className="w-8 h-8" style={{ color: f.color || '#22c55e' }} />
               </div>
             </div>
-          ))}
-          
-          <GradientButton onClick={() => { setEditingId(null); setEditName(""); setEditDesc(""); setEditActiveTab("basic"); }} className="w-full py-4 mt-2">
-            <Plus className="w-4 h-4 mr-2" /> Створити фракцію
-          </GradientButton>
+
+            {/* Текстовий блок */}
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2.5">
+                <h3 className="text-lg font-black text-white tracking-tight">{f.name}</h3>
+                {f.id < 0 && (
+                  <span className="text-[7px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-black uppercase tracking-tighter">
+                    System
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-1 h-1 rounded-full bg-primary/40" />
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                  {f.section === 'separate' ? 'Окрема структура' : 'Основна фракція'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Кнопки керування */}
+          <div className="flex gap-2.5">
+            <button 
+              onClick={() => openEdit(f)}
+              className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-black hover:border-primary hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] transition-all active:scale-90"
+            >
+              <Settings className="w-4.5 h-4.5" />
+            </button>
+            <button 
+              onClick={() => deleteFaction(f.id, f.name)}
+              className="w-11 h-11 flex items-center justify-center rounded-2xl bg-destructive/5 border border-destructive/10 text-destructive/40 hover:text-white hover:bg-destructive hover:border-destructive transition-all active:scale-90"
+            >
+              <Trash2 className="w-4.5 h-4.5" />
+            </button>
+          </div>
         </div>
-      )}
+      </div>
+    ))}
+
+    {/* Кнопка створення з Cyberpunk ефектом */}
+    <button 
+      onClick={() => { setEditingId(null); setEditName(""); setEditDesc(""); setEditActiveTab("basic"); }}
+      className="group relative w-full py-6 rounded-[2.5rem] border-2 border-dashed border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all duration-500 overflow-hidden"
+    >
+      <div className="flex items-center justify-center gap-4">
+        <div className="relative w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-500">
+          <Plus className="w-6 h-6 text-white/30 group-hover:text-primary" />
+        </div>
+        <span className="text-xs font-black uppercase tracking-[0.4em] text-white/30 group-hover:text-primary transition-colors">
+          Створити нову фракцію
+        </span>
+      </div>
+    </button>
+  </div>
+)}
 
       {/* 3. СЕКЦІЯ СКЛАДУ (Твій "Склад" замість заявок) */}
       {activeSection === "players" && (
@@ -2515,17 +2569,17 @@ return (
         </div>
       )}
 
-      {/* 4. МОДАЛКА ПІДТВЕРДЖЕННЯ ВИГНАННЯ */}
+{/* 4. МОДАЛКА ПІДТВЕРДЖЕННЯ ВИГНАННЯ */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          {/* ФОН (Backdrop) - він тепер окремо від вікна */}
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+          {/* ФОН (Backdrop) - окремий шар */}
           <div 
             className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
             onClick={() => setIsModalOpen(false)}
           />
           
-          {/* ВІКНО МОДАЛКИ - тепер воно точно буде зверху завдяки relative та z-index */}
-          <div className="relative z-10 w-full max-w-[280px] liquid-glass border-primary/20 rounded-[2.5rem] p-8 text-center shadow-2xl animate-in zoom-in-95 duration-200">
+          {/* ВІКНО (Content) - додаємо translate-z-0 для форсування шару */}
+          <div className="relative z-[10001] w-full max-w-[280px] liquid-glass border border-white/20 rounded-[2.5rem] p-8 text-center shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200">
             <div className="w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto mb-4">
               <UserX className="w-8 h-8 text-destructive" />
             </div>
@@ -2539,7 +2593,7 @@ return (
             <div className="grid grid-cols-2 gap-3 w-full">
               <button 
                 onClick={() => setIsModalOpen(false)} 
-                className="py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-white active:scale-95 transition-all"
+                className="py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[9px] font-black uppercase text-white active:scale-95 transition-all"
               >
                 Назад
               </button>
