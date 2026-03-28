@@ -2569,49 +2569,47 @@ return (
         </div>
       )}
 
-{/* 4. МОДАЛКА В СТИЛЕ HIGH-END (БЕЗ ГЛЮКОВ) */}
-      {isModalOpen && (
+{/* 4. МОДАЛКА (ФІКС: Додано перевірку гравця) */}
+      {isModalOpen && playerToKick && (
         <div 
           className="fixed inset-0 flex items-center justify-center p-4" 
-          style={{ zIndex: 99999 }} // Экстремально высокий индекс
+          style={{ zIndex: 999999 }}
         >
-          {/* ФОН: Просто темный цвет без лишних фильтров */}
+          {/* ФОН */}
           <div 
-            className="absolute inset-0 bg-black/80 animate-in fade-in duration-300"
+            className="absolute inset-0 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300"
             onClick={() => setIsModalOpen(false)}
           />
           
-          {/* ТЕЛО МОДАЛКИ: Используем плотный фон вместо liquid-glass */}
-          <div className="relative z-[100000] w-full max-w-[320px] bg-[#111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
+          {/* ВІКНО - Додав white/10 bg для видимості */}
+          <div className="relative z-[1000000] w-full max-w-[320px] bg-[#111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
             
-            {/* Иконка */}
             <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-destructive/10 border border-destructive/20 flex items-center justify-center">
               <UserX className="w-10 h-10 text-destructive" />
             </div>
 
-            {/* Текст */}
             <h3 className="text-xl font-black text-white tracking-tight mb-2 uppercase">
-              Исключение
+              Вигнання
             </h3>
+            
             <p className="text-[12px] text-muted-foreground leading-relaxed mb-8">
-              Выгнать <span className="text-primary font-bold">{playerToKick?.username}</span> из состава фракции?
+              Ви дійсно хочете вигнати <span className="text-primary font-bold">{playerToKick.username}</span>?
             </p>
 
-            {/* Кнопки */}
             <div className="flex flex-col gap-3">
               <button 
                 onClick={confirmKick}
                 disabled={isProcessing}
                 className="w-full py-4 rounded-2xl bg-destructive text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all"
               >
-                {isProcessing ? "Секунду..." : "Подтвердить"}
+                {isProcessing ? "Видаляємо..." : "Підтвердити"}
               </button>
               
               <button 
                 onClick={() => setIsModalOpen(false)}
                 className="w-full py-4 rounded-2xl bg-white/5 text-white/50 text-[10px] font-black uppercase tracking-[0.2em] hover:text-white transition-all"
               >
-                Отмена
+                Скасувати
               </button>
             </div>
           </div>
