@@ -1949,18 +1949,11 @@ const ManageFactionsTab = () => {
   const [newQuestion, setNewQuestion] = useState("");
   const [editActiveTab, setEditActiveTab] = useState<"basic" | "design" | "form" | "leader">("basic");
 
-  const fetchPlayers = async () => {
-  const { data, error } = await supabase
+const fetchPlayers = async () => {
+  // 1. Отримуємо тільки дані з faction_applications (БЕЗ JOIN)
+  const { data: apps, error } = await supabase
     .from("faction_applications")
-    .select(`
-      id,
-      username,
-      faction_name,
-      status,
-      user_data:users!username (
-        avatar_url
-      )
-    `)
+    .select("id, username, faction_name, status")
     .eq("status", "approved");
 
   if (error) {
@@ -1968,13 +1961,32 @@ const ManageFactionsTab = () => {
     return;
   }
 
-  // Перетворюємо дані, щоб avatar_url був під рукою (p.avatar_url)
-  const formatted = data.map((p: any) => ({
-    ...p,
-    avatar_url: p.user_data?.avatar_url || null
-  }));
+  if (apps && apps.length > 0) {
+    // 2. Збираємо всі нікнейми
+    const usernames = apps.map(a => a.username).filter(Boolean);
 
-  setPlayers(formatted);
+    // 3. Отримуємо аватарки з таблиці users
+    const { data: usersData } = await supabase
+      .from("users")
+      .select("username, avatar_url")
+      .in("username", usernames);
+
+    // Створюємо карту аватарок
+    const avatarMap: Record<string, string | null> = {};
+    usersData?.forEach(u => {
+      avatarMap[u.username.toLowerCase()] = u.avatar_url;
+    });
+
+    // 4. Формуємо фінальний масив
+    const formatted = apps.map((p: any) => ({
+      ...p,
+      avatar_url: avatarMap[p.username?.toLowerCase()] || null
+    }));
+
+    setPlayers(formatted);
+  } else {
+    setPlayers([]);
+  }
 };
 
   const inputCls = "w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent";
