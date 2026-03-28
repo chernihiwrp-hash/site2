@@ -1941,32 +1941,7 @@ const ManageFactionsTab = () => {
   const [playerToKick, setPlayerToKick] = useState<{id: number, username: string} | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const openKickModal = (id: number, username: string) => {
-  setPlayerToKick({ id, username });
-  setIsModalOpen(true);
-};
-
-const confirmKick = async () => {
-  if (!playerToKick) return;
-  setIsProcessing(true);
-  try {
-    const { error } = await supabase
-      .from("faction_applications")
-      .update({ status: 'rejected' })
-      .eq("id", playerToKick.id);
-
-    if (error) throw error;
-
-    setPlayers(prev => prev.filter(p => p.id !== playerToKick.id));
-    setIsModalOpen(false);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setIsProcessing(false);
-    setPlayerToKick(null);
-  }
-};
-
+  
   // Edit faction
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
