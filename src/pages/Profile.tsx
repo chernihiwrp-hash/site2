@@ -489,56 +489,76 @@ const loadData = useCallback(async () => {
           </div>
         </div>
       </div>
-{/* ═══ ДОКУМЕНТИ ТА ТРАНСПОРТ ═══ */}
-<div className="grid grid-cols-2 gap-x-4 gap-y-12 px-1">
-  {[
-    // Лицензії (фільтруємо лише схвалені)
-    ...(profileData.licenses?.filter(l => l.status === "approved") || []),
-    // Машини
-    ...((profileData as any).cars || [])
-  ].map((item: any) => (
-    <div key={item.id} className="relative flex flex-col items-center">
-      
-      {/* Картка (Прямокутник) */}
-      <div className="w-full aspect-[16/10] rounded-xl relative overflow-hidden active:scale-95 transition-all shadow-lg"
-        style={{ 
-          background: "linear-gradient(145deg, #0f0f11 0%, #050505 100%)",
-          border: "1px solid hsl(0 0% 100% / 0.12)"
-        }}>
-        
-        {/* Декор: сітка та градієнт */}
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(var(--primary),0.15),transparent_70%)]" />
-
-        {/* Контент всередині */}
-        <div className="relative z-10 h-full flex flex-col items-center justify-center p-3">
-          <div className="w-10 h-10 rounded-lg bg-white/[0.03] border border-white/10 flex items-center justify-center mb-2 shadow-inner">
-            {item.plate_number ? (
-              <Car className="w-5 h-5 text-primary/80" />
-            ) : (
-              <Shield className="w-5 h-5 text-primary/80" />
-            )}
-          </div>
-          <span className="text-[10px] font-black text-center text-white/90 uppercase tracking-tight italic leading-tight line-clamp-2 px-1">
-            {item.license_type ? item.license_type.split('|')[0].trim() : (item.car_model || "Транспорт")}
-          </span>
+{/* ═══ РАЗДЕЛ: ЛІЦЕНЗІЇ ═══ */}
+      <div className="mb-6 animate-fade-in">
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <Shield className="w-4 h-4 text-primary drop-shadow-[0_0_5px_rgba(var(--primary),0.4)]" />
+          <h2 className="text-[10px] font-black tracking-[0.2em] uppercase opacity-60">Активні ліцензії</h2>
         </div>
-
-        {/* Водяний знак Тризуб */}
-        <div className="absolute -right-1 -bottom-2 w-12 h-16 opacity-[0.04] rotate-12 pointer-events-none">
-          <Trident />
+        
+        <div className="grid grid-cols-2 gap-4">
+          {profileData.licenses?.filter(l => l.status === "approved" && !l.plate_number).map((item: any) => (
+            <div key={item.id} className="relative aspect-[16/10] rounded-2xl p-[1px] overflow-hidden shadow-xl active:scale-95 transition-all"
+                 style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%)" }}>
+              <div className="absolute inset-0" style={{ background: passportBg }}>
+                {/* Glow снизу */}
+                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[radial-gradient(circle_at_50%_120%,rgba(var(--primary),0.2),transparent_80%)]" />
+                <img src="https://i.ibb.co/NbX6ZNs/images-2.jpg" className="absolute inset-0 w-full h-full object-cover opacity-[0.05] pointer-events-none" />
+                
+                <div className="relative z-10 h-full flex flex-col items-center justify-center p-3 text-center">
+                  <Shield className="w-6 h-6 text-primary/60 mb-1" />
+                  <span className="text-[9px] font-black uppercase tracking-tighter leading-tight italic opacity-90">
+                    {item.license_type?.split('|')[0].trim()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Номерний знак (Плашка), якщо він є */}
-      {item.plate_number && (
-        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 scale-110">
-          <PlateBadge plate={item.plate_number} />
+      {/* ═══ РАЗДЕЛ: ТРАНСПОРТНИЙ ПАРК ═══ */}
+      <div className="mb-10 animate-fade-in">
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <Car className="w-4 h-4 text-primary drop-shadow-[0_0_5px_rgba(var(--primary),0.4)]" />
+          <h2 className="text-[10px] font-black tracking-[0.2em] uppercase opacity-60">Мій транспорт</h2>
         </div>
-      )}
-    </div>
-  ))}
-</div>
+
+        <div className="space-y-6">
+          {((profileData as any).cars || []).map((car: any) => (
+            <div key={car.id} className="relative group">
+              {/* Основная карточка машины (Стиль как у паспорта) */}
+              <div className="w-full rounded-[24px] p-[1px] overflow-hidden shadow-2xl transition-all"
+                   style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%)" }}>
+                <div className="relative p-5 flex items-center justify-between" style={{ background: passportBg }}>
+                  {/* Glow эффект темы */}
+                  <div className="absolute inset-x-0 bottom-0 h-full bg-[radial-gradient(circle_at_50%_130%,rgba(var(--primary),0.25),transparent_70%)] pointer-events-none" />
+                  
+                  <div className="relative z-10 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                      <Car className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mb-1">Транспортний засіб</p>
+                      <p className="text-sm font-bold tracking-tight uppercase italic">{car.car_model || "Невідома модель"}</p>
+                    </div>
+                  </div>
+
+                  {/* Трайдент водяной знак */}
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-16 opacity-5 pointer-events-none">
+                    <Trident />
+                  </div>
+                </div>
+              </div>
+
+              {/* Номерной знак, "вылетающий" снизу */}
+              <div className="absolute -bottom-3 right-6 z-20 transform group-hover:translate-y-0.5 transition-transform">
+                <PlateBadge plate={car.plate_number} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
       {/* Кнопка адмін панелі — тільки для прийнятих адмінів */}
       {isApprovedAdmin && (
         <div className="mt-4 animate-fade-in">
