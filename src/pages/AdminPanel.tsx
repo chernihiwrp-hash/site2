@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import PageHeader from "../components/PageHeader";
+import { createPortal } from 'react-dom';
 import NeonCard from "../components/NeonCard";
 import GradientButton from "../components/GradientButton";
 import {
@@ -2569,31 +2570,27 @@ return (
         </div>
       )}
 
-{/* 4. МОДАЛКА (ФІКС: Додано перевірку гравця) */}
-      {isModalOpen && playerToKick && (
-        <div 
-          className="fixed inset-0 flex items-center justify-center p-4" 
-          style={{ zIndex: 999999 }}
-        >
+{/* 4. МОДАЛКА ЧЕРЕЗ ПОРТАЛ (ПРОБ’Є БУДЬ-ЩО) */}
+      {isModalOpen && playerToKick && createPortal(
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999999 }}>
           {/* ФОН */}
           <div 
-            className="absolute inset-0 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300"
+            className="fixed inset-0 bg-black/90 backdrop-blur-md animate-in fade-in"
             onClick={() => setIsModalOpen(false)}
           />
           
-          {/* ВІКНО - Додав white/10 bg для видимості */}
-          <div className="relative z-[1000000] w-full max-w-[320px] bg-[#111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
-            
+          {/* ВІКНО */}
+          <div className="relative z-[10000000] w-full max-w-[320px] bg-[#111] border border-white/20 rounded-[2.5rem] p-8 text-center shadow-[0_0_100px_rgba(0,0,0,1)] animate-in zoom-in-95 duration-200">
             <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-destructive/10 border border-destructive/20 flex items-center justify-center">
               <UserX className="w-10 h-10 text-destructive" />
             </div>
 
-            <h3 className="text-xl font-black text-white tracking-tight mb-2 uppercase">
+            <h3 className="text-xl font-black text-white tracking-tight mb-2 uppercase italic">
               Вигнання
             </h3>
             
             <p className="text-[12px] text-muted-foreground leading-relaxed mb-8">
-              Ви дійсно хочете вигнати <span className="text-primary font-bold">{playerToKick.username}</span>?
+              Вигнати <span className="text-primary font-bold">{playerToKick.username}</span>?
             </p>
 
             <div className="flex flex-col gap-3">
@@ -2602,18 +2599,19 @@ return (
                 disabled={isProcessing}
                 className="w-full py-4 rounded-2xl bg-destructive text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all"
               >
-                {isProcessing ? "Видаляємо..." : "Підтвердити"}
+                {isProcessing ? "..." : "ПІДТВЕРДИТИ"}
               </button>
               
               <button 
                 onClick={() => setIsModalOpen(false)}
                 className="w-full py-4 rounded-2xl bg-white/5 text-white/50 text-[10px] font-black uppercase tracking-[0.2em] hover:text-white transition-all"
               >
-                Скасувати
+                СКАСУВАТИ
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body // <--- ЦЕ КЛЮЧОВИЙ МОМЕНТ
       )}
       </div> // <--- ДОДАЙ ЦЕ (закриває основний контейнер AdminPanel)
   );
