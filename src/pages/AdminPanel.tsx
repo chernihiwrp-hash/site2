@@ -2335,6 +2335,28 @@ useEffect(() => {
   (p.username || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
   (p.faction_name || "").toLowerCase().includes(searchQuery.toLowerCase()) 
 );
+
+  const kickPlayer = async (id: number, username: string) => {
+
+  if (!confirm(`Вигнати гравця ${username} з фракції?`)) return;
+
+  try {
+
+    const { error } = await supabase
+      .from("faction_applications")
+      .update({ status: 'rejected' })
+      .eq("id", id);
+
+    if (error) throw error;
+
+    setPlayers(prev => prev.filter(p => p.id !== id));
+    
+    alert(`Гравця ${username} успішно звільнено!`);
+  } catch (err) {
+    console.error("Помилка:", err);
+    alert("Не вдалося звільнити гравця.");
+  }
+};
   
 return (
     <div className="space-y-4 animate-fade-in">
