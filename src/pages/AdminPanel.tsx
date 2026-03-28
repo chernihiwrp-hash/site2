@@ -821,20 +821,28 @@ const PlatesTab = () => {
 
   const decide = async (id: number, status: "approved" | "rejected") => {
     try {
-      // Оновлення в базі
-      const { error } = await supabase
-        .from("car_plates")
-        .update({ status: status })
-        .eq("id", id);
+      console.log("Спроба оновити ID:", id, "Статус:", status);
       
-      if (error) throw error;
+     
+      const { data, error } = await supabase
+        .from("car_plates")
+        .update({ status: status }) 
+        .eq("id", id)             
+        .select();                 
+      if (error) {
+        console.error("Помилка Supabase:", error);
+        throw error;
+      }
 
-      // Оновлення в інтерфейсі
+      console.log("Успішно оновлено:", data);
+
+
       setPlates(prev => prev.map(p => p.id === id ? { ...p, status } : p));
       toast.success(status === "approved" ? "Номер видано!" : "Відхилено");
-    } catch (err) {
-      console.error(err);
-      toast.error("Помилка збереження");
+      
+    } catch (err: any) {
+      console.error("Деталі помилки:", err);
+      toast.error(`Помилка: ${err.message || "Збереження"}`);
     }
   };
 
