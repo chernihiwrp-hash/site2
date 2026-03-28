@@ -46,12 +46,6 @@ type TabId =
   "news" | "houses" | "wanted" | "election" | "documents" |
   "add_faction" | "voice" | "tokens" | "manage_factions" | "debug" | "bans";
 
-// ─── PERMISSIONS ─────────────────────────────────────────────────────────────
-type TabId =
-  "sos" | "applications" | "factions" | "licenses" | "plates" | "house_requests" |
-  "news" | "houses" | "wanted" | "election" | "documents" |
-  "add_faction" | "voice" | "tokens" | "manage_factions" | "debug" | "bans";
-
 const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boolean }[] = [
   { id: "sos",           label: "SOS Сигнали",          icon: AlertTriangle, sub: "Realtime",    danger: true },
   { id: "applications",  label: "Заявки адміністратора", icon: Users,         sub: "Заявки" },
