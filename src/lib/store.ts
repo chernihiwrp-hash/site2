@@ -142,6 +142,25 @@ export const store = {
     return allHouses;
   },
 
+// ── CAR PLATES ─────────────────────────────────────────────────────────────
+  getCarPlates: async (nick: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("car_plates")
+        .select("*")
+        .eq("owner_nick", nick); 
+
+      if (error) {
+        console.error("Ошибка запроса к car_plates:", error);
+        return [];
+      }
+      return data || [];
+    } catch (e) {
+      console.error("Критическая ошибка в getCarPlates:", e);
+      return [];
+    }
+  }, // <--- Закрывает getCarPlates
+  
   addHouse: async (name: string, desc: string, price: number, imageUrl?: string, category = "Люкс") => {
     await supabase.from("houses").insert({
       name, description: desc, price,
