@@ -2762,7 +2762,3 @@ const BansTab = () => {
 };
 
 export default AdminPanel;
-
-}; // Закриває AdminPanel
-
-export default AdminPanel;
