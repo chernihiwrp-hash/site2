@@ -783,8 +783,6 @@ const WantedTab = () => {
 };
 
 // ─── CAR PLATES (ТІЛЬКИ НОМЕРИ) ──────────────────────────────────────────────
-// ─── PLATE BADGE COMPONENT ──────────────────────────────────────────────────
-// ВСТАВЛЯЙ ЦЕ ПЕРЕД PlatesTab
 const PlateBadge = ({ number }: { number: string }) => (
   <div className="inline-flex items-center bg-white rounded-[4px] border-[1.5px] border-black/10 overflow-hidden shadow-sm shrink-0" style={{ height: "24px" }}>
     <div className="bg-[#0052b4] w-[12px] h-full flex flex-col items-center justify-center gap-0.5 px-[2px]">
@@ -803,19 +801,27 @@ const PlateBadge = ({ number }: { number: string }) => (
 );
 
 // ─── CAR PLATES (ТІЛЬКИ НОМЕРИ) ──────────────────────────────────────────────
-const PlatesTab = () => {
-  const [plates, setPlates] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const fetchPlates = async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from("car_plates")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (data) setPlates(data);
-    setLoading(false);
-  };
+const PlateBadge = ({ plate }: { plate: string }) => {
+
+  const text = String(plate || "??-????");
+
+  return (
+    <div className="inline-flex items-center bg-white rounded-[4px] border-[1.5px] border-black/10 overflow-hidden shadow-sm shrink-0" style={{ height: "24px" }}>
+      <div className="bg-[#0052b4] w-[12px] h-full flex flex-col items-center justify-center gap-0.5 px-[2px]">
+        <div className="flex flex-col gap-[1px]">
+          <div className="w-[4px] h-[1.5px] bg-yellow-400 rounded-[0.5px]" />
+        </div>
+        <span className="text-[6px] leading-none font-black text-white tracking-tighter">UA</span>
+      </div>
+      <div className="px-2 py-0.5 flex items-center">
+        <span className="text-[12px] font-black text-[#1a1a1b] tracking-wider leading-none" style={{ fontFamily: "monospace" }}>
+          {text.toUpperCase()}
+        </span>
+      </div>
+    </div>
+  );
+};
 
   useEffect(() => { fetchPlates(); }, []);
 
@@ -963,7 +969,7 @@ const DebugTab = () => {
   const addLog = (msg: string) => setLog(prev => [msg, ...prev].slice(0, 20));
 
   const testInsertFaction = async () => {
-    addLog("⏳ Тестую faction_applications INSERT...");
+    addLog("Тестую faction_applications INSERT...");
     const { data, error } = await supabase.from("faction_applications").insert({
       faction_id: null,
       faction_name: "Тест",
