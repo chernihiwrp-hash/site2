@@ -445,77 +445,76 @@ const loadData = useCallback(async () => {
           </div>
         </div>
       </div>
-  {/* ═══ ЛІЦЕНЗІЇ (Квадрати-плітки) ═══ */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3 px-1">
+  {/* ═══ ЛІЦЕНЗІЇ (Cyber-Passport Плитки) ═══ */}
+      <div className="mb-6 animate-fade-in">
+        <div className="flex items-center gap-2 mb-4 px-1">
           <FileCheck className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-black tracking-widest uppercase">Документи</h2>
+          <h2 className="text-[11px] font-black tracking-widest uppercase opacity-70">Документи</h2>
         </div>
 
-        {/* Сетка из квадратов */}
+        {/* Сетка */}
         <div className="grid grid-cols-2 gap-3">
           {profileData.licenses && profileData.licenses.filter(l => l.status === "approved" && !l.plate_number).length > 0 ? (
             profileData.licenses
               .filter(l => l.status === "approved" && !l.plate_number)
               .map(l => (
-                <div key={l.id} className="aspect-square flex flex-col items-center justify-center p-4 rounded-[28px] bg-white/[0.03] border border-white/5 hover:bg-primary/10 transition-all active:scale-95 shadow-lg">
-                  <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
-                    <Shield className="w-6 h-6 text-primary" />
+                <div key={l.id} className="aspect-square relative group overflow-hidden rounded-[30px] p-[1px] bg-gradient-to-br from-white/10 to-transparent shadow-xl transition-all active:scale-95">
+                  {/* Внутренний контейнер с фоном паспорта */}
+                  <div className="absolute inset-[1px] rounded-[29px] overflow-hidden" style={{
+                    background: passportBg || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))",
+                    transition: "background 0.6s ease"
+                  }}>
+                    {/* BG Image (дублируем из паспорта для стиля) */}
+                    <img
+                      src="https://i.ibb.co/NbX6ZNs/images-2.jpg"
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                      style={{ opacity: 0.1 }}
+                      onError={e => { e.currentTarget.style.display = "none"; }}
+                    />
+                    
+                    {/* Тематическое свечение (radial gradient) */}
+                    <div className="absolute inset-0 rounded-2xl" style={{
+                      background: `radial-gradient(ellipse 80% 50% at 50% 100%, hsl(var(--primary) / 0.08) 0%, transparent 70%)`,
+                      transition: "background 0.6s ease"
+                    }} />
+
+                    {/* Trident вотермарк (маленький, в углу) */}
+                    <div className="absolute -right-3 -bottom-3 w-16 h-20 pointer-events-none rotate-12">
+                      <Trident />
+                    </div>
+                    
+                    {/* Машиночитаемая строка (маленькая, для стиля) */}
+                    <div className="absolute left-0 bottom-0 right-0 px-3 py-1 opacity-20" style={{ borderTop: "1px solid hsl(0 0% 100% / 0.05)", background: "hsl(0 0% 100% / 0.02)" }}>
+                       <p className="text-[5px] text-muted-foreground/30 font-mono tracking-widest text-center truncate">
+                        ID:{String(l.id).padStart(5, '0')} // TYPE:{l.license_type.split('|')[0].trim().slice(0,3).toUpperCase()}
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-black text-center text-foreground uppercase leading-tight tracking-tighter">
-                    {l.license_type.split('|')[0].trim()}
-                  </span>
+
+                  {/* Контент поверх всего */}
+                  <div className="relative z-10 aspect-square flex flex-col items-center justify-center p-4">
+                    <div className="relative">
+                      <div className="w-11 h-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-transform group-hover:scale-105">
+                        <Shield className="w-6 h-6 text-primary" style={{ filter: "drop-shadow(0 0 4px hsl(var(--primary)))" }} />
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-background/50 backdrop-blur-sm border border-primary/30 rounded-full flex items-center justify-center">
+                         <CheckCircle className="w-2.5 h-2.5 text-primary" />
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black text-center text-foreground uppercase tracking-tighter leading-tight px-1 group-hover:neon-text-lime transition-all">
+                      {l.license_type.split('|')[0].trim()}
+                    </span>
+                  </div>
                 </div>
               ))
           ) : (
-            <div className="col-span-2 py-6 liquid-glass rounded-3xl text-center border border-dashed border-white/10">
-               <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Список порожній</p>
+            <div className="col-span-2 py-8 liquid-glass rounded-[32px] text-center opacity-40 border border-dashed border-white/10">
+               <p className="text-[10px] uppercase tracking-widest">Немає ліцензій</p>
             </div>
           )}
         </div>
       </div>
-
-      {/* ═══ ТРАНСПОРТ (car_plates) ═══ */}
-      {((profileData as any).cars?.length > 0) && (
-        <div className="mb-8 animate-fade-in">
-          <div className="flex items-center gap-2 mb-3 px-1 text-yellow-400">
-            <Car className="w-4 h-4" />
-            <h2 className="text-sm font-black tracking-widest uppercase">Мій транспорт</h2>
-          </div>
-
-          <div className="space-y-3">
-            {(profileData as any).cars.map((car: any) => (
-              <div key={car.id} className="liquid-glass-card rounded-[24px] p-4 border border-white/5 flex items-center justify-between shadow-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
-                    <Car className="w-5 h-5 text-yellow-400" />
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-muted-foreground uppercase font-black leading-none mb-1">Registration</p>
-                    <p className="text-xs font-black text-white uppercase italic">{car.model || "Vehicle"}</p>
-                  </div>
-                </div>
-
-                {/* UA Номерний знак */}
-                <div className="relative flex items-stretch rounded-[5px] border-[1.5px] border-[#1a1a1a] bg-[#fdfdfd] h-[28px] overflow-hidden shadow-md">
-                  <div className="w-[12px] bg-[#005BBB] flex flex-col items-center justify-center gap-[1px]">
-                    <div className="w-[8px] h-[4px] rounded-[0.5px] overflow-hidden">
-                       <div className="h-1/2 bg-[#005BBB]" />
-                       <div className="h-1/2 bg-[#FFD500]" />
-                    </div>
-                    <span className="text-[4px] font-black text-white">UA</span>
-                  </div>
-                  <div className="px-3 flex items-center justify-center bg-white">
-                    <span className="text-[13px] font-[900] text-[#111] font-sans tracking-tight">
-                      {car.plate_number}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       {/* Кнопка адмін панелі — тільки для прийнятих адмінів */}
       {isApprovedAdmin && (
         <div className="mt-4 animate-fade-in">
