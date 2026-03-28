@@ -1933,9 +1933,9 @@ const LeaderAssignmentBlock = ({ factionId, factionName, onAssigned }: { faction
 const ManageFactionsTab = () => {
   const [factions, setFactions] = useState<any[]>([]);
   const [players, setPlayers] = useState<any[]>([]); 
-  const [activeSection, setActiveSection] = useState<"factions" | "players">("factions");
+  const [activeSection, setActiveSection] = useState<"factions" | "players" | "apps">("factions");
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState(""); 
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Edit faction
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -1967,20 +1967,27 @@ const ManageFactionsTab = () => {
     { id: -11, name: "МАФІЯ",       color: "hsl(0, 65%, 45%)",   section: "separate", gradient: "" },
   ];
 
-  useEffect(() => {
+useEffect(() => {
     const load = async () => {
+  
       const { data: f } = await supabase.from("factions").select("*").order("created_at", { ascending: true });
       const dbFactions = (f || []) as { id: number; name: string; color: string; section: string; gradient?: string }[];
       const dbNames = new Set(dbFactions.map(x => x.name.toLowerCase()));
-      // Merge: DB factions + static ones not in DB
+      
       const staticMissing = STATIC_FACTION_LIST.filter(s => !dbNames.has(s.name.toLowerCase()));
       setFactions([...dbFactions, ...staticMissing]);
+
+      
+      const { data: p } = await supabase.from("users").select("*").neq("faction", "none");
+      if (p) setPlayers(p);
+
       setLoading(false);
     };
+    
     load();
-    store.getFactionApps().then(setApps);
+ 
   }, []);
-
+  
   const deleteFaction = async (id: number, name: string) => {
     if (id < 0) { toast.error("Статичні фракції не можна видалити з бази"); return; }
     if (!confirm(`Видалити фракцію "${name}"?`)) return;
@@ -2323,6 +2330,11 @@ const ManageFactionsTab = () => {
     );
   }
 
+  const filteredPlayers = players.filter(p => 
+  (p.username || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+  (p.faction || "").toLowerCase().includes(searchQuery.toLowerCase())
+);
+  
 return (
     <div className="space-y-4 animate-fade-in">
       {/* 1. ПЕРЕМИКАЧ (Тільки Фракції та Склад) */}
