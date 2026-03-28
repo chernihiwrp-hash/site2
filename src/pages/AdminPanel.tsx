@@ -46,6 +46,32 @@ type TabId =
   "news" | "houses" | "wanted" | "election" | "documents" |
   "add_faction" | "voice" | "tokens" | "manage_factions" | "debug" | "bans";
 
+// ─── PERMISSIONS ─────────────────────────────────────────────────────────────
+type TabId =
+  "sos" | "applications" | "factions" | "licenses" | "plates" | "house_requests" |
+  "news" | "houses" | "wanted" | "election" | "documents" |
+  "add_faction" | "voice" | "tokens" | "manage_factions" | "debug" | "bans";
+
+const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boolean }[] = [
+  { id: "sos",           label: "SOS Сигнали",          icon: AlertTriangle, sub: "Realtime",    danger: true },
+  { id: "applications",  label: "Заявки адміністратора", icon: Users,         sub: "Заявки" },
+  { id: "factions",      label: "Заявки у фракції",      icon: Shield,        sub: "Заявки" },
+  { id: "licenses",      label: "Ліцензії",             icon: FileCheck,     sub: "Управління" },
+  { id: "plates",        label: "Номери",               icon: Car,           sub: "Управління" },
+  { id: "house_requests",label: "Купівля будинків",       icon: Home,          sub: "Управління" },
+  { id: "news",          label: "Новини та оновлення",    icon: Newspaper,     sub: "Управління" },
+  { id: "houses",        label: "Управління будинками",  icon: Building2,     sub: "Управління" },
+  { id: "wanted",        label: "Розшук",                icon: Crosshair,     sub: "Управління", danger: true },
+  { id: "election",      label: "Вибори мера",           icon: Vote,          sub: "Управління" },
+  { id: "documents",     label: "Документи",             icon: ScrollText,    sub: "Управління" },
+  { id: "add_faction",   label: "Додати фракцію",         icon: ShieldAlert,   sub: "Управління" },
+  { id: "voice",         label: "Голос міста",           icon: Megaphone,     sub: "Управління" },
+  { id: "tokens",        label: "Токени CR",             icon: Coins,         sub: "Фінанси" },
+  { id: "manage_factions",label: "Управління фракціями",   icon: ShieldAlert,   sub: "Фракції" },
+  { id: "bans",            label: "Бани гравців",           icon: UserX,         sub: "Безпека", danger: true },
+  { id: "debug",           label: "Діагностика",            icon: Settings,      sub: "Debug" },
+];
+
 const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
   sos: false, applications: false, factions: false, licenses: false,
   plates: false, 
