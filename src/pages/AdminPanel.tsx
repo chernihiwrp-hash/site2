@@ -1968,25 +1968,26 @@ const ManageFactionsTab = () => {
   ];
 
 useEffect(() => {
-    const load = async () => {
-  
-      const { data: f } = await supabase.from("factions").select("*").order("created_at", { ascending: true });
-      const dbFactions = (f || []) as { id: number; name: string; color: string; section: string; gradient?: string }[];
-      const dbNames = new Set(dbFactions.map(x => x.name.toLowerCase()));
-      
-      const staticMissing = STATIC_FACTION_LIST.filter(s => !dbNames.has(s.name.toLowerCase()));
-      setFactions([...dbFactions, ...staticMissing]);
-
-      
-      const { data: p } = await supabase.from("users").select("*").neq("faction", "none");
-      if (p) setPlayers(p);
-
-      setLoading(false);
-    };
+  const load = async () => {
+    setLoading(true);
     
-    load();
- 
-  }, []);
+    const { data: f } = await supabase.from("factions").select("*").order("created_at");
+    if (f) setFactions(f);
+
+    const { data: a, error } = await supabase
+      .from("faction_applications")
+      .select("*")
+      .eq("status", "approved"); 
+
+    if (error) console.error("Помилка завантаження складу:", error);
+    
+  
+    if (a) setPlayers(a);
+
+    setLoading(false);
+  };
+  load();
+}, []);
   
   const deleteFaction = async (id: number, name: string) => {
     if (id < 0) { toast.error("Статичні фракції не можна видалити з бази"); return; }
@@ -2332,7 +2333,7 @@ useEffect(() => {
 
   const filteredPlayers = players.filter(p => 
   (p.username || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-  (p.faction || "").toLowerCase().includes(searchQuery.toLowerCase())
+  (p.faction_name || "").toLowerCase().includes(searchQuery.toLowerCase()) 
 );
   
 return (
