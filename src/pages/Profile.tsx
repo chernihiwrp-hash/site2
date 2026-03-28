@@ -45,6 +45,9 @@ const statusLabels: Record<string, string> = {
 
 const Profile = () => {
   const navigate = useNavigate();
+
+  const nick = localStorage.getItem("crp_nick") || "Гравець";
+  
   const [showAdminInput, setShowAdminInput] = useState(false);
   const [adminCode, setAdminCode] = useState("");
   const [isApprovedAdmin, setIsApprovedAdmin] = useState(false);
