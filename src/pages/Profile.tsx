@@ -445,74 +445,76 @@ const loadData = useCallback(async () => {
           </div>
         </div>
       </div>
-  {/* ═══ ЛІЦЕНЗІЇ (Cyber-Passport Плитки) ═══ */}
+{/* ═══ ЛІЦЕНЗІЇ ТА РЕЄСТРАЦІЇ (3D Cyber-Passport) ═══ */}
       <div className="mb-6 animate-fade-in">
         <div className="flex items-center gap-2 mb-4 px-1">
-          <FileCheck className="w-4 h-4 text-primary" />
-          <h2 className="text-[11px] font-black tracking-widest uppercase opacity-70">Документи</h2>
+          <FileCheck className="w-4 h-4 text-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
+          <h2 className="text-[11px] font-black tracking-widest uppercase opacity-80">Документи та транспорт</h2>
         </div>
 
-        {/* Сетка */}
-        <div className="grid grid-cols-2 gap-3">
-          {profileData.licenses && profileData.licenses.filter(l => l.status === "approved" && !l.plate_number).length > 0 ? (
-            profileData.licenses
-              .filter(l => l.status === "approved" && !l.plate_number)
-              .map(l => (
-                <div key={l.id} className="aspect-square relative group overflow-hidden rounded-[30px] p-[1px] bg-gradient-to-br from-white/10 to-transparent shadow-xl transition-all active:scale-95">
-                  {/* Внутренний контейнер с фоном паспорта */}
-                  <div className="absolute inset-[1px] rounded-[29px] overflow-hidden" style={{
-                    background: passportBg || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))",
-                    transition: "background 0.6s ease"
-                  }}>
-                    {/* BG Image (дублируем из паспорта для стиля) */}
-                    <img
-                      src="https://i.ibb.co/NbX6ZNs/images-2.jpg"
-                      alt=""
-                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                      style={{ opacity: 0.1 }}
-                      onError={e => { e.currentTarget.style.display = "none"; }}
-                    />
-                    
-                    {/* Тематическое свечение (radial gradient) */}
-                    <div className="absolute inset-0 rounded-2xl" style={{
-                      background: `radial-gradient(ellipse 80% 50% at 50% 100%, hsl(var(--primary) / 0.08) 0%, transparent 70%)`,
-                      transition: "background 0.6s ease"
-                    }} />
-
-                    {/* Trident вотермарк (маленький, в углу) */}
-                    <div className="absolute -right-3 -bottom-3 w-16 h-20 pointer-events-none rotate-12">
-                      <Trident />
-                    </div>
-                    
-                    {/* Машиночитаемая строка (маленькая, для стиля) */}
-                    <div className="absolute left-0 bottom-0 right-0 px-3 py-1 opacity-20" style={{ borderTop: "1px solid hsl(0 0% 100% / 0.05)", background: "hsl(0 0% 100% / 0.02)" }}>
-                       <p className="text-[5px] text-muted-foreground/30 font-mono tracking-widest text-center truncate">
-                        ID:{String(l.id).padStart(5, '0')} // TYPE:{l.license_type.split('|')[0].trim().slice(0,3).toUpperCase()}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Контент поверх всего */}
-                  <div className="relative z-10 aspect-square flex flex-col items-center justify-center p-4">
-                    <div className="relative">
-                      <div className="w-11 h-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-transform group-hover:scale-105">
-                        <Shield className="w-6 h-6 text-primary" style={{ filter: "drop-shadow(0 0 4px hsl(var(--primary)))" }} />
-                      </div>
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-background/50 backdrop-blur-sm border border-primary/30 rounded-full flex items-center justify-center">
-                         <CheckCircle className="w-2.5 h-2.5 text-primary" />
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-black text-center text-foreground uppercase tracking-tighter leading-tight px-1 group-hover:neon-text-lime transition-all">
-                      {l.license_type.split('|')[0].trim()}
-                    </span>
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            ...(profileData.licenses?.filter(l => l.status === "approved") || []),
+            ...((profileData as any).cars || [])
+          ].map((item: any) => (
+            <div key={item.id} className="aspect-square relative group">
+              {/* Основна карта (Паспорт) */}
+              <div className="absolute inset-0 rounded-[32px] p-[1px] bg-gradient-to-br from-white/15 to-transparent shadow-2xl transition-transform group-active:scale-95 overflow-hidden">
+                <div className="absolute inset-[1px] rounded-[31px] overflow-hidden" style={{
+                  background: passportBg || "linear-gradient(145deg, #0a0a0c 0%, #050505 100%)",
+                }}>
+                  {/* Текстура паспорта */}
+                  <img src="https://i.ibb.co/NbX6ZNs/images-2.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-10 pointer-events-none" />
+                  
+                  {/* Світіння та Trident */}
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(var(--primary),0.1),transparent_70%)]" />
+                  <div className="absolute -right-2 -bottom-2 w-14 h-18 opacity-20 rotate-12 pointer-events-none">
+                    <Trident />
                   </div>
                 </div>
-              ))
-          ) : (
-            <div className="col-span-2 py-8 liquid-glass rounded-[32px] text-center opacity-40 border border-dashed border-white/10">
-               <p className="text-[10px] uppercase tracking-widest">Немає ліцензій</p>
+
+                {/* Контент (Іконка + Текст) */}
+                <div className="relative z-10 h-full flex flex-col items-center justify-center pb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center mb-2 shadow-inner">
+                    {item.plate_number ? (
+                      <Car className="w-6 h-6 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
+                    ) : (
+                      <Shield className="w-6 h-6 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
+                    )}
+                  </div>
+                  <span className="text-[10px] font-black text-center text-white/90 uppercase tracking-tighter leading-tight px-3">
+                    {item.license_type ? item.license_type.split('|')[0].trim() : (item.car_model || "Транспорт")}
+                  </span>
+                </div>
+              </div>
+
+              {/* ──── 3D НОМЕРНИЙ ЗНАК (Виступаючий шар) ──── */}
+              {item.plate_number && (
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-20 transition-transform group-hover:-translate-y-1">
+                  {/* Тінь для об'єму */}
+                  <div className="absolute inset-0 bg-black/60 blur-[4px] translate-y-1 rounded-[4px]" />
+                  
+                  {/* Сама пластина номера */}
+                  <div className="relative flex items-stretch rounded-[4px] border-[1.2px] border-[#111] bg-[#fdfdfd] h-[24px] min-w-[80px] overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)]">
+                    {/* Синя полоса UA */}
+                    <div className="w-[10px] bg-[#005BBB] flex flex-col items-center justify-center gap-[0.5px]">
+                      <div className="w-[7px] h-[4px] rounded-[0.5px] overflow-hidden">
+                         <div className="h-1/2 bg-[#005BBB]" />
+                         <div className="h-1/2 bg-[#FFD500]" />
+                      </div>
+                      <span className="text-[4px] font-black text-white">UA</span>
+                    </div>
+                    {/* Текст номера */}
+                    <div className="px-2.5 flex items-center justify-center bg-white w-full">
+                      <span className="text-[12px] font-[1000] text-[#111] font-sans tracking-tight whitespace-nowrap">
+                        {item.plate_number}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
       </div>
       {/* Кнопка адмін панелі — тільки для прийнятих адмінів */}
