@@ -22,6 +22,10 @@ const Licenses = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"form" | "search">("search");
 
+  const [searchNick, setSearchNick] = useState("");
+  const [searchResult, setSearchResult] = useState<{ found: boolean; items: string[] } | null>(null);
+  const [searching, setSearching] = useState(false);
+
   const handleSearch = async () => {
     const cleanNick = searchNick.trim();
     if (!cleanNick) return toast.error("Введіть нік гравця");
@@ -52,12 +56,42 @@ const Licenses = () => {
         setSearchResult({ found: false, items: [] });
       }
     } catch (err) {
-      console.error("Помилка поиска:", err);
+      console.error("Помилка пошуку:", err);
       toast.error("Помилка при пошуку");
     } finally {
       setSearching(false);
     }
   };
+
+  // Добавь это, чтобы выбор оружия заработал
+  const toggleWeapon = (weapon: string) => {
+    if (selected.includes(weapon)) {
+      setSelected(selected.filter(w => w !== weapon));
+    } else if (selected.length < 5) {
+      setSelected([...selected, weapon]);
+    } else {
+      toast.error("Максимум 5 предметів!");
+    }
+  };
+
+  // Добавь это, чтобы заявка отправлялась в базу
+  const handleSubmit = async () => {
+    if (!nick) return toast.error("Нік не знайдено");
+    if (!roblox || !telegram || selected.length === 0) return toast.error("Заповніть усі поля та оберіть зброю");
+    setLoading(true);
+    try {
+      // Формируем строку: список оружия + роблокс ник
+      const licenseData = `${selected.join(", ")} | Roblox: ${roblox}`;
+      await store.submitLicense(nick, licenseData, telegram);
+      setSubmitted(true);
+    } catch (err) {
+      console.error(err);
+      toast.error("Помилка відправки, спробуй ще раз");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // ── Екран "немає грошей" ──
 
 
