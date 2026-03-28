@@ -74,27 +74,7 @@ const saveAdminPerms = async (nick: string, perms: Record<TabId, boolean>) => {
   );
 };
 
-// ─── TAB LIST ─────────────────────────────────────────────────────────────────
-type Tab = TabId | "superadmin" | "restrictions";
 
-const TAB_LIST: { id: TabId; label: string; icon: typeof Newspaper; sub: string; danger?: boolean }[] = [
-  { id: "sos",           label: "SOS Сигнали",          icon: AlertTriangle, sub: "Realtime",    danger: true },
-  { id: "applications",  label: "Заявки адміністратора", icon: Users,         sub: "Заявки" },
-  { id: "factions",      label: "Заявки у фракції",      icon: Shield,        sub: "Заявки" },
-  { id: "licenses",      label: "Ліцензії та номери",    icon: FileCheck,     sub: "Управління" },
-  { id: "house_requests",label: "Купівля будинків",       icon: Home,          sub: "Управління" },
-  { id: "news",          label: "Новини та оновлення",   icon: Newspaper,     sub: "Управління" },
-  { id: "houses",        label: "Управління будинками",  icon: Building2,     sub: "Управління" },
-  { id: "wanted",        label: "Розшук",                icon: Crosshair,     sub: "Управління", danger: true },
-  { id: "election",      label: "Вибори мера",           icon: Vote,          sub: "Управління" },
-  { id: "documents",     label: "Документи",             icon: ScrollText,    sub: "Управління" },
-  { id: "add_faction",   label: "Додати фракцію",        icon: ShieldAlert,   sub: "Управління" },
-  { id: "voice",         label: "Голос міста",           icon: Megaphone,     sub: "Управління" },
-  { id: "tokens",        label: "Токени CR",             icon: Coins,         sub: "Фінанси" },
-  { id: "manage_factions",label: "Управління фракціями",   icon: ShieldAlert,   sub: "Фракції" },
-  { id: "bans",            label: "Бани гравців",           icon: UserX,         sub: "Безпека", danger: true },
-  { id: "debug",           label: "Діагностика",            icon: Settings,      sub: "Debug" },
-];
 
 const inputClass = "w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent";
 
@@ -223,6 +203,7 @@ const AdminPanel = () => {
         {tab === "tokens"        && <TokensTab />}
         {tab === "voice"         && <VoiceTab />}
         {tab === "licenses"      && <LicensesTab />}
+        {tab === "plates"        && <PlatesTab />} 
         {tab === "house_requests"&& <HouseRequestsTab />}
         {tab === "add_faction"   && <AddFactionTab />}
         {tab === "manage_factions" && <ManageFactionsTab />}
@@ -649,10 +630,13 @@ const HouseRequestsTab = () => {
   );
 };
 
-// ─── LICENSES ────────────────────────────────────────────────────────────────
+// ─── LICENSES (ТІЛЬКИ ЗБРОЯ) ─────────────────────────────────────────────────
 const LicensesTab = () => {
   const [apps, setApps] = useState<LicenseApplication[]>([]);
-  useEffect(() => { store.getLicenseApplications().then(setApps); }, []);
+  
+  useEffect(() => { 
+    store.getLicenseApplications().then(setApps); 
+  }, []);
 
   const decide = async (id: number, status: "approved" | "rejected") => {
     await store.updateLicenseStatus(id, status);
@@ -671,96 +655,65 @@ const LicensesTab = () => {
   return (
     <div className="space-y-3 animate-fade-in">
       <div className="flex items-center justify-between px-1">
-        <p className="text-[10px] font-black text-muted-foreground tracking-widest uppercase">Заявок: {apps.length}</p>
-        <div className="flex items-center gap-1.5 text-[10px] text-primary/50 uppercase font-bold tracking-tighter">
-          <ShieldCheck className="w-3 h-3" /> Перевірка ліцензій
-        </div>
+        <p className="text-[10px] font-black text-muted-foreground tracking-widest uppercase">Заявок на зброю: {apps.length}</p>
       </div>
 
       {apps.length === 0 && (
         <div className="text-center py-12 liquid-glass-card rounded-3xl border-dashed">
-          <Car className="w-8 h-8 text-muted-foreground opacity-20 mx-auto mb-2" />
-          <p className="text-xs text-muted-foreground font-medium">Черга порожня</p>
+          <ShieldCheck className="w-8 h-8 text-muted-foreground opacity-20 mx-auto mb-2" />
+          <p className="text-xs text-muted-foreground font-medium">Заявок на зброю немає</p>
         </div>
       )}
 
-      {apps.map(a => {
-        // Визначаємо, це зброя чи авто для кольору картки
-        const isCar = !!a.plate_number;
-
-        return (
-          <NeonCard key={a.id} glowColor={isCar ? "cyan" : "lime"}>
-            <div className="flex flex-col gap-3">
-              {/* Хедер картки */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
-                    <UserCheck className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-black text-white leading-none mb-1">{a.username}</h4>
-                    <span className={`text-[9px] px-2 py-0.5 rounded border font-black uppercase tracking-tighter ${sc[a.status]}`}>
-                      {sl[a.status]}
-                    </span>
-                  </div>
+      {apps.map(a => (
+        <NeonCard key={a.id} glowColor="lime">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                  <UserCheck className="w-5 h-5 text-primary" />
                 </div>
-
-                {a.status === "pending" && (
-                  <div className="flex gap-2">
-                    <button onClick={() => decide(a.id, "approved")} className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 text-primary flex items-center justify-center active:scale-90 transition-all shadow-[0_0_15px_rgba(var(--primary),0.2)]">
-                      <Check className="w-5 h-5" />
-                    </button>
-                    <button onClick={() => decide(a.id, "rejected")} className="w-9 h-9 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive flex items-center justify-center active:scale-90 transition-all">
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                )}
+                <div>
+                  <h4 className="text-sm font-black text-white leading-none mb-1">{a.username}</h4>
+                  <span className={`text-[9px] px-2 py-0.5 rounded border font-black uppercase tracking-tighter ${sc[a.status]}`}>
+                    {sl[a.status]}
+                  </span>
+                </div>
               </div>
 
-              {/* Контент заявки */}
-              <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 relative overflow-hidden group">
-                {isCar ? (
-                  <div className="flex items-center justify-between relative z-10">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-                        <Car className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-[8px] text-primary font-black uppercase tracking-widest leading-none mb-1">Реєстрація авто</p>
-                        <p className="text-xs font-black text-white uppercase italic">{a.license_type || "Транспорт"}</p>
-                      </div>
-                    </div>
-                    {/* Номерний знак */}
-                    <div className="scale-90 origin-right">
-                       <PlateBadge plate={a.plate_number || "??-????"} />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2 relative z-10">
-                    <div className="flex items-center gap-1.5 opacity-50">
-                      <Shield className="w-3 h-3 text-primary" />
-                      <span className="text-[9px] font-black uppercase tracking-widest">Ліцензія на зброю</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(a.license_type || "").split(",").map((tag, i) => (
-                        <span key={i} className="px-2.5 py-1 rounded-md border border-primary/30 bg-primary/10 text-[10px] font-black text-primary uppercase italic shadow-sm">
-                          {tag.trim()}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {/* Легкий фоновий градієнт для глибини */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              {a.status === "pending" && (
+                <div className="flex gap-2">
+                  <button onClick={() => decide(a.id, "approved")} className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 text-primary flex items-center justify-center active:scale-90 transition-all">
+                    <Check className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => decide(a.id, "rejected")} className="w-9 h-9 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive flex items-center justify-center active:scale-90 transition-all">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5">
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 opacity-50">
+                  <Shield className="w-3 h-3 text-primary" />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Тип ліцензії</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(a.license_type || "Зброя").split(",").map((tag, i) => (
+                    <span key={i} className="px-2.5 py-1 rounded-md border border-primary/30 bg-primary/10 text-[10px] font-black text-primary uppercase italic">
+                      {tag.trim()}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-          </NeonCard>
-        );
-      })}
+          </div>
+        </NeonCard>
+      ))}
     </div>
   );
 };
-
 // ─── WANTED ───────────────────────────────────────────────────────────────────
 const WantedTab = () => {
   const [wanted, setWanted] = useState<WantedPerson[]>([]);
@@ -794,6 +747,83 @@ const WantedTab = () => {
               <div className="flex gap-0.5 mt-1">{Array.from({ length: w.stars }).map((_, j) => <Star key={j} className="w-3 h-3 text-yellow-400 fill-yellow-400" />)}</div>
             </div>
             <button onClick={async () => { await store.removeWanted(w.id); setWanted(prev => prev.filter(x => x.id !== w.id)); toast.success("Видалено"); }} className="p-1.5 rounded-lg liquid-glass text-destructive active:scale-95"><Trash2 className="w-3.5 h-3.5" /></button>
+          </div>
+        </NeonCard>
+      ))}
+    </div>
+  );
+};
+
+// ─── CAR PLATES (ТІЛЬКИ НОМЕРИ) ──────────────────────────────────────────────
+const PlatesTab = () => {
+  const [plates, setPlates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPlates = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("car_plates")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setPlates(data);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchPlates(); }, []);
+
+  const decide = async (id: number, status: "approved" | "rejected") => {
+    // Ця функція має бути в твоїм store.ts
+    await store.updateCarPlateStatus(id, status);
+    setPlates(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+    toast.success(status === "approved" ? "Номер видано!" : "Відхилено");
+  };
+
+  if (loading) return <div className="text-center py-10 opacity-50 text-[10px] font-black animate-pulse uppercase">Завантаження...</div>;
+
+  return (
+    <div className="space-y-3 animate-fade-in">
+      <p className="text-[10px] font-black text-muted-foreground uppercase px-1 tracking-widest">Заявки на номери: {plates.length}</p>
+      
+      {plates.length === 0 && (
+        <div className="text-center py-10 liquid-glass-card rounded-2xl opacity-30">
+          <Car className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-20" />
+          <p className="text-xs">Заявок немає</p>
+        </div>
+      )}
+
+      {plates.map(p => (
+        <NeonCard key={p.id} glowColor="cyan">
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-black italic">{p.username}</span>
+              <span className={`text-[9px] px-2 py-0.5 rounded border font-black uppercase ${
+                p.status === 'pending' ? 'border-yellow-500 text-yellow-500' : 
+                p.status === 'approved' ? 'border-primary text-primary' : 'border-destructive text-destructive'
+              }`}>
+                {p.status === 'pending' ? 'Очікує' : p.status === 'approved' ? 'Видано' : 'Відмовлено'}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-2xl border border-white/10">
+              <div>
+                <p className="text-[8px] text-primary font-black uppercase mb-1">Транспортний засіб</p>
+                <p className="text-xs font-black uppercase italic">{p.car_model || "Не вказано"}</p>
+              </div>
+              <div className="scale-90 origin-right">
+                <PlateBadge plate={p.plate_number || "??-????"} />
+              </div>
+            </div>
+
+            {p.status === "pending" && (
+              <div className="flex gap-2">
+                <button onClick={() => decide(p.id, "approved")} className="flex-1 py-2.5 bg-primary/20 border border-primary/30 text-primary text-[10px] font-black uppercase rounded-xl hover:bg-primary/30 active:scale-95 transition-all">
+                  Видати номер
+                </button>
+                <button onClick={() => decide(p.id, "rejected")} className="px-4 py-2.5 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl active:scale-95 transition-all">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
         </NeonCard>
       ))}
@@ -894,49 +924,49 @@ const DebugTab = () => {
       form_data: { nick: "debug_user", roblox: "test", age: "18", telegram: "@test", experience: "", message: "test" },
     }).select();
     if (error) {
-      addLog("❌ ПОМИЛКА: " + error.message);
+      addLog("ПОМИЛКА: " + error.message);
       addLog("   Code: " + error.code);
       addLog("   Details: " + (error.details || "none"));
       addLog("   Hint: " + (error.hint || "none"));
     } else {
-      addLog("✅ faction_applications — OK! id=" + (data?.[0]?.id || "?"));
+      addLog("faction_applications — OK! id=" + (data?.[0]?.id || "?"));
       // Clean up test record
       if (data?.[0]?.id) {
         await supabase.from("faction_applications").delete().eq("id", data[0].id);
-        addLog("🧹 Тестовий запис видалено");
+        addLog("Тестовий запис видалено");
       }
     }
   };
 
   const testInsertAdmin = async () => {
-    addLog("⏳ Тестую admin_applications INSERT...");
+    addLog("Тестую admin_applications INSERT...");
     const { data, error } = await supabase.from("admin_applications").insert({
       username: "debug_user",
       status: "pending",
       form_data: { nick: "debug_user", roblox: "test", age: "18" },
     }).select();
     if (error) {
-      addLog("❌ ПОМИЛКА: " + error.message);
+      addLog("ПОМИЛКА: " + error.message);
       addLog("   Code: " + error.code);
       addLog("   Details: " + (error.details || "none"));
       addLog("   Hint: " + (error.hint || "none"));
     } else {
-      addLog("✅ admin_applications — OK! id=" + (data?.[0]?.id || "?"));
+      addLog("admin_applications — OK! id=" + (data?.[0]?.id || "?"));
       if (data?.[0]?.id) {
         await supabase.from("admin_applications").delete().eq("id", data[0].id);
-        addLog("🧹 Тестовий запис видалено");
+        addLog("Тестовий запис видалено");
       }
     }
   };
 
   const testSelect = async () => {
-    addLog("⏳ Тестую SELECT з обох таблиць...");
+    addLog("Тестую SELECT з обох таблиць...");
     const { data: fa, error: fe } = await supabase.from("faction_applications").select("id").limit(1);
     const { data: aa, error: ae } = await supabase.from("admin_applications").select("id").limit(1);
-    if (fe) addLog("❌ faction_applications SELECT: " + fe.message);
-    else addLog("✅ faction_applications SELECT OK, рядків: " + (fa?.length ?? 0));
-    if (ae) addLog("❌ admin_applications SELECT: " + ae.message);
-    else addLog("✅ admin_applications SELECT OK, рядків: " + (aa?.length ?? 0));
+    if (fe) addLog("faction_applications SELECT: " + fe.message);
+    else addLog("faction_applications SELECT OK, рядків: " + (fa?.length ?? 0));
+    if (ae) addLog("admin_applications SELECT: " + ae.message);
+    else addLog("admin_applications SELECT OK, рядків: " + (aa?.length ?? 0));
   };
 
   return (
@@ -2377,7 +2407,7 @@ const BansTab = () => {
 
     // Notify player
     await store.addNotification(banNick.trim(),
-      `⛔ Ви отримали бан${permanent ? " назавжди" : ` на ${selectedDur?.label}`}. Причина: ${banReason}`
+      `Ви отримали бан${permanent ? " назавжди" : ` на ${selectedDur?.label}`}. Причина: ${banReason}`
     );
 
     toast.success(`${banNick} заблоковано!`);
@@ -2389,7 +2419,7 @@ const BansTab = () => {
 
   const removeBan = async (id: number, nick: string) => {
     await supabase.from("bans").delete().eq("id", id);
-    await store.addNotification(nick, "✅ Ваш бан був знятий адміністрацією");
+    await store.addNotification(nick, "Ваш бан був знятий адміністрацією");
     toast.success("Бан знятий!");
     loadBans();
   };
