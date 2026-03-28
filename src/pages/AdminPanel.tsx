@@ -42,22 +42,24 @@ const isSuperAdmin = () =>
 
 // ─── PERMISSIONS ─────────────────────────────────────────────────────────────
 type TabId =
-  "sos" | "applications" | "factions" | "licenses" | "house_requests" |
+  "sos" | "applications" | "factions" | "licenses" | "plates" | "house_requests" |
   "news" | "houses" | "wanted" | "election" | "documents" |
   "add_faction" | "voice" | "tokens" | "manage_factions" | "debug" | "bans";
 
 const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
   sos: false, applications: false, factions: false, licenses: false,
+  plates: false, 
   house_requests: false, news: false, houses: false, wanted: false,
-  election: false, documents: false, add_faction: false, voice: false, tokens: false,
-  manage_factions: false, debug: false, bans: false,
+  election: false, documents: false, add_faction: false, voice: false, 
+  tokens: false, manage_factions: false, debug: false, bans: false,
 };
+
 const DEFAULT_PERMS: Record<TabId, boolean> = {
   sos: true, applications: true, factions: true, licenses: true,
+  plates: true, 
   house_requests: true, news: true, houses: true, wanted: true,
-  election: true, documents: true, add_faction: true, voice: true, tokens: true,
-  manage_factions: true,
-  debug: true, bans: true,
+  election: true, documents: true, add_faction: true, voice: true, 
+  tokens: true, manage_factions: true, debug: true, bans: true,
 };
 
 const getAdminPerms = (nick: string): Record<TabId, boolean> => {
