@@ -2569,47 +2569,47 @@ return (
         </div>
       )}
 
-{/* 4. МОДАЛКА В СТИЛЕ HIGH-END */}
+{/* 4. МОДАЛКА В СТИЛЕ HIGH-END (БЕЗ ГЛЮКОВ) */}
       {isModalOpen && (
-        <div className="fixed inset-0 !z-[10000] flex items-center justify-center p-4">
-          {/* ФОН: Глубокое размытие и легкое затемнение */}
+        <div 
+          className="fixed inset-0 flex items-center justify-center p-4" 
+          style={{ zIndex: 99999 }} // Экстремально высокий индекс
+        >
+          {/* ФОН: Просто темный цвет без лишних фильтров */}
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-500"
+            className="absolute inset-0 bg-black/80 animate-in fade-in duration-300"
             onClick={() => setIsModalOpen(false)}
           />
           
-          {/* ТЕЛО МОДАЛКИ: Стекло с тонкой белой обводкой */}
-          <div className="relative z-10 w-full max-w-[320px] bg-[#0c0c0c]/80 border border-white/10 backdrop-blur-2xl rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-300 text-center">
+          {/* ТЕЛО МОДАЛКИ: Используем плотный фон вместо liquid-glass */}
+          <div className="relative z-[100000] w-full max-w-[320px] bg-[#111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
             
-            {/* Иконка с мягким свечением */}
-            <div className="relative w-20 h-20 mx-auto mb-6">
-              <div className="absolute inset-0 bg-destructive/20 blur-2xl rounded-full animate-pulse" />
-              <div className="relative w-full h-full rounded-3xl bg-destructive/10 border border-destructive/20 flex items-center justify-center shadow-inner">
-                <UserX className="w-10 h-10 text-destructive" />
-              </div>
+            {/* Иконка */}
+            <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-destructive/10 border border-destructive/20 flex items-center justify-center">
+              <UserX className="w-10 h-10 text-destructive" />
             </div>
 
             {/* Текст */}
             <h3 className="text-xl font-black text-white tracking-tight mb-2 uppercase">
               Исключение
             </h3>
-            <p className="text-[11px] text-muted-foreground leading-relaxed mb-8 px-2">
-              Вы собираетесь выгнать <span className="text-primary font-bold">@{playerToKick?.username}</span>. Это действие обновит статус заявки на "отклонено".
+            <p className="text-[12px] text-muted-foreground leading-relaxed mb-8">
+              Выгнать <span className="text-primary font-bold">{playerToKick?.username}</span> из состава фракции?
             </p>
 
-            {/* Кнопки: Одна яркая, вторая — прозрачная */}
-            <div className="space-y-3">
+            {/* Кнопки */}
+            <div className="flex flex-col gap-3">
               <button 
                 onClick={confirmKick}
                 disabled={isProcessing}
-                className="w-full py-4 rounded-2xl bg-destructive text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_10px_20px_rgba(239,68,68,0.2)] hover:shadow-[0_10px_30px_rgba(239,68,68,0.4)] active:scale-[0.97] transition-all"
+                className="w-full py-4 rounded-2xl bg-destructive text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all"
               >
-                {isProcessing ? "Обработка..." : "Подтвердить Kick"}
+                {isProcessing ? "Секунду..." : "Подтвердить"}
               </button>
               
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="w-full py-4 rounded-2xl bg-white/5 text-white/40 text-[10px] font-black uppercase tracking-[0.2em] hover:text-white hover:bg-white/10 transition-all"
+                className="w-full py-4 rounded-2xl bg-white/5 text-white/50 text-[10px] font-black uppercase tracking-[0.2em] hover:text-white transition-all"
               >
                 Отмена
               </button>
