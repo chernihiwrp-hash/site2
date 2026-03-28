@@ -2751,7 +2751,7 @@ const BansTab = () => {
                     <Clock className="w-3 h-3 text-orange-400" />
                     <span className="text-[9px] text-orange-400 font-semibold">{timeLeft(ban.expires_at)}</span>
                   </div>
-               )}
+                  )}
               </div>
             </div>
           ))}
