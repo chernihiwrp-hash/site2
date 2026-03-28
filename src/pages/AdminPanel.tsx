@@ -9,7 +9,8 @@ import {
   Link, Image, Type, Radio, UserCheck, Building2, Car, FileText, Gavel,
   MessageSquare, Wallet, ShieldCheck, Zap, RefreshCw, Crown, Lock, Eye,
   EyeOff, Settings, UserCog, Search, Star, Palette,
-  Skull, Flame, Target, BookOpen, Scale, User, UserMinus
+  Skull, Flame, Target, BookOpen, Scale, User, UserMinus, Clock
+} from "lucide-react";
 } from "lucide-react";
 import { toast } from "sonner";
 import { store, supabase, getBalance, addBalance, subtractBalance } from "../lib/store";
