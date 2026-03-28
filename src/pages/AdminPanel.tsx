@@ -1937,6 +1937,36 @@ const ManageFactionsTab = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [playerToKick, setPlayerToKick] = useState<{id: number, username: string} | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const openKickModal = (id: number, username: string) => {
+  setPlayerToKick({ id, username });
+  setIsModalOpen(true);
+};
+
+const confirmKick = async () => {
+  if (!playerToKick) return;
+  setIsProcessing(true);
+  try {
+    const { error } = await supabase
+      .from("faction_applications")
+      .update({ status: 'rejected' })
+      .eq("id", playerToKick.id);
+
+    if (error) throw error;
+
+    setPlayers(prev => prev.filter(p => p.id !== playerToKick.id));
+    setIsModalOpen(false);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setIsProcessing(false);
+    setPlayerToKick(null);
+  }
+};
+
   // Edit faction
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
@@ -1971,21 +2001,27 @@ useEffect(() => {
   const load = async () => {
     setLoading(true);
     
+    // 1. Завантажуємо кастомні фракції з БД
     const { data: f } = await supabase.from("factions").select("*").order("created_at");
-    if (f) setFactions(f);
+    
+    // Об'єднуємо статичні фракції та ті, що в базі
+    if (f) {
+      setFactions([...STATIC_FACTION_LIST, ...f]);
+    } else {
+      setFactions(STATIC_FACTION_LIST);
+    }
 
-    const { data: a, error } = await supabase
+    // 2. Завантажуємо СКЛАД (тільки approved заявки)
+    const { data: a } = await supabase
       .from("faction_applications")
       .select("*")
-      .eq("status", "approved"); 
+      .eq("status", "approved");
 
-    if (error) console.error("Помилка завантаження складу:", error);
-    
-  
     if (a) setPlayers(a);
 
     setLoading(false);
   };
+  
   load();
 }, []);
   
@@ -2336,25 +2372,35 @@ useEffect(() => {
   (p.faction_name || "").toLowerCase().includes(searchQuery.toLowerCase()) 
 );
 
-  const kickPlayer = async (id: number, username: string) => {
+  const openKickModal = (id: number, username: string) => {
+  setPlayerToKick({ id, username });
+  setIsModalOpen(true);
+};
 
-  if (!confirm(`Вигнати гравця ${username} з фракції?`)) return;
-
+const confirmKick = async () => {
+  if (!playerToKick) return;
+  setIsProcessing(true);
+  
   try {
-
+    // Оновлюємо статус у таблиці заявок на 'rejected'
     const { error } = await supabase
       .from("faction_applications")
       .update({ status: 'rejected' })
-      .eq("id", id);
+      .eq("id", playerToKick.id);
 
     if (error) throw error;
 
-    setPlayers(prev => prev.filter(p => p.id !== id));
+    // Видаляємо гравця зі списку в інтерфейсі без перезавантаження
+    setPlayers(prev => prev.filter(p => p.id !== playerToKick.id));
     
-    alert(`Гравця ${username} успішно звільнено!`);
+    // Закриваємо модалку
+    setIsModalOpen(false);
   } catch (err) {
-    console.error("Помилка:", err);
-    alert("Не вдалося звільнити гравця.");
+    console.error("Помилка при звільненні:", err);
+    // Тут можна додати гарне сповіщення про помилку
+  } finally {
+    setIsProcessing(false);
+    setPlayerToKick(null);
   }
 };
   
