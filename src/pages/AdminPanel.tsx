@@ -2517,27 +2517,43 @@ return (
 
       {/* 4. МОДАЛКА ПІДТВЕРДЖЕННЯ ВИГНАННЯ */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="w-full max-w-[280px] liquid-glass border-primary/20 rounded-[2.5rem] p-8 text-center animate-in zoom-in-95">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          {/* ФОН (Backdrop) - він тепер окремо від вікна */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
+            onClick={() => setIsModalOpen(false)}
+          />
+          
+          {/* ВІКНО МОДАЛКИ - тепер воно точно буде зверху завдяки relative та z-index */}
+          <div className="relative z-10 w-full max-w-[280px] liquid-glass border-primary/20 rounded-[2.5rem] p-8 text-center shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto mb-4">
               <UserX className="w-8 h-8 text-destructive" />
             </div>
+            
             <h3 className="text-base font-black uppercase tracking-widest mb-2 text-white">Звільнення</h3>
-            <p className="text-[11px] text-muted-foreground mb-6">
+            
+            <p className="text-[11px] text-muted-foreground mb-6 leading-relaxed">
               Вигнати <span className="text-primary font-bold">{playerToKick?.username}</span> зі складу?
             </p>
+            
             <div className="grid grid-cols-2 gap-3 w-full">
-              <button onClick={() => setIsModalOpen(false)} className="py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[9px] font-black uppercase text-white">Назад</button>
-              <button onClick={confirmKick} disabled={isProcessing} className="py-3.5 rounded-2xl bg-destructive text-white text-[9px] font-black uppercase shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-white active:scale-95 transition-all"
+              >
+                Назад
+              </button>
+              <button 
+                onClick={confirmKick} 
+                disabled={isProcessing} 
+                className="py-3.5 rounded-2xl bg-destructive text-white text-[9px] font-black uppercase shadow-[0_0_20px_rgba(239,68,68,0.4)] active:scale-95 transition-all"
+              >
                 {isProcessing ? "..." : "Kick"}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
-  );
-};
 // ─── BANS TAB ─────────────────────────────────────────────────────────────────
 const BansTab = () => {
   const [bans, setBans] = useState<{
