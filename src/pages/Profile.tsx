@@ -57,22 +57,18 @@ const Profile = () => {
   const [balance, setBalanceState] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
-  const nick = localStorage.getItem("crp_nick") || "Гравець";
-
 const loadData = useCallback(async () => {
     setRefreshing(true);
     try {
+  
       const data = await store.getPlayerProfile(nick);
       
-      const { data: carsData, error: carsError } = await supabase
-        .from("car_plates") 
-        .select("*")
-        .ilike("owner_nick", nick);
-
-      if (carsError) console.error("Ошибка car_plates:", carsError);
+  
+      const carsData = await store.getCarPlates(nick);
 
       setProfileData({
         ...data,
+  
         cars: carsData || []
       });
 
