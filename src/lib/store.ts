@@ -83,7 +83,7 @@ export const store = {
 
   // ── LICENSES & PLATES (ДОБАВЛЯЕМ НОВОЕ, НЕ УДАЛЯЯ СТАРОЕ) ──────────────────
   
-  getLicenseApps: async (): Promise<LicenseApplication[]> => {
+  getLicenseApplications: async (): Promise<LicenseApplication[]> => {
     const { data } = await supabase
       .from("license_applications")
       .select("*")
