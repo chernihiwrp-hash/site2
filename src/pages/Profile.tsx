@@ -59,15 +59,36 @@ const Profile = () => {
 
   const nick = localStorage.getItem("crp_nick") || "Гравець";
 
-  const loadData = useCallback(async () => {
+const loadData = useCallback(async () => {
     setRefreshing(true);
     try {
+
       const data = await store.getPlayerProfile(nick);
-      setProfileData(data);
+  
+      const { data: carsData, error: carsError } = await supabase
+        .from("car_registrations")
+        .select("*")
+        .ilike("owner_nick", nick);
+
+      if (carsError) console.error("Ошибка авто:", carsError);
+
+      setProfileData({
+        ...data,
+        cars: carsData || [] 
+      });
+
       setBalanceState(getBalance(nick));
-      const notifs = await store.getNotifications(nick); setNotifications(notifs);
-    } catch (e) { console.error(e); }
-    setRefreshing(false);
+
+      if (typeof (store as any).getNotifications === 'function') {
+        const notifs = await (store as any).getNotifications(nick);
+        setNotifications(notifs);
+      }
+      
+    } catch (e) {
+      console.error("Помилка завантаження:", e);
+    } finally {
+      setRefreshing(false);
+    }
   }, [nick]);
 
   useEffect(() => {
@@ -426,120 +447,93 @@ const Profile = () => {
           </div>
         </div>
       </div>
-     {/* ═══ ЛІЦЕНЗІЇ (ID-CARDS) ═══ */}
+     {/* ═══ ЛІЦЕНЗІЇ (Premium Glass Design) ═══ */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4 px-1">
           <div className="flex items-center gap-2">
-            <div className="w-1.5 h-4 bg-primary rounded-full shadow-[0_0_8px_hsl(var(--primary))]" />
-            <h2 className="text-sm font-black tracking-widest uppercase text-foreground/90">Документи</h2>
+            <div className="w-1 h-4 bg-primary rounded-full shadow-[0_0_10px_hsl(var(--primary))]" />
+            <h2 className="text-sm font-black tracking-widest uppercase text-foreground/80">Документи</h2>
           </div>
-          <button onClick={() => navigate("/licenses")} className="text-[10px] font-bold text-primary px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all">
+          <button onClick={() => navigate("/licenses")} className="text-[10px] font-bold text-primary px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 active:scale-95 transition-all">
             ОТРИМАТИ +
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          {profileData.licenses.filter(l => l.status === "approved" && !l.plate_number).length > 0 ? (
-            profileData.licenses
-              .filter(l => l.status === "approved" && !l.plate_number)
-              .map(l => (
-                <div key={l.id} className="relative group overflow-hidden rounded-2xl p-[1px] bg-gradient-to-br from-white/10 to-transparent">
-                  <div className="relative bg-[#0a0a0a]/90 backdrop-blur-xl rounded-[15px] p-4 overflow-hidden">
-                    {/* Декор сетка на фоне */}
-                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', size: '20px 20px' }} />
-                    
-                    <div className="flex justify-between items-start relative z-10">
-                      <div className="flex gap-4">
-                        <div className="relative">
-                          <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-[inner_0_0_12px_rgba(var(--primary),0.1)]">
-                            <Shield className="w-6 h-6 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
-                          </div>
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-background border border-primary/30 rounded-full flex items-center justify-center">
-                            <CheckCircle className="w-2.5 h-2.5 text-primary" />
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <p className="text-[7px] text-primary font-black uppercase tracking-[0.3em] mb-1 opacity-70">Government License</p>
-                          <p className="text-sm font-black text-white uppercase tracking-tight mb-1">
-                            {l.license_type.split('|')[0].trim()}
-                          </p>
-                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">
-                            <span className="w-1 h-1 rounded-full bg-primary animate-ping" />
-                            <span className="text-[8px] text-primary font-bold uppercase tracking-tighter">Дійсна до кінця сезону</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end">
-                        <div className="text-[9px] font-mono text-white/20">#LC-{String(l.id).padStart(4, '0')}</div>
-                        <Trident /> {/* Маленький тризуб в углу */}
-                      </div>
+        <div className="grid grid-cols-1 gap-3">
+          {profileData.licenses?.filter(l => l.status === "approved" && !l.plate_number).map(l => (
+            <div key={l.id} className="relative overflow-hidden rounded-[20px] p-4 bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-2xl group">
+              {/* Фоновое свечение */}
+              <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary/10 blur-[50px] group-hover:bg-primary/20 transition-all" />
+              
+              <div className="flex justify-between items-start relative z-10">
+                <div className="flex gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-transparent border border-primary/20 flex items-center justify-center shadow-[inset_0_0_15px_rgba(var(--primary),0.1)]">
+                    <Shield className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[8px] text-primary font-black uppercase tracking-[0.2em] mb-1">State License</p>
+                    <p className="text-sm font-black text-white uppercase tracking-tight italic leading-none">
+                      {l.license_type.split('|')[0].trim()}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      <span className="text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">Verified ID: {String(l.id).padStart(5, '0')}</span>
                     </div>
                   </div>
                 </div>
-              ))
-          ) : (
-            <div className="py-8 rounded-2xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center opacity-40">
-              <FileCheck className="w-8 h-8 mb-2" />
-              <p className="text-[10px] font-medium uppercase tracking-widest">Ліцензії відсутні</p>
+                {/* Маленький штрих-код для стиля */}
+                <div className="opacity-30 flex flex-col items-end">
+                   <div className="flex gap-[1px] h-4 mb-1">
+                      {[1,3,2,4,2,1,4].map((h,i) => <div key={i} className="w-[1.5px] bg-white" style={{height: h*4}} />)}
+                   </div>
+                </div>
+              </div>
             </div>
-          )}
+          ))}
         </div>
       </div>
 
-      {/* ═══ ТРАНСПОРТ ТА НОМЕРИ ═══ */}
-      {(() => {
-        // Ищем в лицензиях те, где есть plate_number
-        const cars = profileData.licenses.filter(l => l.plate_number && l.status === "approved");
-        if (cars.length === 0) return null;
+      {/* ═══ ТРАНСПОРТ (Из таблицы car_registrations) ═══ */}
+      {((profileData as any).cars?.length > 0) && (
+        <div className="mb-8">
+           <div className="flex items-center gap-2 mb-4 px-1">
+            <div className="w-1 h-4 bg-yellow-400 rounded-full shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
+            <h2 className="text-sm font-black tracking-widest uppercase text-foreground/80">Транспорт</h2>
+          </div>
 
-        return (
-          <div className="mb-8 animate-fade-in">
-             <div className="flex items-center gap-2 mb-4 px-1">
-              <div className="w-1.5 h-4 bg-yellow-400 rounded-full shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
-              <h2 className="text-sm font-black tracking-widest uppercase text-foreground/90">Транспорт</h2>
-            </div>
-
-            <div className="space-y-4">
-              {cars.map((c) => (
-                <div key={c.id} className="liquid-glass-card rounded-[24px] p-5 border border-white/5 flex items-center justify-between gap-4 shadow-xl">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Car className="w-3.5 h-3.5 text-muted-foreground" />
-                      <p className="text-[8px] text-muted-foreground uppercase font-black tracking-widest">Registration</p>
-                    </div>
-                    <p className="text-[13px] font-black text-foreground uppercase truncate">
-                       {c.license_type?.split("|")[0]?.trim() || "Vehicle"}
-                    </p>
+          <div className="space-y-3">
+            {(profileData as any).cars.map((car: any) => (
+              <div key={car.id} className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center justify-between shadow-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center">
+                    <Car className="w-5 h-5 text-yellow-400" />
                   </div>
-
-                  {/* Реалістичний UA Номер */}
-                  <div className="shrink-0 group">
-                    <div className="relative flex items-stretch rounded-[5px] border-[1.5px] border-[#1a1a1a] bg-[#fdfdfd] h-[30px] overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.4)] group-hover:translate-y-[-2px] transition-transform">
-                      {/* UA Side Strip */}
-                      <div className="w-[15px] bg-[#005BBB] flex flex-col items-center justify-center gap-[1px] py-[2px]">
-                        <div className="w-[10px] h-[6px] overflow-hidden rounded-[0.5px]">
-                           <div className="h-1/2 bg-[#005BBB]" />
-                           <div className="h-1/2 bg-[#FFD500]" />
-                        </div>
-                        <span className="text-[5px] font-black text-white leading-none">UA</span>
-                      </div>
-                      
-                      {/* Text */}
-                      <div className="px-3 flex items-center justify-center bg-white">
-                        <span className="text-[14px] font-[900] text-[#111] tracking-[0.02em] font-sans whitespace-nowrap" style={{ fontStretch: 'condensed' }}>
-                          {c.plate_number}
-                        </span>
-                      </div>
-                    </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Ownership</p>
+                    <p className="text-sm font-black text-white uppercase italic">{car.model || "Vehicle"}</p>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* UA Номерний знак */}
+                <div className="relative flex items-stretch rounded-[5px] border-[1.5px] border-[#1a1a1a] bg-[#fdfdfd] h-[30px] overflow-hidden shadow-lg scale-110">
+                  <div className="w-[14px] bg-[#005BBB] flex flex-col items-center justify-center gap-[1px]">
+                    <div className="w-[9px] h-[5px] rounded-[0.5px] overflow-hidden">
+                       <div className="h-1/2 bg-[#005BBB]" />
+                       <div className="h-1/2 bg-[#FFD500]" />
+                    </div>
+                    <span className="text-[5px] font-black text-white">UA</span>
+                  </div>
+                  <div className="px-3 flex items-center justify-center">
+                    <span className="text-[14px] font-[900] text-[#111] font-sans tracking-tight">
+                      {car.plate_number}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        );
-      })()}
+        </div>
+      )}
       {/* Кнопка адмін панелі — тільки для прийнятих адмінів */}
       {isApprovedAdmin && (
         <div className="mt-4 animate-fade-in">
