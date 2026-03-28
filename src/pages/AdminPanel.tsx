@@ -2573,45 +2573,58 @@ return (
 {/* 4. МОДАЛКА ЧЕРЕЗ ПОРТАЛ (ПРОБ’Є БУДЬ-ЩО) */}
       {isModalOpen && playerToKick && createPortal(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999999 }}>
-          {/* ФОН */}
+          {/* ФОН з блюром та плавною появою */}
           <div 
-            className="fixed inset-0 bg-black/90 backdrop-blur-md animate-in fade-in"
+            className="fixed inset-0 bg-black/40 backdrop-blur-xl animate-in fade-in duration-500"
             onClick={() => setIsModalOpen(false)}
           />
           
-          {/* ВІКНО */}
-          <div className="relative z-[10000000] w-full max-w-[320px] bg-[#111] border border-white/20 rounded-[2.5rem] p-8 text-center shadow-[0_0_100px_rgba(0,0,0,1)] animate-in zoom-in-95 duration-200">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-destructive/10 border border-destructive/20 flex items-center justify-center">
-              <UserX className="w-10 h-10 text-destructive" />
+          {/* ВІКНО з анімацією вистрибування (zoom-in) та "скляним" ефектом */}
+          <div className="relative z-[10000000] w-full max-w-[340px] bg-[#0c0c0c]/90 border border-white/10 rounded-[3rem] p-10 text-center shadow-[0_0_80px_rgba(0,0,0,0.8)] animate-in zoom-in-90 slide-in-from-bottom-10 duration-300 ease-out">
+            
+            {/* Декоративне світло на фоні вікна */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-primary/50 blur-md shadow-[0_0_20px_rgba(var(--primary-rgb),0.8)]" />
+
+            {/* Іконка з пульсуючим неоном */}
+            <div className="relative w-24 h-24 mx-auto mb-8">
+              <div className="absolute inset-0 bg-destructive/20 blur-3xl rounded-full animate-pulse" />
+              <div className="relative w-full h-full rounded-[2rem] bg-destructive/10 border border-destructive/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                <UserX className="w-12 h-12 text-destructive shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
+              </div>
             </div>
 
-            <h3 className="text-xl font-black text-white tracking-tight mb-2 uppercase italic">
-              Вигнання
+            {/* Текстовий блок */}
+            <h3 className="text-2xl font-black text-white tracking-tighter mb-3 uppercase italic">
+              Звільнення
             </h3>
             
-            <p className="text-[12px] text-muted-foreground leading-relaxed mb-8">
-              Вигнати <span className="text-primary font-bold">{playerToKick.username}</span>?
+            <p className="text-[13px] text-muted-foreground leading-relaxed mb-10 font-medium">
+              Ви збираєтесь вигнати <br/>
+              <span className="text-primary font-black text-base shadow-primary/20">@{playerToKick.username}</span> <br/>
+              <span className="opacity-50 text-[10px] uppercase tracking-widest">зі складу фракції</span>
             </p>
 
-            <div className="flex flex-col gap-3">
+            {/* Кнопки з ефектом натискання */}
+            <div className="space-y-4">
               <button 
                 onClick={confirmKick}
                 disabled={isProcessing}
-                className="w-full py-4 rounded-2xl bg-destructive text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all"
+                className="group relative w-full py-5 rounded-[1.5rem] bg-destructive text-white text-[11px] font-black uppercase tracking-[0.3em] overflow-hidden transition-all active:scale-95 shadow-[0_15px_30px_rgba(239,68,68,0.3)] hover:shadow-[0_15px_40px_rgba(239,68,68,0.5)]"
               >
-                {isProcessing ? "..." : "ПІДТВЕРДИТИ"}
+                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                <span className="relative">{isProcessing ? "Виконується..." : "Підтвердити"}</span>
               </button>
               
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="w-full py-4 rounded-2xl bg-white/5 text-white/50 text-[10px] font-black uppercase tracking-[0.2em] hover:text-white transition-all"
+                className="w-full py-5 rounded-[1.5rem] bg-white/5 border border-white/5 text-white/30 text-[11px] font-black uppercase tracking-[0.3em] hover:text-white hover:bg-white/10 transition-all active:scale-95"
               >
-                СКАСУВАТИ
+                Скасувати
               </button>
             </div>
           </div>
         </div>,
-        document.body // <--- ЦЕ КЛЮЧОВИЙ МОМЕНТ
+        document.body
       )}
       </div> // <--- ДОДАЙ ЦЕ (закриває основний контейнер AdminPanel)
   );
