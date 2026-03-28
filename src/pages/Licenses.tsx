@@ -22,53 +22,42 @@ const Licenses = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"form" | "search">("search");
 
-  // Search
-  const [searchNick, setSearchNick] = useState("");
-  const [searchResult, setSearchResult] = useState<{ found: boolean; items: string[] } | null>(null);
-  const [searching, setSearching] = useState(false);
-
-
-  const toggleWeapon = (weapon: string) => {
-    if (selected.includes(weapon)) {
-      setSelected(selected.filter(w => w !== weapon));
-    } else if (selected.length < 5) {
-      setSelected([...selected, weapon]);
-    } else {
-      toast.error("Максимум 5 предметів!");
-    }
-  };
-
   const handleSearch = async () => {
-    if (!searchNick.trim()) return toast.error("Введіть нік гравця");
+    const cleanNick = searchNick.trim();
+    if (!cleanNick) return toast.error("Введіть нік гравця");
+    
     setSearching(true);
     setSearchResult(null);
-    const { data } = await supabase
-      .from("license_applications")
-      .select("license_type, status")
-      .ilike("username", searchNick.trim())
-      .eq("status", "approved");
-    if (data && data.length > 0) {
-      const items = data.map((d: Record<string, unknown>) => d.license_type as string).filter(Boolean);
-      setSearchResult({ found: true, items });
-    } else {
-      setSearchResult({ found: false, items: [] });
-    }
-    setSearching(false);
-  };
-
-  const handleSubmit = async () => {
-    if (!nick) return toast.error("Нік не знайдено");
-    if (!roblox || !telegram || selected.length === 0) return toast.error("Заповніть усі поля та оберіть зброю");
-    setLoading(true);
+    
     try {
-      await store.submitLicense(nick, `${selected.join(", ")} | Roblox: ${roblox}`, telegram);
-      setSubmitted(true);
-    } catch {
-      toast.error("Помилка відправки, спробуй ще раз");
-    }
-    setLoading(false);
-  };
 
+      const { data, error } = await supabase
+        .from("license_applications")
+        .select("license_type, status")
+        .ilike("username", cleanNick) 
+        .eq("status", "approved");
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+    
+        const items = data.map((d) => {
+          const type = String(d.license_type);
+          
+          return type.includes("|") ? type.split("|")[0].trim() : type;
+        });
+        
+        setSearchResult({ found: true, items });
+      } else {
+        setSearchResult({ found: false, items: [] });
+      }
+    } catch (err) {
+      console.error("Помилка поиска:", err);
+      toast.error("Помилка при пошуку");
+    } finally {
+      setSearching(false);
+    }
+  };
   // ── Екран "немає грошей" ──
 
 
