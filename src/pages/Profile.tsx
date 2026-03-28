@@ -489,85 +489,74 @@ const loadData = useCallback(async () => {
           </div>
         </div>
       </div>
-{/* ═══ СЕКЦІЯ: ЛІЦЕНЗІЇ ТА ТРАНСПОРТ ═══ */}
-      <div className="space-y-4 animate-fade-in">
-        <div className="flex items-center gap-2 px-1">
-          <FileCheck className="w-4 h-4 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
-          <h2 className="text-[10px] font-black tracking-[0.2em] uppercase opacity-70">Документи та майно</h2>
+{/* ═══ ЯРУС 1: ЛІЦЕНЗІЇ ═══ */}
+      <div className="mb-10 animate-fade-in">
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <Shield className="w-4 h-4 text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.8)]" />
+          <h2 className="text-[10px] font-black tracking-[0.3em] uppercase opacity-80">Державні ліцензії</h2>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            ...(profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number) || []),
-            ...((profileData as any).cars || [])
-          ].map((item: any) => (
-            <div key={item.id} className="relative aspect-[4/3] rounded-2xl p-[1.5px] overflow-hidden shadow-2xl"
-                 style={{ 
-                   background: "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(var(--primary),0.3) 100%)",
-                 }}>
-              
-              {/* Внутрішній контент (як у картки будинку) */}
+        <div className="grid grid-cols-1 gap-4">
+          {profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any) => (
+            <div key={item.id} className="relative w-full h-[100px] rounded-2xl p-[1.5px] overflow-hidden shadow-2xl"
+                 style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(var(--primary),0.4) 100%)" }}>
               <div className="absolute inset-[1px] rounded-[15px] overflow-hidden" style={{ background: passportBg }}>
                 
-                {/* СУПЕР СИЛЬНИЙ GLOW (Свічення знизу) */}
-                <div className="absolute inset-x-0 bottom-0 h-2/3 pointer-events-none" 
-                     style={{ 
-                       background: `radial-gradient(circle at 50% 120%, rgba(var(--primary), 0.6) 0%, transparent 70%)`,
-                       filter: "blur(10px)"
-                     }} />
+                {/* СИЛЬНЫЙ GLOW СНИЗУ */}
+                <div className="absolute inset-x-0 bottom-0 h-full pointer-events-none" 
+                     style={{ background: `radial-gradient(circle at 50% 140%, rgba(var(--primary), 0.7) 0%, transparent 75%)` }} />
 
-                {/* Текстура та водяний знак */}
-                <img src="https://i.ibb.co/NbX6ZNs/images-2.jpg" className="absolute inset-0 w-full h-full object-cover opacity-[0.04] pointer-events-none" />
-                
-                <div className="relative z-10 h-full flex flex-col p-3 justify-between">
-                  {/* Верхня частина: Іконка */}
-                  <div className="flex justify-between items-start">
-                    <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shadow-lg">
-                      {item.plate_number ? <Car className="w-4 h-4 text-primary" /> : <Shield className="w-4 h-4 text-primary" />}
-                    </div>
-                    <Trident /> {/* Маленький тризуб у кутку */}
+                <div className="relative z-10 h-full flex items-center px-6 gap-5">
+                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0">
+                    <Shield className="w-6 h-6 text-primary" />
                   </div>
+                  <div className="flex flex-col">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Документ підтверджено</p>
+                    <p className="text-sm font-black uppercase tracking-tight text-white italic">
+                      {item.license_type?.split('|')[0].trim() || "Ліцензія"}
+                    </p>
+                  </div>
+                  <div className="ml-auto opacity-10"><Trident /></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-                  {/* Нижня частина: Назва та Номер */}
-                  <div className="space-y-1.5">
-                    <p className="text-[9px] font-black uppercase tracking-tight text-white/90 leading-tight italic truncate">
-                      {item.license_type ? item.license_type.split('|')[0].trim() : (item.car_model || "Транспорт")}
+      {/* ═══ ЯРУС 2: ТРАНСПОРТНИЙ ПАРК ═══ */}
+      <div className="mb-10 animate-fade-in">
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <Car className="w-4 h-4 text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.8)]" />
+          <h2 className="text-[10px] font-black tracking-[0.3em] uppercase opacity-80">Транспортні засоби</h2>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
+          {((profileData as any).cars || []).map((car: any) => (
+            <div key={car.id} className="relative w-full h-[110px] rounded-2xl p-[1.5px] overflow-hidden shadow-2xl"
+                 style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(var(--primary),0.4) 100%)" }}>
+              <div className="absolute inset-[1px] rounded-[15px] overflow-hidden" style={{ background: passportBg }}>
+                
+                {/* СИЛЬНЫЙ GLOW СНИЗУ */}
+                <div className="absolute inset-x-0 bottom-0 h-full pointer-events-none" 
+                     style={{ background: `radial-gradient(circle at 50% 140%, rgba(var(--primary), 0.7) 0%, transparent 75%)` }} />
+
+                <div className="relative z-10 h-full flex items-center px-6 gap-5">
+                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0">
+                    <Car className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1 leading-none">Власність</p>
+                    <p className="text-sm font-black uppercase tracking-tight text-white italic truncate mb-2">
+                      {car.car_model || "Транспорт"}
                     </p>
                     
-                    {/* Номерний знак (ВБУДОВАНИЙ, БЕЗ ВИЛЬОТІВ) */}
-                    {item.plate_number && (
-                      <div className="mt-1">
-                         <div style={{
-                            display: "inline-flex",
-                            alignItems: "stretch",
-                            borderRadius: 4,
-                            border: "1.5px solid #222",
-                            background: "#fff",
-                            overflow: "hidden",
-                            height: 22,
-                            boxShadow: "0 2px 4px rgba(0,0,0,0.3)"
-                          }}>
-                            {/* Синій прапор */}
-                            <div className="w-2.5 bg-[#005BBB] flex flex-col items-center justify-center">
-                               <div className="w-2 h-1.5 bg-yellow-400 mt-0.5" style={{ height: '2px', background: '#FFD500' }} />
-                               <span style={{ fontSize: '4px', fontWeight: 900, color: '#fff', transform: 'scale(0.8)' }}>UA</span>
-                            </div>
-                            {/* Текст номера */}
-                            <div className="px-2 flex items-center justify-center bg-white">
-                              <span style={{ 
-                                fontFamily: "Arial Black, sans-serif", 
-                                fontSize: "10px", 
-                                fontWeight: 900, 
-                                color: "#111",
-                                letterSpacing: "-0.5px"
-                              }}>
-                                {item.plate_number}
-                              </span>
-                            </div>
-                         </div>
-                      </div>
-                    )}
+                    {/* Номерной знак ВНУТРИ прямоугольника */}
+                    <div className="inline-block scale-90 origin-left">
+                       <PlateBadge plate={car.plate_number} />
+                    </div>
                   </div>
+                  <div className="opacity-10 shrink-0"><Trident /></div>
                 </div>
               </div>
             </div>
