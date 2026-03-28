@@ -445,68 +445,66 @@ const loadData = useCallback(async () => {
           </div>
         </div>
       </div>
-{/* ═══ ЛІЦЕНЗІЇ ТА РЕЄСТРАЦІЇ (3D Cyber-Passport) ═══ */}
-      <div className="mb-6 animate-fade-in">
-        <div className="flex items-center gap-2 mb-4 px-1">
-          <FileCheck className="w-4 h-4 text-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
-          <h2 className="text-[11px] font-black tracking-widest uppercase opacity-80">Документи та транспорт</h2>
+{/* ═══ ДОКУМЕНТИ ТА АВТОПАРК (3D Cyber-Style) ═══ */}
+      <div className="mb-8 animate-fade-in">
+        <div className="flex items-center gap-2 mb-5 px-1">
+          <FileCheck className="w-4 h-4 text-primary drop-shadow-[0_0_5px_rgba(var(--primary),0.4)]" />
+          <h2 className="text-[11px] font-black tracking-[0.2em] uppercase opacity-70">Документи та транспорт</h2>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-8">
           {[
-            ...(profileData.licenses?.filter(l => l.status === "approved") || []),
+            ...(profileData.licenses?.filter(l => l.status === "approved" && !l.plate_number) || []),
             ...((profileData as any).cars || [])
           ].map((item: any) => (
             <div key={item.id} className="aspect-square relative group">
-              {/* Основна карта (Паспорт) */}
-              <div className="absolute inset-0 rounded-[32px] p-[1px] bg-gradient-to-br from-white/15 to-transparent shadow-2xl transition-transform group-active:scale-95 overflow-hidden">
-                <div className="absolute inset-[1px] rounded-[31px] overflow-hidden" style={{
-                  background: passportBg || "linear-gradient(145deg, #0a0a0c 0%, #050505 100%)",
+              {/* Основна карта (Стиль PASSPORT CARD) */}
+              <div className="absolute inset-0 rounded-[35px] p-[1px] bg-gradient-to-br from-white/20 to-transparent shadow-2xl transition-all group-active:scale-95 overflow-hidden">
+                <div className="absolute inset-[1px] rounded-[34px] overflow-hidden" style={{
+                  background: passportBg || "linear-gradient(145deg, #0d0d0f 0%, #050505 100%)",
                 }}>
-                  {/* Текстура паспорта */}
-                  <img src="https://i.ibb.co/NbX6ZNs/images-2.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-10 pointer-events-none" />
-                  
-                  {/* Світіння та Trident */}
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(var(--primary),0.1),transparent_70%)]" />
-                  <div className="absolute -right-2 -bottom-2 w-14 h-18 opacity-20 rotate-12 pointer-events-none">
+                  {/* Фонова текстура та Трайдент */}
+                  <img src="https://i.ibb.co/NbX6ZNs/images-2.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.08] pointer-events-none" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(var(--primary),0.15),transparent_80%)]" />
+                  <div className="absolute -right-2 -bottom-2 w-16 h-20 opacity-10 rotate-12 pointer-events-none">
                     <Trident />
                   </div>
                 </div>
 
-                {/* Контент (Іконка + Текст) */}
-                <div className="relative z-10 h-full flex flex-col items-center justify-center pb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center mb-2 shadow-inner">
+                {/* Контент (Іконка + Назва) */}
+                <div className="relative z-10 h-full flex flex-col items-center justify-center pb-6">
+                  <div className="w-12 h-12 rounded-[20px] bg-white/[0.03] border border-white/10 flex items-center justify-center mb-2 shadow-inner group-hover:bg-primary/5 transition-colors">
                     {item.plate_number ? (
-                      <Car className="w-6 h-6 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
+                      <Car className="w-6 h-6 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
                     ) : (
-                      <Shield className="w-6 h-6 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
+                      <Shield className="w-6 h-6 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
                     )}
                   </div>
-                  <span className="text-[10px] font-black text-center text-white/90 uppercase tracking-tighter leading-tight px-3">
+                  <span className="text-[10px] font-black text-center text-white/90 uppercase tracking-tighter leading-tight px-4 italic">
                     {item.license_type ? item.license_type.split('|')[0].trim() : (item.car_model || "Транспорт")}
                   </span>
                 </div>
               </div>
 
-              {/* ──── 3D НОМЕРНИЙ ЗНАК (Виступаючий шар) ──── */}
+              {/* ──── 3D НОМЕРНИЙ ЗНАК (Випирає знизу) ──── */}
               {item.plate_number && (
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-20 transition-transform group-hover:-translate-y-1">
-                  {/* Тінь для об'єму */}
-                  <div className="absolute inset-0 bg-black/60 blur-[4px] translate-y-1 rounded-[4px]" />
+                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-30 transition-all group-hover:-translate-y-1">
+                  {/* Тінь об'єму */}
+                  <div className="absolute inset-0 bg-black/90 blur-[6px] translate-y-2 rounded-[4px] scale-x-95" />
                   
-                  {/* Сама пластина номера */}
-                  <div className="relative flex items-stretch rounded-[4px] border-[1.2px] border-[#111] bg-[#fdfdfd] h-[24px] min-w-[80px] overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)]">
+                  {/* Металева пластина номера */}
+                  <div className="relative flex items-stretch rounded-[3px] border-[1.2px] border-[#111] bg-[#fdfdfd] h-[26px] min-w-[90px] overflow-hidden shadow-[0_4px_10px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.9)]">
                     {/* Синя полоса UA */}
-                    <div className="w-[10px] bg-[#005BBB] flex flex-col items-center justify-center gap-[0.5px]">
-                      <div className="w-[7px] h-[4px] rounded-[0.5px] overflow-hidden">
+                    <div className="w-[11px] bg-[#005BBB] flex flex-col items-center justify-center gap-[0.5px]">
+                      <div className="w-[8px] h-[5px] rounded-[0.5px] overflow-hidden">
                          <div className="h-1/2 bg-[#005BBB]" />
                          <div className="h-1/2 bg-[#FFD500]" />
                       </div>
-                      <span className="text-[4px] font-black text-white">UA</span>
+                      <span className="text-[4px] font-[1000] text-white leading-none">UA</span>
                     </div>
                     {/* Текст номера */}
-                    <div className="px-2.5 flex items-center justify-center bg-white w-full">
-                      <span className="text-[12px] font-[1000] text-[#111] font-sans tracking-tight whitespace-nowrap">
+                    <div className="px-3 flex items-center justify-center bg-white w-full">
+                      <span className="text-[13px] font-[1000] text-[#111] font-sans tracking-tighter uppercase whitespace-nowrap">
                         {item.plate_number}
                       </span>
                     </div>
