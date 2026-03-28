@@ -409,31 +409,62 @@ export const store = {
   deleteDoc: async (id: number) => { await supabase.from("documents").delete().eq("id", id); },
   setDocs: (_: DocumentItem[]) => {},
 
-  // ── CARS / LICENSES ───────────────────────────────────────────────────────
+// ── CARS / LICENSES ───────────────────────────────────────────────────────
+  
+
   getCars: async (): Promise<CarRecord[]> => {
-    const { data } = await supabase.from("license_applications").select("*").eq("status", "approved").not("plate_number", "is", null);
+    const { data } = await supabase
+      .from("car_plates")
+      .select("*")
+      .eq("status", "approved");
+      
     if (!data) return [];
-    return data.map((r: Record<string, unknown>) => ({
-      plate: r.plate_number as string,
-      model: (r.license_type as string) || "Авто",
-      owner: r.username as string,
+    return data.map((r: any) => ({
+      plate: r.plate_number,
+      model: r.car_model || "Транспорт",
+      owner: r.username,
     }));
   },
+
+
   getLicenseApplications: async (): Promise<LicenseApplication[]> => {
-    const { data } = await supabase.from("license_applications").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase
+      .from("license_applications")
+      .select("*")
+      .order("created_at", { ascending: false });
     if (!data) return [];
     return data as LicenseApplication[];
   },
-  submitLicense: async (username: string, licenseType: string, plateNumber?: string) => {
+
+
+  submitLicense: async (username: string, licenseType: string) => {
     const { error } = await supabase.from("license_applications").insert({
-      username, license_type: licenseType,
-      plate_number: plateNumber || null, status: "pending",
+      username, 
+      license_type: licenseType,
+      status: "pending",
     });
     if (error) { console.error("submitLicense error:", error); throw new Error(error.message); }
   },
+
+  submitCarPlate: async (username: string, model: string, plate: string) => {
+    const { error } = await supabase.from("car_plates").insert({
+      username,
+      plate_number: plate,
+      car_model: model,
+      status: "pending",
+    });
+    if (error) { console.error("submitCarPlate error:", error); throw new Error(error.message); }
+  },
+
   updateLicenseStatus: async (id: number, status: "approved" | "rejected") => {
     await supabase.from("license_applications").update({ status }).eq("id", id);
   },
+
+
+  updateCarPlateStatus: async (id: number, status: "approved" | "rejected") => {
+    await supabase.from("car_plates").update({ status }).eq("id", id);
+  },
+
   setCars: (_: CarRecord[]) => {},
 
   // ── SOS ───────────────────────────────────────────────────────────────────
@@ -539,8 +570,8 @@ export const store = {
 
   // ── PROFILE DATA ──────────────────────────────────────────────────────────
   getPlayerProfile: async (nick: string) => {
-    const [houseRes, factionRes, licRes] = await Promise.all([
-   
+    const [houseRes, factionRes, licRes, platesRes] = await Promise.all([
+
       supabase
         .from("house_purchase_requests")
         .select(`
@@ -555,12 +586,17 @@ export const store = {
         .eq("username", nick)
         .eq("status", "approved"),
 
+
       supabase.from("faction_applications").select("faction_name, status").eq("username", nick).order("created_at", { ascending: false }),
-      supabase.from("license_applications").select("id, license_type, plate_number, status").eq("username", nick).eq("status", "approved"),
+      
+
+      supabase.from("license_applications").select("id, license_type, status").eq("username", nick).eq("status", "approved"),
+      
+
+      supabase.from("car_plates").select("id, plate_number, car_model, status").eq("username", nick).eq("status", "approved"),
     ]);
 
     return {
- 
       houses: (houseRes.data || []).map((h: any) => ({
         id: h.id,
         name: h.houses?.name || "Вилла",
@@ -569,10 +605,12 @@ export const store = {
         image: h.houses?.image_url 
       })),
       factionApps: (factionRes.data || []) as { faction_name: string; status: string }[],
-      licenses: (licRes.data || []) as { id: number; license_type: string; plate_number: string | null; status: string }[],
+   
+      licenses: (licRes.data || []) as { id: number; license_type: string; status: string }[],
+    
+      carPlates: (platesRes.data || []) as { id: number; plate_number: string; car_model: string; status: string }[],
     };
   },
-
   // ── REALTIME ──────────────────────────────────────────────────────────────
   onNewSos: (cb: (msg: SosMessage) => void) => {
     return supabase.channel("sos_live")
