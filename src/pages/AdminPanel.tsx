@@ -2569,40 +2569,49 @@ return (
         </div>
       )}
 
-{/* 4. МОДАЛКА ПІДТВЕРДЖЕННЯ ВИГНАННЯ */}
+{/* 4. МОДАЛКА В СТИЛЕ HIGH-END */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-          {/* ФОН (Backdrop) - окремий шар */}
+        <div className="fixed inset-0 !z-[10000] flex items-center justify-center p-4">
+          {/* ФОН: Глубокое размытие и легкое затемнение */}
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
+            className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-500"
             onClick={() => setIsModalOpen(false)}
           />
           
-          {/* ВІКНО (Content) - додаємо translate-z-0 для форсування шару */}
-          <div className="relative z-[10001] w-full max-w-[280px] liquid-glass border border-white/20 rounded-[2.5rem] p-8 text-center shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto mb-4">
-              <UserX className="w-8 h-8 text-destructive" />
+          {/* ТЕЛО МОДАЛКИ: Стекло с тонкой белой обводкой */}
+          <div className="relative z-10 w-full max-w-[320px] bg-[#0c0c0c]/80 border border-white/10 backdrop-blur-2xl rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-300 text-center">
+            
+            {/* Иконка с мягким свечением */}
+            <div className="relative w-20 h-20 mx-auto mb-6">
+              <div className="absolute inset-0 bg-destructive/20 blur-2xl rounded-full animate-pulse" />
+              <div className="relative w-full h-full rounded-3xl bg-destructive/10 border border-destructive/20 flex items-center justify-center shadow-inner">
+                <UserX className="w-10 h-10 text-destructive" />
+              </div>
             </div>
-            
-            <h3 className="text-base font-black uppercase tracking-widest mb-2 text-white">Звільнення</h3>
-            
-            <p className="text-[11px] text-muted-foreground mb-6 leading-relaxed">
-              Вигнати <span className="text-primary font-bold">{playerToKick?.username}</span> зі складу?
+
+            {/* Текст */}
+            <h3 className="text-xl font-black text-white tracking-tight mb-2 uppercase">
+              Исключение
+            </h3>
+            <p className="text-[11px] text-muted-foreground leading-relaxed mb-8 px-2">
+              Вы собираетесь выгнать <span className="text-primary font-bold">@{playerToKick?.username}</span>. Это действие обновит статус заявки на "отклонено".
             </p>
-            
-            <div className="grid grid-cols-2 gap-3 w-full">
+
+            {/* Кнопки: Одна яркая, вторая — прозрачная */}
+            <div className="space-y-3">
               <button 
-                onClick={() => setIsModalOpen(false)} 
-                className="py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[9px] font-black uppercase text-white active:scale-95 transition-all"
+                onClick={confirmKick}
+                disabled={isProcessing}
+                className="w-full py-4 rounded-2xl bg-destructive text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_10px_20px_rgba(239,68,68,0.2)] hover:shadow-[0_10px_30px_rgba(239,68,68,0.4)] active:scale-[0.97] transition-all"
               >
-                Назад
+                {isProcessing ? "Обработка..." : "Подтвердить Kick"}
               </button>
+              
               <button 
-                onClick={confirmKick} 
-                disabled={isProcessing} 
-                className="py-3.5 rounded-2xl bg-destructive text-white text-[9px] font-black uppercase shadow-[0_0_20px_rgba(239,68,68,0.4)] active:scale-95 transition-all"
+                onClick={() => setIsModalOpen(false)}
+                className="w-full py-4 rounded-2xl bg-white/5 text-white/40 text-[10px] font-black uppercase tracking-[0.2em] hover:text-white hover:bg-white/10 transition-all"
               >
-                {isProcessing ? "..." : "Kick"}
+                Отмена
               </button>
             </div>
           </div>
