@@ -426,86 +426,136 @@ const Profile = () => {
           </div>
         </div>
       </div>
-      {/* Ліцензії */}
-      <div className="mb-2">
-        <div className="liquid-glass-card rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: "hsl(210 80% 55% / 0.12)", border: "1px solid hsl(210 80% 55% / 0.2)" }}>
-                <Car className="w-4 h-4" style={{ color: "hsl(210 80% 55%)" }} />
-              </div>
-              <p className="text-sm font-medium">Мої ліцензії</p>
-            </div>
-            <button onClick={() => navigate("/licenses")} className="text-[10px] text-primary flex items-center gap-0.5">
-              Отримати <ChevronRight className="w-3 h-3" />
-            </button>
+      {/* ═══ ЛІЦЕНЗІЇ (Карточки) ═══ */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <FileCheck className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-bold tracking-wide uppercase">Мої ліцензії</h2>
           </div>
-          <div className="px-4 py-3">
-            {profileData.licenses.length > 0 ? (
-              <div className="space-y-1.5">
-                {profileData.licenses.map(l => (
-                  <div key={l.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Car className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-xs text-foreground">{l.license_type}</span>
-                    </div>
-                    {l.plate_number && <span className="text-[10px] font-mono text-yellow-400">{l.plate_number}</span>}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground text-center py-2">Немає активних ліцензій</p>
-            )}
-          </div>
+          <button onClick={() => navigate("/licenses")} className="text-[10px] text-primary font-bold bg-primary/10 px-2 py-1 rounded-lg border border-primary/20 active:scale-95 transition-all">
+            ОТРИМАТИ +
+          </button>
         </div>
+
+        {profileData.licenses.filter(l => l.status === "approved" && !l.plate_number).length > 0 ? (
+          <div className="grid grid-cols-1 gap-3">
+            {profileData.licenses
+              .filter(l => l.status === "approved" && !l.plate_number)
+              .map(l => (
+                <div key={l.id} className="relative overflow-hidden rounded-2xl p-4 liquid-glass-card border border-white/5 group active:scale-[0.98] transition-all">
+                  {/* Фоновий декор карточки */}
+                  <div className="absolute -right-4 -bottom-4 opacity-[0.05] group-hover:opacity-10 transition-opacity">
+                    <Shield className="w-24 h-24 text-primary" />
+                  </div>
+                  
+                  <div className="flex items-start justify-between relative z-10">
+                    <div className="flex gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                        <Shield className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-0.5">Permit / Ліцензія</p>
+                        <p className="text-sm font-black text-foreground uppercase tracking-tight">
+                          {l.license_type.split('|')[0].trim()}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                          <span className="text-[9px] text-primary font-bold uppercase">Active / Дійсна</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[8px] text-muted-foreground font-mono opacity-40">ID:{l.id}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        ) : (
+          <div className="liquid-glass rounded-2xl p-6 text-center border border-dashed border-white/10">
+            <p className="text-xs text-muted-foreground">У вас ще немає активних ліцензій</p>
+          </div>
+        )}
       </div>
 
-
-
-      {/* Номери авто */}
+      {/* ═══ НОМЕРИ АВТО (Реалістичні знаки) ═══ */}
       {(() => {
-        const cars = profileData.licenses.filter((l: { plate_number: string | null; status: string }) => l.plate_number && l.status === "approved");
+        const cars = profileData.licenses.filter((l) => l.plate_number && l.status === "approved");
         if (cars.length === 0) return null;
         return (
-          <div className="mb-2">
-            <div className="liquid-glass-card rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: "hsl(45 100% 55% / 0.1)", border: "1px solid hsl(45 100% 55% / 0.2)" }}>
-                    <Car className="w-4 h-4 text-yellow-400" />
-                  </div>
-                  <p className="text-sm font-medium">Мої автомобілі</p>
-                </div>
-                <button onClick={() => navigate("/car-registration")} className="text-[10px] text-primary flex items-center gap-0.5">
-                  Управління <ChevronRight className="w-3 h-3" />
-                </button>
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3 px-1">
+              <div className="flex items-center gap-2">
+                <Car className="w-4 h-4 text-yellow-400" />
+                <h2 className="text-sm font-bold tracking-wide uppercase">Зареєстровані авто</h2>
               </div>
-              <div className="px-4 py-3 space-y-2.5">
-                {cars.map((c: { id: number; license_type: string; plate_number: string | null }) => (
-                  <div key={c.id} className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-muted-foreground truncate flex-1">{c.license_type?.split("|")[0]?.trim() || "Авто"}</span>
-                    <div style={{ display: "inline-flex", alignItems: "stretch", borderRadius: 6, border: "2px solid #333", background: "#fff", overflow: "hidden", height: 26, boxShadow: "0 1px 5px rgba(0,0,0,0.4)", flexShrink: 0 }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 16, borderRight: "1.5px solid #333", background: "#fff", gap: 1 }}>
-                        <div style={{ width: 11, height: 7, overflow: "hidden", borderRadius: 1, border: "0.5px solid #ccc" }}>
+            </div>
+
+            <div className="space-y-3">
+              {cars.map((c) => (
+                <div key={c.id} className="liquid-glass-card rounded-2xl p-4 border border-white/5 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Транспортний засіб</p>
+                    <p className="text-xs font-bold text-foreground truncate">
+                       {c.license_type?.split("|")[0]?.trim() || "Легкове авто"}
+                    </p>
+                  </div>
+
+                  {/* Реалістичний номерний знак */}
+                  <div className="shrink-0 scale-110 origin-right">
+                    <div style={{ 
+                      display: "inline-flex", 
+                      alignItems: "stretch", 
+                      borderRadius: 4, 
+                      border: "1.5px solid #222", 
+                      background: "#fff", 
+                      overflow: "hidden", 
+                      height: 28, 
+                      boxShadow: "0 4px 10px rgba(0,0,0,0.3), inset 0 0 2px rgba(0,0,0,0.1)" 
+                    }}>
+                      {/* UA Flag Section */}
+                      <div style={{ 
+                        display: "flex", 
+                        flexDirection: "column", 
+                        alignItems: "center", 
+                        justifyContent: "center", 
+                        width: 14, 
+                        background: "#005BBB", // Синій колір зверху для секції
+                        padding: "2px 0",
+                        gap: 1
+                      }}>
+                        <div style={{ width: 9, height: 6, borderRadius: 0.5, overflow: "hidden" }}>
                           <div style={{ width: "100%", height: "50%", background: "#005BBB" }} />
                           <div style={{ width: "100%", height: "50%", background: "#FFD500" }} />
                         </div>
-                        <span style={{ fontSize: 4.5, fontWeight: 900, color: "#111", fontFamily: "Arial", lineHeight: 1 }}>UA</span>
+                        <span style={{ fontSize: 5, fontWeight: 900, color: "#fff", fontFamily: "Arial" }}>UA</span>
                       </div>
-                      <span style={{ fontFamily: "'Arial Black', Arial, sans-serif", fontWeight: 900, fontSize: 10, color: "#111", letterSpacing: "0.08em", padding: "0 6px", display: "flex", alignItems: "center", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                      
+                      {/* Plate Number */}
+                      <span style={{ 
+                        fontFamily: "'Arial Black', sans-serif", 
+                        fontWeight: 900, 
+                        fontSize: 12, 
+                        color: "#111", 
+                        letterSpacing: "0.05em", 
+                        padding: "0 8px", 
+                        display: "flex", 
+                        alignItems: "center", 
+                        textTransform: "uppercase", 
+                        whiteSpace: "nowrap",
+                        background: "#fff"
+                      }}>
                         {c.plate_number}
                       </span>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         );
       })()}
-
       {/* Кнопка адмін панелі — тільки для прийнятих адмінів */}
       {isApprovedAdmin && (
         <div className="mt-4 animate-fade-in">
