@@ -99,14 +99,6 @@ export const store = {
     }));
   },
 
-  updateLicenseStatus: async (id: number, status: "approved" | "rejected") => {
-    await supabase.from("license_applications").update({ status }).eq("id", id);
-  },
-
-  updateCarPlateStatus: async (id: number, status: "approved" | "rejected") => {
-    await supabase.from("car_plates").update({ status }).eq("id", id);
-  },
-
   // ── NEWS ──────────────────────────────────────────────────────────────────
   getNews: async (): Promise<NewsItem[]> => {
     const { data } = await supabase.from("news").select("*").order("created_at", { ascending: false });
