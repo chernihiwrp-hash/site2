@@ -2419,8 +2419,44 @@ return (
         {/* СПИСОК ГРАВЦІВ */}
         <div className="grid gap-2.5">
            {filteredPlayers.map((p) => (
-             // Тут код з аватарками, який ми зробили
-           ))}
+  <div key={p.id} className="liquid-glass border-white/5 rounded-2xl p-3 flex items-center justify-between group transition-all hover:border-primary/20">
+    <div className="flex items-center gap-3.5">
+      {/* Контейнер Аватарки */}
+      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+        {p.avatar_url ? (
+          <img 
+            src={p.avatar_url} 
+            alt="" 
+            className="w-full h-full object-cover" 
+            onError={(e) => (e.currentTarget.style.display = 'none')} 
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-primary/5 text-primary/40 font-black text-sm uppercase">
+            {p.username?.charAt(0)}
+          </div>
+        )}
+      </div>
+
+      {/* Текстова інформація */}
+      <div className="flex flex-col">
+        <span className="text-sm font-bold text-white tracking-tight leading-tight">
+          {p.username}
+        </span>
+        <span className="text-[10px] font-medium text-primary/60 uppercase tracking-[0.15em] mt-0.5">
+          {p.faction_name || "Громадянин"}
+        </span>
+      </div>
+    </div>
+
+    {/* Кнопка Kick */}
+    <button 
+      onClick={() => openKickModal(p.id, p.username)}
+      className="p-2.5 bg-destructive/5 text-destructive/40 hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 rounded-xl transition-all active:scale-90"
+    >
+      <UserMinus className="w-4 h-4" />
+    </button>
+  </div>
+))}
         </div>
       </>
     )}
