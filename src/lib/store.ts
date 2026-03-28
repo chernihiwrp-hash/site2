@@ -81,6 +81,32 @@ const _saveNotifs = (items: Notification[]) => {
 // ─── STORE ───────────────────────────────────────────────────────────────────
 export const store = {
 
+  // ── LICENSES & PLATES (ДОБАВЛЯЕМ НОВОЕ, НЕ УДАЛЯЯ СТАРОЕ) ──────────────────
+  
+  getLicenseApps: async (): Promise<LicenseApplication[]> => {
+    const { data } = await supabase
+      .from("license_applications")
+      .select("*")
+      .order("created_at", { ascending: false });
+    
+    if (!data) return [];
+    return data.map((r: any) => ({
+      id: r.id,
+      username: r.username,
+      license_type: r.license_type,
+      status: r.status,
+      date: new Date(r.created_at).toLocaleDateString("uk-UA")
+    }));
+  },
+
+  updateLicenseStatus: async (id: number, status: "approved" | "rejected") => {
+    await supabase.from("license_applications").update({ status }).eq("id", id);
+  },
+
+  updateCarPlateStatus: async (id: number, status: "approved" | "rejected") => {
+    await supabase.from("car_plates").update({ status }).eq("id", id);
+  },
+
   // ── NEWS ──────────────────────────────────────────────────────────────────
   getNews: async (): Promise<NewsItem[]> => {
     const { data } = await supabase.from("news").select("*").order("created_at", { ascending: false });
