@@ -148,25 +148,17 @@ export const store = {
       const { data, error } = await supabase
         .from("car_plates")
         .select("*")
-        .eq("username", nick) // ИСПОЛЬЗУЕМ ВАШУ КОЛОНКУ 'username'
-        .eq("status", "approved"); // Берем только одобренные номера
+        .eq("username", nick); // ИСПОЛЬЗУЕМ username ИЗ ТВОЕЙ ТАБЛИЦЫ
 
       if (error) {
-        console.error("Ошибка запроса к car_plates:", error);
+        console.error("Помилка БД car_plates:", error.message);
         return [];
       }
       return data || [];
     } catch (e) {
-      console.error("Критическая ошибка в getCarPlates:", e);
+      console.error("Критична помилка getCarPlates:", e);
       return [];
     }
-  },
-  
-  addHouse: async (name: string, desc: string, price: number, imageUrl?: string, category = "Люкс") => {
-    await supabase.from("houses").insert({
-      name, description: desc, price,
-      image_url: imageUrl || null, category, is_for_sale: true,
-    });
   },
 
   deleteHouse: async (id: number) => { await supabase.from("houses").delete().eq("id", id); },
