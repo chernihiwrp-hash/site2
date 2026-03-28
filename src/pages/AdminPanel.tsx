@@ -2759,5 +2759,6 @@ const BansTab = () => {
       )}
     </div>
   );
+  };
 
 export default AdminPanel;
