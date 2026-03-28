@@ -2752,13 +2752,13 @@ const BansTab = () => {
                     <span className="text-[9px] text-orange-400 font-semibold">{timeLeft(ban.expires_at)}</span>
                   </div>
                 )}
-              </div>
-            </div>
-          ))}
+             ))}
         </div>
       )}
     </div>
   );
-};
+}; 
+
+}; 
 
 export default AdminPanel;
