@@ -653,35 +653,110 @@ const HouseRequestsTab = () => {
 const LicensesTab = () => {
   const [apps, setApps] = useState<LicenseApplication[]>([]);
   useEffect(() => { store.getLicenseApplications().then(setApps); }, []);
+
   const decide = async (id: number, status: "approved" | "rejected") => {
     await store.updateLicenseStatus(id, status);
     setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
     toast.success(status === "approved" ? "Схвалено!" : "Відхилено!");
   };
-  const sc = { pending: "bg-yellow-400/15 text-yellow-400", approved: "bg-primary/15 text-primary", rejected: "bg-destructive/15 text-destructive" };
+
+  const sc = { 
+    pending: "bg-yellow-400/15 text-yellow-400 border-yellow-400/20", 
+    approved: "bg-primary/15 text-primary border-primary/20", 
+    rejected: "bg-destructive/15 text-destructive border-destructive/20" 
+  };
+  
   const sl = { pending: "На розгляді", approved: "Схвалено", rejected: "Відхилено" };
+
   return (
     <div className="space-y-3 animate-fade-in">
-      <p className="text-xs text-muted-foreground">Заявок: {apps.length}</p>
-      {apps.length === 0 && <div className="text-center py-10 liquid-glass-card rounded-2xl"><Car className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" /><p className="text-xs text-muted-foreground">Немає заявок</p></div>}
-      {apps.map(a => (
-        <NeonCard key={a.id} glowColor="green">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-1.5 mb-1"><Users className="w-3 h-3 text-muted-foreground" /><h4 className="text-xs font-semibold">{a.username}</h4></div>
-              <div className="flex items-center gap-1.5"><FileCheck className="w-3 h-3 text-muted-foreground" /><p className="text-[10px] text-muted-foreground">{a.license_type}</p></div>
-              {a.plate_number && <div className="flex items-center gap-1.5 mt-0.5"><Car className="w-3 h-3 text-yellow-400" /><p className="text-[10px] font-mono text-yellow-400">{a.plate_number}</p></div>}
-              <span className={`text-[9px] px-2 py-0.5 rounded-md mt-1 inline-block ${sc[a.status]}`}>{sl[a.status]}</span>
-            </div>
-            {a.status === "pending" && (
-              <div className="flex gap-1 ml-2">
-                <button onClick={() => decide(a.id, "approved")} className="p-1.5 rounded-lg bg-primary/15 text-primary active:scale-95"><Check className="w-3.5 h-3.5" /></button>
-                <button onClick={() => decide(a.id, "rejected")} className="p-1.5 rounded-lg bg-destructive/15 text-destructive active:scale-95"><X className="w-3.5 h-3.5" /></button>
+      <div className="flex items-center justify-between px-1">
+        <p className="text-[10px] font-black text-muted-foreground tracking-widest uppercase">Заявок: {apps.length}</p>
+        <div className="flex items-center gap-1.5 text-[10px] text-primary/50 uppercase font-bold tracking-tighter">
+          <ShieldCheck className="w-3 h-3" /> Перевірка ліцензій
+        </div>
+      </div>
+
+      {apps.length === 0 && (
+        <div className="text-center py-12 liquid-glass-card rounded-3xl border-dashed">
+          <Car className="w-8 h-8 text-muted-foreground opacity-20 mx-auto mb-2" />
+          <p className="text-xs text-muted-foreground font-medium">Черга порожня</p>
+        </div>
+      )}
+
+      {apps.map(a => {
+        // Визначаємо, це зброя чи авто для кольору картки
+        const isCar = !!a.plate_number;
+
+        return (
+          <NeonCard key={a.id} glowColor={isCar ? "cyan" : "lime"}>
+            <div className="flex flex-col gap-3">
+              {/* Хедер картки */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
+                    <UserCheck className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-white leading-none mb-1">{a.username}</h4>
+                    <span className={`text-[9px] px-2 py-0.5 rounded border font-black uppercase tracking-tighter ${sc[a.status]}`}>
+                      {sl[a.status]}
+                    </span>
+                  </div>
+                </div>
+
+                {a.status === "pending" && (
+                  <div className="flex gap-2">
+                    <button onClick={() => decide(a.id, "approved")} className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 text-primary flex items-center justify-center active:scale-90 transition-all shadow-[0_0_15px_rgba(var(--primary),0.2)]">
+                      <Check className="w-5 h-5" />
+                    </button>
+                    <button onClick={() => decide(a.id, "rejected")} className="w-9 h-9 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive flex items-center justify-center active:scale-90 transition-all">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </NeonCard>
-      ))}
+
+              {/* Контент заявки */}
+              <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 relative overflow-hidden group">
+                {isCar ? (
+                  <div className="flex items-center justify-between relative z-10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+                        <Car className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-[8px] text-primary font-black uppercase tracking-widest leading-none mb-1">Реєстрація авто</p>
+                        <p className="text-xs font-black text-white uppercase italic">{a.license_type || "Транспорт"}</p>
+                      </div>
+                    </div>
+                    {/* Номерний знак */}
+                    <div className="scale-90 origin-right">
+                       <PlateBadge plate={a.plate_number || "??-????"} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 relative z-10">
+                    <div className="flex items-center gap-1.5 opacity-50">
+                      <Shield className="w-3 h-3 text-primary" />
+                      <span className="text-[9px] font-black uppercase tracking-widest">Ліцензія на зброю</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(a.license_type || "").split(",").map((tag, i) => (
+                        <span key={i} className="px-2.5 py-1 rounded-md border border-primary/30 bg-primary/10 text-[10px] font-black text-primary uppercase italic shadow-sm">
+                          {tag.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Легкий фоновий градієнт для глибини */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              </div>
+            </div>
+          </NeonCard>
+        );
+      })}
     </div>
   );
 };
