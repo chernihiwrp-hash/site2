@@ -69,6 +69,8 @@ const loadData = useCallback(async () => {
         .select("*")
         .ilike("owner_nick", nick);
 
+      if (carsError) console.error("Ошибка car_plates:", carsError);
+
       setProfileData({
         ...data,
         cars: carsData || []
@@ -76,13 +78,12 @@ const loadData = useCallback(async () => {
 
       setBalanceState(getBalance(nick));
 
- 
       if (store && typeof (store as any).getNotifications === 'function') {
         const notifs = await (store as any).getNotifications(nick);
         setNotifications(notifs);
       }
     } catch (e) {
-      console.error("Ошибка:", e);
+      console.error("Ошибка загрузки:", e);
     } finally {
       setRefreshing(false);
     }
@@ -444,59 +445,68 @@ const loadData = useCallback(async () => {
           </div>
         </div>
       </div>
-  {/* ═══ ЛІЦЕНЗІЇ (Твои квадраты) ═══ */}
+  {/* ═══ ЛІЦЕНЗІЇ (Квадрати-плітки) ═══ */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-3 px-1">
           <FileCheck className="w-4 h-4 text-primary" />
-          <h2 className="text-[11px] font-black tracking-widest uppercase opacity-70">Документи</h2>
+          <h2 className="text-sm font-black tracking-widest uppercase">Документи</h2>
         </div>
 
-        <div className="liquid-glass rounded-[28px] p-5 border border-white/5">
+        {/* Сетка из квадратов */}
+        <div className="grid grid-cols-2 gap-3">
           {profileData.licenses && profileData.licenses.filter(l => l.status === "approved" && !l.plate_number).length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {profileData.licenses
-                .filter(l => l.status === "approved" && !l.plate_number)
-                .map(l => (
-                  <div key={l.id} className="flex flex-col items-center justify-center p-4 rounded-[22px] bg-white/[0.03] border border-white/5">
-                    <Shield className="w-5 h-5 text-primary/70 mb-2" />
-                    <span className="text-[10px] font-black text-center text-foreground uppercase leading-none">
-                      {l.license_type.split('|')[0].trim()}
-                    </span>
+            profileData.licenses
+              .filter(l => l.status === "approved" && !l.plate_number)
+              .map(l => (
+                <div key={l.id} className="aspect-square flex flex-col items-center justify-center p-4 rounded-[28px] bg-white/[0.03] border border-white/5 hover:bg-primary/10 transition-all active:scale-95 shadow-lg">
+                  <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+                    <Shield className="w-6 h-6 text-primary" />
                   </div>
-                ))}
-            </div>
+                  <span className="text-[10px] font-black text-center text-foreground uppercase leading-tight tracking-tighter">
+                    {l.license_type.split('|')[0].trim()}
+                  </span>
+                </div>
+              ))
           ) : (
-            <p className="text-[10px] text-center opacity-30 uppercase tracking-tighter">Порожньо</p>
+            <div className="col-span-2 py-6 liquid-glass rounded-3xl text-center border border-dashed border-white/10">
+               <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Список порожній</p>
+            </div>
           )}
         </div>
       </div>
 
-      {/* ═══ НОМЕРИ (car_plates) ═══ */}
+      {/* ═══ ТРАНСПОРТ (car_plates) ═══ */}
       {((profileData as any).cars?.length > 0) && (
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-in">
           <div className="flex items-center gap-2 mb-3 px-1 text-yellow-400">
             <Car className="w-4 h-4" />
-            <h2 className="text-[11px] font-black tracking-widest uppercase">Транспорт</h2>
+            <h2 className="text-sm font-black tracking-widest uppercase">Мій транспорт</h2>
           </div>
 
           <div className="space-y-3">
             {(profileData as any).cars.map((car: any) => (
-              <div key={car.id} className="liquid-glass-card rounded-[22px] p-4 border border-white/5 flex items-center justify-between">
+              <div key={car.id} className="liquid-glass-card rounded-[24px] p-4 border border-white/5 flex items-center justify-between shadow-xl">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
-                    <Car className="w-4 h-4 text-yellow-400" />
+                  <div className="w-10 h-10 rounded-full bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
+                    <Car className="w-5 h-5 text-yellow-400" />
                   </div>
-                  <p className="text-xs font-black text-white uppercase italic">{car.model || "Vehicle"}</p>
+                  <div>
+                    <p className="text-[9px] text-muted-foreground uppercase font-black leading-none mb-1">Registration</p>
+                    <p className="text-xs font-black text-white uppercase italic">{car.model || "Vehicle"}</p>
+                  </div>
                 </div>
 
-                {/* Номерной знак */}
-                <div className="relative flex items-stretch rounded-[4px] border border-[#111] bg-white h-[26px] overflow-hidden shadow-lg">
+                {/* UA Номерний знак */}
+                <div className="relative flex items-stretch rounded-[5px] border-[1.5px] border-[#1a1a1a] bg-[#fdfdfd] h-[28px] overflow-hidden shadow-md">
                   <div className="w-[12px] bg-[#005BBB] flex flex-col items-center justify-center gap-[1px]">
-                    <div className="w-[8px] h-[4px] bg-white/30 rounded-[0.5px]" />
+                    <div className="w-[8px] h-[4px] rounded-[0.5px] overflow-hidden">
+                       <div className="h-1/2 bg-[#005BBB]" />
+                       <div className="h-1/2 bg-[#FFD500]" />
+                    </div>
                     <span className="text-[4px] font-black text-white">UA</span>
                   </div>
-                  <div className="px-3 flex items-center">
-                    <span className="text-[12px] font-[900] text-[#111] font-sans">
+                  <div className="px-3 flex items-center justify-center bg-white">
+                    <span className="text-[13px] font-[900] text-[#111] font-sans tracking-tight">
                       {car.plate_number}
                     </span>
                   </div>
