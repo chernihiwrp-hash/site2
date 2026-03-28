@@ -17,6 +17,51 @@ const getTelegramUser = () => {
   } catch { return null; }
 };
 
+const PlateBadge = ({ plate }: { plate: string }) => (
+  <div style={{
+    display: "inline-flex",
+    alignItems: "stretch",
+    borderRadius: 6,
+    border: "2px solid #333",
+    background: "#fff",
+    overflow: "hidden",
+    height: 28,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+    flexShrink: 0,
+  }}>
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      width: 18,
+      borderRight: "1.5px solid #333",
+      background: "#fff",
+      gap: 1,
+    }}>
+      <div style={{ width: 12, height: 8, overflow: "hidden", borderRadius: 1, border: "0.5px solid #ccc" }}>
+        <div style={{ width: "100%", height: "50%", background: "#005BBB" }} />
+        <div style={{ width: "100%", height: "50%", background: "#FFD500" }} />
+      </div>
+      <span style={{ fontSize: 5, fontWeight: 900, color: "#111", fontFamily: "Arial", lineHeight: 1 }}>UA</span>
+    </div>
+    <span style={{
+      fontFamily: "'Arial Black', Arial, sans-serif",
+      fontWeight: 900,
+      fontSize: 11,
+      color: "#111",
+      letterSpacing: "0.08em",
+      padding: "0 7px",
+      display: "flex",
+      alignItems: "center",
+      textTransform: "uppercase",
+      whiteSpace: "nowrap",
+    }}>
+      {plate}
+    </span>
+  </div>
+);
+
 const Trident = () => (
   <svg viewBox="0 0 100 120" fill="currentColor" className="text-white w-full h-full opacity-[0.07]">
     <path d="M50 5 C50 5 42 15 42 28 C42 35 45 40 45 40 L35 40 C35 40 28 35 28 22 C28 10 35 5 35 5 L28 5 C28 5 18 12 18 28 C18 44 28 52 38 54 L38 100 L44 100 L44 60 L56 60 L56 100 L62 100 L62 54 C72 52 82 44 82 28 C82 12 72 5 72 5 L65 5 C65 5 72 10 72 22 C72 35 65 40 65 40 L55 40 C55 40 58 35 58 28 C58 15 50 5 50 5Z"/>
