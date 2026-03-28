@@ -156,7 +156,7 @@ const CarRegistration = () => {
     if (!plate.trim()) return toast.error("Введіть номер");
     if (!model.trim()) return toast.error("Введіть модель авто");
     setLoading(true);
-    await store.submitLicense(nick.trim(), model.trim(), plate.trim().toUpperCase());
+    await store.submitCarPlate(nick.trim(), model.trim(), plate.trim().toUpperCase());
     toast.success("Заявку відправлено! Адміністрація розгляне її.");
     setPlate(""); setModel("");
     setLoading(false);
