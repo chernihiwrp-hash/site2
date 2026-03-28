@@ -783,6 +783,26 @@ const WantedTab = () => {
 };
 
 // ─── CAR PLATES (ТІЛЬКИ НОМЕРИ) ──────────────────────────────────────────────
+// ─── PLATE BADGE COMPONENT ──────────────────────────────────────────────────
+// ВСТАВЛЯЙ ЦЕ ПЕРЕД PlatesTab
+const PlateBadge = ({ number }: { number: string }) => (
+  <div className="inline-flex items-center bg-white rounded-[4px] border-[1.5px] border-black/10 overflow-hidden shadow-sm shrink-0" style={{ height: "24px" }}>
+    <div className="bg-[#0052b4] w-[12px] h-full flex flex-col items-center justify-center gap-0.5 px-[2px]">
+      <div className="flex flex-col gap-[1px]">
+        <div className="w-[4px] h-[2px] bg-yellow-400 rounded-[0.5px]" />
+        <div className="w-[4px] h-[2px] bg-[#0052b4] rounded-[0.5px]" />
+      </div>
+      <span className="text-[6px] leading-none font-black text-white tracking-tighter">UA</span>
+    </div>
+    <div className="px-2 py-0.5 flex items-center">
+      <span className="text-[12px] font-black text-[#1a1a1b] tracking-wider leading-none" style={{ fontFamily: "monospace" }}>
+        {number.toUpperCase()}
+      </span>
+    </div>
+  </div>
+);
+
+// ─── CAR PLATES (ТІЛЬКИ НОМЕРИ) ──────────────────────────────────────────────
 const PlatesTab = () => {
   const [plates, setPlates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -800,7 +820,7 @@ const PlatesTab = () => {
   useEffect(() => { fetchPlates(); }, []);
 
   const decide = async (id: number, status: "approved" | "rejected") => {
-    // Ця функція має бути в твоїм store.ts
+   
     await store.updateCarPlateStatus(id, status);
     setPlates(prev => prev.map(p => p.id === id ? { ...p, status } : p));
     toast.success(status === "approved" ? "Номер видано!" : "Відхилено");
