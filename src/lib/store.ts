@@ -421,33 +421,30 @@ export const store = {
   deleteDoc: async (id: number) => { await supabase.from("documents").delete().eq("id", id); },
   setDocs: (_: DocumentItem[]) => {},
 
-// ── CARS / LICENSES ───────────────────────────────────────────────────────
-  
 
-  getCars: async (): Promise<CarRecord[]> => {
-    const { data } = await supabase
+  getCars: async (nick?: string): Promise<CarRecord[]> => {
+    let query = supabase
       .from("car_plates")
       .select("*")
       .eq("status", "approved");
       
-    if (!data) return [];
+    if (nick) {
+      query = query.eq("username", nick); 
+    }
+
+    const { data, error } = await query;
+      
+    if (error) {
+      console.error("Ошибка в getCars:", error.message);
+      return [];
+    }
+    
     return data.map((r: any) => ({
       plate: r.plate_number,
       model: r.car_model || "Транспорт",
-      owner: r.username,
+      owner: r.username, 
     }));
   },
-
-
-  getLicenseApplications: async (): Promise<LicenseApplication[]> => {
-    const { data } = await supabase
-      .from("license_applications")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (!data) return [];
-    return data as LicenseApplication[];
-  },
-
 
   submitLicense: async (username: string, licenseType: string) => {
     const { error } = await supabase.from("license_applications").insert({
