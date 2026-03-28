@@ -2366,47 +2366,43 @@ useEffect(() => {
       </div>
     );
   }
-
+// 1. Фільтрація
   const filteredPlayers = players.filter(p => 
-  (p.username || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-  (p.faction_name || "").toLowerCase().includes(searchQuery.toLowerCase()) 
-);
+    (p.username || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (p.faction_name || "").toLowerCase().includes(searchQuery.toLowerCase()) 
+  );
 
+  // 2. Логіка вигнання
   const openKickModal = (id: number, username: string) => {
-  setPlayerToKick({ id, username });
-  setIsModalOpen(true);
-};
+    setPlayerToKick({ id, username });
+    setIsModalOpen(true);
+  };
 
-const confirmKick = async () => {
-  if (!playerToKick) return;
-  setIsProcessing(true);
-  
-  try {
-    // Оновлюємо статус у таблиці заявок на 'rejected'
-    const { error } = await supabase
-      .from("faction_applications")
-      .update({ status: 'rejected' })
-      .eq("id", playerToKick.id);
-
-    if (error) throw error;
-
-    // Видаляємо гравця зі списку в інтерфейсі без перезавантаження
-    setPlayers(prev => prev.filter(p => p.id !== playerToKick.id));
+  const confirmKick = async () => {
+    if (!playerToKick) return;
+    setIsProcessing(true);
     
-    // Закриваємо модалку
-    setIsModalOpen(false);
-  } catch (err) {
-    console.error("Помилка при звільненні:", err);
-    // Тут можна додати гарне сповіщення про помилку
-  } finally {
-    setIsProcessing(false);
-    setPlayerToKick(null);
-  }
-};
-  
-return (
+    try {
+      const { error } = await supabase
+        .from("faction_applications")
+        .update({ status: 'rejected' })
+        .eq("id", playerToKick.id);
+
+      if (error) throw error;
+
+      setPlayers(prev => prev.filter(p => p.id !== playerToKick.id));
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Помилка:", err);
+    } finally {
+      setIsProcessing(false);
+      setPlayerToKick(null);
+    }
+  };
+
+  return (
     <div className="space-y-4 animate-fade-in">
-      {/* 1. ПЕРЕМИКАЧ СЕКЦІЙ */}
+      {/* ПЕРЕМИКАЧ СЕКЦІЙ */}
       <div className="flex gap-2">
         <button 
           onClick={() => setActiveSection("factions")}
@@ -2422,13 +2418,13 @@ return (
         </button>
       </div>
 
-      {/* 2. ПОШУК (Показуємо тільки у вкладці "Склад") */}
+      {/* ПОШУК */}
       {activeSection === "players" && (
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <input 
             type="text"
-            placeholder="Пошук гравця..."
+            placeholder="Пошук за іменем або фракцією..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full liquid-glass rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
@@ -2436,56 +2432,67 @@ return (
         </div>
       )}
 
-      {/* 3. КОНТЕНТ: ГРАВЦІ */}
+      {/* СПИСОК ГРАВЦІВ (Новий дизайн: Аватарка + Інфо) */}
       {activeSection === "players" && (
-        <div className="grid gap-3">
+        <div className="grid gap-2.5">
           {filteredPlayers.length > 0 ? (
             filteredPlayers.map((p) => (
-              <NeonCard key={p.id} glowColor="lime">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                      {p.is_leader ? <Crown className="w-5 h-5 text-yellow-400" /> : <User className="w-5 h-5 text-primary" />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">{p.username}</p>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-tighter">
-                        {p.faction_name || "Без фракції"}
-                      </p>
-                    </div>
+              <div key={p.id} className="liquid-glass border-white/5 rounded-2xl p-3 flex items-center justify-between group transition-all hover:border-primary/20">
+                <div className="flex items-center gap-3.5">
+                  {/* Контейнер Аватарки */}
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                    {p.avatar_url ? (
+                      <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-primary/5 text-primary/40 font-black text-sm">
+                        {p.username?.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </div>
-                  <button 
-                    onClick={() => openKickModal(p.id, p.username)}
-                    className="p-2.5 bg-destructive/10 text-destructive border border-destructive/20 rounded-xl active:scale-95 transition-all"
-                  >
-                    <UserMinus className="w-4 h-4" />
-                  </button>
+
+                  {/* Текстова інформація */}
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-white tracking-tight leading-tight">
+                      {p.username}
+                    </span>
+                    <span className="text-[10px] font-medium text-primary/60 uppercase tracking-[0.15em] mt-0.5">
+                      {p.faction_name || "Громадянин"}
+                    </span>
+                  </div>
                 </div>
-              </NeonCard>
+
+                {/* Кнопка Kick */}
+                <button 
+                  onClick={() => openKickModal(p.id, p.username)}
+                  className="p-2.5 bg-destructive/5 text-destructive/40 hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 rounded-xl transition-all active:scale-90"
+                >
+                  <UserMinus className="w-4 h-4" />
+                </button>
+              </div>
             ))
           ) : (
-            <div className="py-10 text-center liquid-glass rounded-2xl border-dashed border-white/10">
-              <p className="text-sm text-muted-foreground">Нікого не знайдено 🕵️‍♂️</p>
+            <div className="py-12 text-center liquid-glass rounded-3xl border-dashed border-white/10">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-black">Дані відсутні</p>
             </div>
           )}
         </div>
       )}
 
-      {/* 4. МОДАЛКА ПІДТВЕРДЖЕННЯ (Confirm Kick) */}
+      {/* МОДАЛКА ПІДТВЕРДЖЕННЯ */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="w-full max-w-[280px] liquid-glass border-primary/20 rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
             <div className="w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto mb-4">
               <UserX className="w-8 h-8 text-destructive" />
             </div>
-            <h3 className="text-base font-black uppercase tracking-widest mb-2">Звільнення</h3>
+            <h3 className="text-base font-black uppercase tracking-widest mb-2 text-white">Звільнення</h3>
             <p className="text-[11px] text-muted-foreground mb-6 leading-relaxed">
-              Вигнати <span className="text-primary font-bold">{playerToKick?.username}</span> зі складу?
+              Ви впевнені, що хочете вигнати <span className="text-primary font-bold">{playerToKick?.username}</span>?
             </p>
             <div className="grid grid-cols-2 gap-3 w-full">
               <button 
                 onClick={() => setIsModalOpen(false)} 
-                className="py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all"
+                className="py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all text-white"
               >
                 Назад
               </button>
@@ -2494,7 +2501,7 @@ return (
                 disabled={isProcessing}
                 className="py-3.5 rounded-2xl bg-destructive text-white text-[9px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(239,68,68,0.4)] active:scale-95 transition-all flex items-center justify-center"
               >
-                {isProcessing ? "..." : "Kick"}
+                {isProcessing ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : "Kick"}
               </button>
             </div>
           </div>
