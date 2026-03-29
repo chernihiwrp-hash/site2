@@ -14,19 +14,22 @@ const CityVoice = () => {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   
-  // Додаємо завантаження голосів з localStorage, щоб вони не зникали після оновлення
+  // Зберігаємо голоси в localStorage, щоб вони не зникали при оновленні сторінки
   const [userVotes, setUserVotes] = useState<Record<number, 'like' | 'dislike'>>(() => {
-    const saved = localStorage.getItem('city_votes');
+    const saved = localStorage.getItem('city_votes_data');
     return saved ? JSON.parse(saved) : {};
   });
 
   useEffect(() => {
-    localStorage.setItem('city_votes', JSON.stringify(userVotes));
+    localStorage.setItem('city_votes_data', JSON.stringify(userVotes));
   }, [userVotes]);
 
   useEffect(() => {
     setLoading(true);
-    store.getCityVoice().then(data => { setIdeas(data); setLoading(false); });
+    store.getCityVoice().then(data => { 
+      setIdeas(data); 
+      setLoading(false); 
+    });
   }, []);
 
   const handleLike = async (id: number) => {
@@ -34,7 +37,7 @@ const CityVoice = () => {
     if (currentVote === 'like') return toast.info("Ви вже підтримали це");
 
     try {
-      // Логіка "передумав": якщо був дизлайк, знімаємо його в БД
+      // Якщо раніше був дизлайк, знімаємо його в базі
       if (currentVote === 'dislike') {
         await store.decrementCityVoiceDislikes(id);
       }
@@ -44,9 +47,13 @@ const CityVoice = () => {
       
       const updatedIdeas = await store.getCityVoice();
       setIdeas(updatedIdeas);
-      toast.success("Ваш голос враховано!", { icon: "👍" });
+
+      // Стильне зелене сповіщення
+      toast.success("ГОЛОС ЗАРАХОВАНО: ЗА", {
+        className: "bg-black border-primary text-primary font-bold uppercase text-[10px] tracking-widest",
+      });
     } catch (error) {
-      toast.error("Не вдалося проголосувати");
+      toast.error("Помилка з'єднання з сервером");
     }
   };
 
@@ -55,7 +62,7 @@ const CityVoice = () => {
     if (currentVote === 'dislike') return toast.info("Ви вже проголосували проти");
 
     try {
-      // Логіка "передумав": якщо був лайк, знімаємо його в БД
+      // Якщо раніше був лайк, знімаємо його в базі
       if (currentVote === 'like') {
         await store.decrementCityVoiceLikes(id);
       }
@@ -65,15 +72,20 @@ const CityVoice = () => {
       
       const updatedIdeas = await store.getCityVoice();
       setIdeas(updatedIdeas);
-      toast.error("Голос проти враховано", { icon: "👎" });
+
+      // Стильне червоне сповіщення
+      toast.error("ГОЛОС ЗАРАХОВАНО: ПРОТИ", {
+        className: "bg-black border-destructive text-destructive font-bold uppercase text-[10px] tracking-widest",
+      });
     } catch (error) {
-      toast.error("Не вдалося проголосувати");
+      toast.error("Помилка з'єднання з сервером");
     }
   };
 
   const submit = async () => {
     if (!message.trim()) return toast.error("Напишіть повідомлення");
     setSending(true);
+    // Тут можна замінити "Гравець" на динамічний нік, якщо він є в системі
     await store.submitCityVoice("Гравець", message, type);
     const updated = await store.getCityVoice();
     setIdeas(updated);
@@ -93,6 +105,7 @@ const CityVoice = () => {
     <div className="min-h-screen bg-background pb-20 px-4 pt-4">
       <PageHeader title="ГОЛОС МІСТА" subtitle="Ідеї та петиції" backTo="/" />
 
+      {/* ФОРМА СТВОРЕННЯ */}
       <div className="liquid-glass-card rounded-2xl p-4 mb-4 animate-fade-in">
         <div className="flex gap-2 mb-3">
           {(["idea", "petition"] as const).map(t => (
@@ -112,6 +125,7 @@ const CityVoice = () => {
         </GradientButton>
       </div>
 
+      {/* СПИСОК КАРТОК */}
       {loading ? (
         <div className="text-center py-8">
           <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
@@ -133,15 +147,19 @@ const CityVoice = () => {
                     {statusLabels[idea.status]}
                   </span>
                 </div>
-                <p className="text-[11px] text-foreground mb-2">{idea.text}</p>
-                <div className="flex items-center justify-between">
+                
+                <p className="text-[11px] text-foreground mb-2 leading-relaxed">{idea.text}</p>
+                
+                <div className="flex items-center justify-between border-t border-white/5 pt-2">
                   <span className="text-[10px] text-muted-foreground">— {idea.author}</span>
+                  
                   <div className="flex items-center gap-3">
+                    {/* КНОПКА ЗА */}
                     <button 
                       onClick={() => handleLike(idea.id)}
-                      className={`flex items-center gap-1 text-[10px] transition-all active:scale-90 ${
+                      className={`flex items-center gap-1.5 text-[10px] transition-all active:scale-90 ${
                         userVotes[idea.id] === 'like' 
-                          ? 'text-primary font-bold drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]' 
+                          ? 'text-primary font-bold drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]' 
                           : 'text-muted-foreground hover:text-primary/70'
                       }`}
                     >
@@ -149,11 +167,12 @@ const CityVoice = () => {
                       {idea.likes}
                     </button>
 
+                    {/* КНОПКА ПРОТИ */}
                     <button 
                       onClick={() => handleDislike(idea.id)}
-                      className={`flex items-center gap-1 text-[10px] transition-all active:scale-90 ${
+                      className={`flex items-center gap-1.5 text-[10px] transition-all active:scale-90 ${
                         userVotes[idea.id] === 'dislike' 
-                          ? 'text-destructive font-bold drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]' 
+                          ? 'text-destructive font-bold drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]' 
                           : 'text-muted-foreground hover:text-destructive/70'
                       }`}
                     >
@@ -165,6 +184,7 @@ const CityVoice = () => {
               </NeonCard>
             </div>
           ))}
+
           {ideas.length === 0 && (
             <div className="text-center py-12 liquid-glass-card rounded-2xl">
               <Megaphone className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
