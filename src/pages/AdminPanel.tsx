@@ -248,6 +248,10 @@ const AdminPanel = () => {
         {tab === "manage_factions" && <ManageFactionsTab />}
         {tab === "bans"            && <BansTab />}
         {tab === "debug"           && <DebugTab />}
+        {/* ─── ВСТАВЛЯЙ СЮДА ─── */}
+        {tab === "nft" && (
+          <NftGiftsTab nftGifts={nftGifts} setNftGifts={setNftGifts} />
+        )}
  </div> // 1. Закриваємо внутрішній div вкладок
     ); // 2. Закриваємо return і ставимо крапку з комою
   } // 3. Закриваємо фігурну дужку блоку if (tab)
