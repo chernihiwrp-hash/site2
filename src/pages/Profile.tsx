@@ -500,15 +500,16 @@ const loadData = useCallback(async () => {
               <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-40" 
                    style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.6) 0%, transparent 80%)` }} />
 
+              {/* ЗАМІНЕНО: Іконка Shield на FileCheck (Документ) */}
               <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
-                <Shield className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
+                <FileCheck className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
               </div>
 
               <div className="flex-1 min-w-0 z-10">
-                <p className="text-[8px] text-muted-foreground uppercase tracking-[0.2em] font-black mb-2 opacity-60">ДОКУМЕНТ ПІДТВЕРДЖЕНО</p>
+                <p className="text-[8px] text-muted-foreground uppercase tracking-[0.2em] font-black mb-2 opacity-60">ЛІЦЕНЗІЯ</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(item.license_type || "Ліцензія").split(',').map((tag: string, i: number) => (
-                    <div key={i} className="px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/10 backdrop-blur-md shadow-[0_0_10px_rgba(var(--primary-rgb),0.1)]">
+                    <div key={i} className="px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/10 backdrop-blur-md">
                       <span className="text-[9px] font-black uppercase tracking-tight text-primary italic whitespace-nowrap">
                         {tag.trim()}
                       </span>
@@ -539,9 +540,10 @@ const loadData = useCallback(async () => {
 
               <div className="flex-1 flex items-center justify-between min-w-0 z-10">
                 <div>
-                  <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-black mb-1 opacity-50">ВЛАСНІСТЬ</p>
-                  <p className="text-sm font-black text-white italic tracking-tighter leading-none mb-1 truncate max-w-[110px]">
-                    {car.car_model || "ТРАНСПОРТ"}
+                  <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-black mb-1 opacity-50">НОМЕРИ АВТО</p>
+                  <p className="text-[7px] text-primary/40 uppercase font-bold tracking-tighter mb-0.5">МОДЕЛЬ АВТО</p>
+                  <p className="text-sm font-black text-white italic tracking-tighter leading-none truncate max-w-[110px]">
+                    {car.car_model || "НЕВІДОМО"}
                   </p>
                 </div>
                 
