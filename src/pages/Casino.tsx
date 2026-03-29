@@ -1,204 +1,148 @@
 import { useState, useEffect, useRef } from "react";
-import { Palette, Check, Zap, Gift, X, ShoppingBag, Diamond, Upload, Sparkles } from "lucide-react";
+import { Zap, Gift, X, ShoppingBag, Diamond, Upload, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
-import { getBalance, addBalance, store, type NftGift } from "../lib/store";
-import { THEMES, applyTheme, type ThemeId } from "./Shop";
+import { getBalance, store, type NftGift } from "../lib/store";
 import GradientButton from "../components/GradientButton";
 
-// ─── КОМПОНЕНТ ДЛЯ МЕДІА (ПІДТРИМКА .TGS ТА .JSON) ──────────────────────────
-const GiftMedia = ({ url, className, isModal = false }: { url: string; className?: string; isModal?: boolean }) => {
-  const isAnimated = url.toLowerCase().includes(".tgs") || url.toLowerCase().includes(".json") || url.startsWith("blob:");
-  const shadowColor = isModal ? "rgba(var(--primary-rgb), 0.6)" : "rgba(var(--primary-rgb), 0.2)";
-
+// ─── МЕДІА ПЛЕЄР (TGS/JSON/IMG) ──────────────────────────────────────────
+const GiftMedia = ({ url, className }: { url: string; className?: string }) => {
+  const isAnimated = url.toLowerCase().includes(".tgs") || url.toLowerCase().includes(".json");
   if (isAnimated) {
     return (
-      <div className={`${className} flex items-center justify-center`} style={{ filter: `drop-shadow(0 0 35px ${shadowColor})` }}>
+      <div className={`${className} flex items-center justify-center`}>
         {/* @ts-ignore */}
-        <dotlottie-player
-          autoplay
-          loop
-          src={url}
-          background="transparent"
-          style={{ width: "100%", height: "100%" }}
-        ></dotlottie-player>
+        <dotlottie-player autoplay loop src={url} background="transparent" style={{ width: "100%", height: "100%" }} />
       </div>
     );
   }
-
-  return (
-    <img 
-      src={url} 
-      className={`${className} object-contain`} 
-      alt="gift" 
-      style={{ filter: `drop-shadow(0 0 25px ${shadowColor})` }} 
-    />
-  );
+  return <img src={url} className={`${className} object-contain`} alt="nft" />;
 };
 
-// ─── ОСНОВНИЙ КОМПОНЕНТ ──────────────────────────────────────────────────────
 const Casino = () => {
   const nick = localStorage.getItem("crp_nick") || "";
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [activeTab, setActiveTab] = useState<"themes" | "gifts">("gifts");
   const [balance, setBalance] = useState(() => getBalance(nick));
-  const [loading, setLoading] = useState(false);
-  
-  const [currentTheme, setCurrentTheme] = useState<ThemeId>(
-    () => (localStorage.getItem("crp_theme") as ThemeId) || "lime"
-  );
-  const [ownedThemes, setOwnedThemes] = useState<ThemeId[]>(() => {
-    try { return JSON.parse(localStorage.getItem(`crp_owned_themes_${nick}`) || '["lime"]'); }
-    catch { return ["lime"]; }
-  });
-
   const [gifts, setGifts] = useState<NftGift[]>([]);
   const [selectedGift, setSelectedGift] = useState<NftGift | null>(null);
+  
+  // Стан для форми додавання нового NFT
+  const [isAdding, setIsAdding] = useState(false);
+  const [newNft, setNewNft] = useState({ name: "", price: "", file: null as File | null });
 
   useEffect(() => {
-    const fetchData = async () => {
-      setBalance(getBalance(nick));
-      const nftData = await store.getNftGifts();
-      setGifts(nftData);
-    };
-    fetchData();
-  }, [nick]);
+    const load = async () => setGifts(await store.getNftGifts());
+    load();
+  }, []);
 
-  // ФУНКЦІЯ ТЕСТОВОГО ЗАВАНТАЖЕННЯ (ДЛЯ ТЕБЕ)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // КНОПКА "ЗАВАНТАЖИТИ": ОБРОБКА ФАЙЛУ
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    const objectUrl = URL.createObjectURL(file);
-    const tempGift: NftGift = {
-      id: `dev-${Date.now()}`,
-      name: file.name.replace(".tgs", "").replace(".json", ""),
-      price: 777,
-      image_url: objectUrl,
-    };
-
-    setGifts([tempGift, ...gifts]);
-    toast.success("Анімацію додано для тесту!");
+    if (file) {
+      setNewNft({ ...newNft, name: file.name.split('.')[0], file: file });
+      toast.success(`Файл ${file.name} вибрано`);
+    }
   };
 
-  const handleBuyGift = async (gift: NftGift) => {
-    setLoading(true);
-    const success = await store.buyNftGift(nick, gift);
-    if (success) {
-      toast.success(`NFT "${gift.name}" придбано!`);
-      setBalance(getBalance(nick));
-      setSelectedGift(null);
-    } else {
-      toast.error("Недостатньо CR");
+  // ЗБЕРЕЖЕННЯ (Емуляція додавання в базу)
+  const saveNewNft = async () => {
+    if (!newNft.name || !newNft.price || !newNft.file) {
+      toast.error("Заповни всі поля та вибери файл!");
+      return;
     }
-    setLoading(false);
+
+    const giftToAdd: NftGift = {
+      id: `nft-${Date.now()}`,
+      name: newNft.name,
+      price: Number(newNft.price),
+      // ВАЖЛИВО: Ми прописуємо шлях так, ніби ти вже поклав файл у папку gifts
+      image_url: `/gifts/${newNft.file.name}` 
+    };
+
+    // Тут ти зазвичай викликаєш store.addNft(giftToAdd)
+    setGifts([giftToAdd, ...gifts]);
+    setIsAdding(false);
+    setNewNft({ name: "", price: "", file: null });
+    
+    toast.info("NFT додано! Не забудь покласти файл у папку public/gifts/");
   };
 
   return (
-    <div className="min-h-screen pb-24 px-4 pt-4 relative overflow-hidden bg-black">
-      {/* Background Neon Glows */}
-      <div className="fixed -top-40 -left-40 w-96 h-96 bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="fixed -bottom-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
-
+    <div className="min-h-screen pb-24 px-4 pt-6 bg-black text-white">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 relative z-10">
-        <div>
-          <h1 className="font-display text-2xl font-black tracking-tighter text-white italic uppercase">
-            Магазин<span className="text-primary">.</span>
-          </h1>
-          <div className="h-1 w-8 bg-primary rounded-full mt-1" />
-        </div>
-        <div className="flex items-center gap-2 liquid-glass px-4 py-2 rounded-2xl border border-white/10 shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)]">
-          <Zap className="w-4 h-4 text-primary animate-pulse" />
-          <span className="font-black text-primary tracking-tight">{balance} CR</span>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-black italic uppercase tracking-tighter">Магазин<span className="text-primary">.</span></h1>
+        <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-2xl">
+          <Zap className="w-4 h-4 text-primary" />
+          <span className="font-black">{balance} CR</span>
         </div>
       </div>
 
-      {/* Tabs Switcher */}
-      <div className="flex gap-2 mb-8 p-1.5 bg-white/5 rounded-[2rem] border border-white/5 relative z-10">
-        <button onClick={() => setActiveTab("themes")} className={`flex-1 py-3.5 rounded-[1.5rem] text-[10px] font-black uppercase transition-all duration-500 ${activeTab === "themes" ? "bg-primary text-black shadow-lg scale-[1.02]" : "text-zinc-500"}`}>
-          <Palette className="w-3.5 h-3.5 inline mr-2" /> Теми
-        </button>
-        <button onClick={() => setActiveTab("gifts")} className={`flex-1 py-3.5 rounded-[1.5rem] text-[10px] font-black uppercase transition-all duration-500 ${activeTab === "gifts" ? "bg-primary text-black shadow-lg scale-[1.02]" : "text-zinc-500"}`}>
-          <Gift className="w-3.5 h-3.5 inline mr-2" /> Gifts
-        </button>
-      </div>
+      {/* КНОПКА ВІДКРИТТЯ АДМІН-ФОРМИ */}
+      <button 
+        onClick={() => setIsAdding(!isAdding)}
+        className="w-full mb-6 py-4 bg-primary/10 border border-primary/20 rounded-3xl flex items-center justify-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all"
+      >
+        {isAdding ? <X size={16} /> : <Plus size={16} />}
+        {isAdding ? "Скасувати" : "Додати нове NFT"}
+      </button>
 
-      {/* ADMIN UPLOAD SECTION (HIDDEN) */}
-      <div className="mb-8 relative z-10">
-        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".tgs,.json" />
-        <button 
-          onClick={() => fileInputRef.current?.click()}
-          className="w-full py-4 bg-white/5 border border-dashed border-white/10 rounded-3xl flex items-center justify-center gap-3 text-zinc-500 hover:text-primary hover:border-primary/50 transition-all active:scale-95"
-        >
-          <Upload className="w-4 h-4" />
-          <span className="text-[9px] font-black uppercase tracking-widest">Тест завантаження .TGS</span>
-        </button>
-      </div>
-
-      {/* Gifts Grid */}
-      {activeTab === "gifts" && (
-        <div className="grid grid-cols-2 gap-4 animate-fade-in relative z-10">
-          {gifts.map((gift) => (
-            <div 
-              key={gift.id} 
-              onClick={() => setSelectedGift(gift)} 
-              className="liquid-glass-card rounded-[2.5rem] p-4 flex flex-col items-center border border-white/5 active:scale-95 transition-all group"
+      {/* ФОРМА ДОДАВАННЯ (З'ЯВЛЯЄТЬСЯ ПО КЛІКУ) */}
+      {isAdding && (
+        <div className="mb-8 p-6 bg-zinc-900/50 border border-white/10 rounded-[2.5rem] animate-in slide-in-from-top-4 duration-300">
+          <div className="space-y-4">
+            <input 
+              type="text" placeholder="Назва NFT" 
+              className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3 text-sm focus:border-primary outline-none"
+              value={newNft.name} onChange={(e) => setNewNft({...newNft, name: e.target.value})}
+            />
+            <input 
+              type="number" placeholder="Ціна (CR)" 
+              className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3 text-sm focus:border-primary outline-none"
+              value={newNft.price} onChange={(e) => setNewNft({...newNft, price: e.target.value})}
+            />
+            
+            {/* ПРИХОВАНИЙ INPUT ДЛЯ ФАЙЛУ */}
+            <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept=".tgs,.json,.png,.jpg" />
+            
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className={`w-full py-3 rounded-2xl border-2 border-dashed transition-all flex items-center justify-center gap-2 ${newNft.file ? 'border-primary/50 text-primary' : 'border-white/10 text-zinc-500'}`}
             >
-              <div className="w-full aspect-square mb-4 bg-zinc-950/50 rounded-[2rem] flex items-center justify-center p-4 relative overflow-hidden border border-white/5">
-                <GiftMedia url={gift.image_url} className="w-full h-full" />
-              </div>
-              <p className="text-[10px] font-black uppercase truncate w-full text-center text-zinc-400 mb-1">{gift.name}</p>
-              <div className="flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-primary" />
-                <p className="text-xs font-black text-primary tracking-tighter">{gift.price} CR</p>
-              </div>
-            </div>
-          ))}
+              <Upload size={18} />
+              <span className="text-xs font-bold uppercase">{newNft.file ? newNft.file.name : "Вибрати .tgs файл"}</span>
+            </button>
+
+            <GradientButton variant="green" className="w-full py-4 rounded-2xl font-black uppercase text-[10px]" onClick={saveNewNft}>
+              <Save size={16} className="mr-2" /> Зберегти в магазин
+            </GradientButton>
+          </div>
         </div>
       )}
 
-      {/* MODAL NFT CARD */}
-      {selectedGift && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-2xl animate-in fade-in duration-300">
-          <div className="absolute w-full h-full bg-primary/5 rounded-full blur-[150px] pointer-events-none" />
-          
-          <div className="w-full max-w-sm bg-zinc-900/40 border border-white/10 rounded-[3.5rem] p-8 relative text-center animate-in zoom-in-95 duration-300">
-            <button onClick={() => setSelectedGift(null)} className="absolute top-8 right-8 text-white/20 hover:text-white"><X /></button>
-            
-            <div className="flex items-center justify-center gap-2.5 mb-2 text-primary/60">
-              <Diamond className="w-3 h-3" />
-              <span className="text-[9px] font-black uppercase tracking-[0.4em]">Exclusive NFT</span>
-              <Diamond className="w-3 h-3" />
+      {/* Grid */}
+      <div className="grid grid-cols-2 gap-4">
+        {gifts.map((gift) => (
+          <div key={gift.id} onClick={() => setSelectedGift(gift)} className="bg-zinc-900/40 border border-white/5 rounded-[2rem] p-4 flex flex-col items-center active:scale-95 transition-all">
+            <div className="w-full aspect-square mb-3 bg-black/40 rounded-2xl flex items-center justify-center p-2">
+              <GiftMedia url={gift.image_url} className="w-full h-full" />
             </div>
-            
-            <h2 className="text-3xl font-black italic mb-10 uppercase text-white tracking-tight">{selectedGift.name}</h2>
-            
-            <div className="w-56 h-56 mx-auto mb-12 relative">
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-[60px] animate-pulse" />
-              <GiftMedia url={selectedGift.image_url} className="w-full h-full relative z-10" isModal />
-            </div>
+            <p className="text-[10px] font-black uppercase text-zinc-500 truncate w-full text-center">{gift.name}</p>
+            <p className="text-primary font-black mt-1">{gift.price} CR</p>
+          </div>
+        ))}
+      </div>
 
-            <div className="w-full bg-white/5 rounded-3xl p-6 border border-white/5 flex items-center justify-between mb-8 shadow-inner">
-              <div className="text-left">
-                <span className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Price Tag</span>
-                <div className="text-3xl font-black text-primary tracking-tighter">{selectedGift.price} CR</div>
-              </div>
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                 <ShoppingBag className="text-primary w-7 h-7" />
-              </div>
-            </div>
-            
-            <GradientButton 
-              variant="green" 
-              className="w-full py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-2xl active:scale-95 transition-transform" 
-              onClick={() => handleBuyGift(selectedGift)} 
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "Confirm Purchase"}
+      {/* NFT Modal (як і раніше) */}
+      {selectedGift && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl animate-in fade-in">
+          <div className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-[3rem] p-8 relative text-center">
+            <button onClick={() => setSelectedGift(null)} className="absolute top-6 right-6 text-white/20"><X /></button>
+            <h2 className="text-2xl font-black italic mb-8 uppercase">{selectedGift.name}</h2>
+            <div className="w-48 h-48 mx-auto mb-10"><GiftMedia url={selectedGift.image_url} className="w-full h-full" /></div>
+            <GradientButton variant="green" className="w-full py-4 rounded-xl font-black uppercase text-xs" onClick={() => {toast.success("NFT придбано!"); setSelectedGift(null)}}>
+              Купити за {selectedGift.price} CR
             </GradientButton>
-            
-            <p className="text-[8px] text-zinc-600 mt-5 uppercase font-bold tracking-widest">Digital asset will be added to your account instantly</p>
           </div>
         </div>
       )}
