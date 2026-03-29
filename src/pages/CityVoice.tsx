@@ -13,6 +13,16 @@ const CityVoice = () => {
   const [type, setType] = useState<"idea" | "petition">("idea");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  
+  // Додаємо завантаження голосів з localStorage, щоб вони не зникали після оновлення
+  const [userVotes, setUserVotes] = useState<Record<number, 'like' | 'dislike'>>(() => {
+    const saved = localStorage.getItem('city_votes');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  useEffect(() => {
+    localStorage.setItem('city_votes', JSON.stringify(userVotes));
+  }, [userVotes]);
 
   useEffect(() => {
     setLoading(true);
@@ -20,29 +30,47 @@ const CityVoice = () => {
   }, []);
 
   const handleLike = async (id: number) => {
-  try {
-    await store.incrementCityVoiceLikes(id);     // зберігаємо в БД
-    
-    // Після збереження заново завантажуємо всі дані з бази
-    const updatedIdeas = await store.getCityVoice();
-    setIdeas(updatedIdeas);                      // оновлюємо екран
-  } catch (error) {
-    console.error("Помилка лайку:", error);
-    toast.error("Не вдалося поставити лайк");
-  }
-};
+    const currentVote = userVotes[id];
+    if (currentVote === 'like') return toast.info("Ви вже підтримали це");
 
-const handleDislike = async (id: number) => {
-  try {
-    await store.incrementCityVoiceDislikes(id);  // зберігаємо в БД
-    
-    const updatedIdeas = await store.getCityVoice();
-    setIdeas(updatedIdeas);
-  } catch (error) {
-    console.error("Помилка дизлайку:", error);
-    toast.error("Не вдалося поставити дизлайк");
-  }
-};
+    try {
+      // Логіка "передумав": якщо був дизлайк, знімаємо його в БД
+      if (currentVote === 'dislike') {
+        await store.decrementCityVoiceDislikes(id);
+      }
+      
+      await store.incrementCityVoiceLikes(id);
+      setUserVotes(prev => ({ ...prev, [id]: 'like' }));
+      
+      const updatedIdeas = await store.getCityVoice();
+      setIdeas(updatedIdeas);
+      toast.success("Ваш голос враховано!", { icon: "👍" });
+    } catch (error) {
+      toast.error("Не вдалося проголосувати");
+    }
+  };
+
+  const handleDislike = async (id: number) => {
+    const currentVote = userVotes[id];
+    if (currentVote === 'dislike') return toast.info("Ви вже проголосували проти");
+
+    try {
+      // Логіка "передумав": якщо був лайк, знімаємо його в БД
+      if (currentVote === 'like') {
+        await store.decrementCityVoiceLikes(id);
+      }
+
+      await store.incrementCityVoiceDislikes(id);
+      setUserVotes(prev => ({ ...prev, [id]: 'dislike' }));
+      
+      const updatedIdeas = await store.getCityVoice();
+      setIdeas(updatedIdeas);
+      toast.error("Голос проти враховано", { icon: "👎" });
+    } catch (error) {
+      toast.error("Не вдалося проголосувати");
+    }
+  };
+
   const submit = async () => {
     if (!message.trim()) return toast.error("Напишіть повідомлення");
     setSending(true);
@@ -109,13 +137,28 @@ const handleDislike = async (id: number) => {
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-muted-foreground">— {idea.author}</span>
                   <div className="flex items-center gap-3">
-                    <button onClick={() => handleLike(idea.id)}
-                      className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 active:scale-95 transition-all">
-                      <ThumbsUp className="w-3.5 h-3.5" /> {idea.likes}
+                    <button 
+                      onClick={() => handleLike(idea.id)}
+                      className={`flex items-center gap-1 text-[10px] transition-all active:scale-90 ${
+                        userVotes[idea.id] === 'like' 
+                          ? 'text-primary font-bold drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]' 
+                          : 'text-muted-foreground hover:text-primary/70'
+                      }`}
+                    >
+                      <ThumbsUp className={`w-3.5 h-3.5 ${userVotes[idea.id] === 'like' ? 'fill-primary/20' : ''}`} /> 
+                      {idea.likes}
                     </button>
-                    <button onClick={() => handleDislike(idea.id)}
-                      className="flex items-center gap-1 text-[10px] text-destructive hover:text-destructive/80 active:scale-95 transition-all">
-                      <ThumbsDown className="w-3.5 h-3.5" /> {idea.dislikes}
+
+                    <button 
+                      onClick={() => handleDislike(idea.id)}
+                      className={`flex items-center gap-1 text-[10px] transition-all active:scale-90 ${
+                        userVotes[idea.id] === 'dislike' 
+                          ? 'text-destructive font-bold drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]' 
+                          : 'text-muted-foreground hover:text-destructive/70'
+                      }`}
+                    >
+                      <ThumbsDown className={`w-3.5 h-3.5 ${userVotes[idea.id] === 'dislike' ? 'fill-destructive/20' : ''}`} /> 
+                      {idea.dislikes}
                     </button>
                   </div>
                 </div>
