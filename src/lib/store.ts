@@ -598,43 +598,50 @@ export const store = {
   // ── PROFILE DATA ──────────────────────────────────────────────────────────
   getPlayerProfile: async (nick: string) => {
     const [houseRes, factionRes, licRes, platesRes] = await Promise.all([
-
+      // Отримуємо запити на будинки разом із датою створення та rental_days
       supabase
         .from("house_purchase_requests")
         .select(`
           id,
           rental_days,
-          houses (
-            name, 
-            price, 
-            image_url
-          )
+          created_at,
+          house_id
         `)
         .eq("username", nick)
         .eq("status", "approved"),
 
-
       supabase.from("faction_applications").select("faction_name, status").eq("username", nick).order("created_at", { ascending: false }),
-      
-
       supabase.from("license_applications").select("id, license_type, status").eq("username", nick).eq("status", "approved"),
-      
-
       supabase.from("car_plates").select("id, plate_number, car_model, status").eq("username", nick).eq("status", "approved"),
     ]);
 
+    // Оскільки JOIN може видавати 404, якщо не налаштовані зв'язки, 
+    // краще отримати дані будинків окремим запитом, якщо є схвалені заявки
+    let housesWithDetails = [];
+    if (houseRes.data && houseRes.data.length > 0) {
+      const houseIds = houseRes.data.map(h => h.house_id);
+      const { data: housesData } = await supabase
+        .from("houses")
+        .select("id, name, price, image_url")
+        .in("id", houseIds);
+
+      housesWithDetails = houseRes.data.map((req: any) => {
+        const details = housesData?.find(d => d.id === req.house_id);
+        return {
+          id: req.id,
+          name: details?.name || "Будинок",
+          price: details?.price || 0,
+          rental_days: req.rental_days || 7,
+          created_at: req.created_at, // ПЕРЕДАЄМО ДАТУ ДЛЯ РОЗРАХУНКУ
+          image: details?.image_url 
+        };
+      });
+    }
+
     return {
-      houses: (houseRes.data || []).map((h: any) => ({
-        id: h.id,
-        name: h.houses?.name || "Вилла",
-        price: h.houses?.price || 0,
-        rental_days: h.rental_days || 7,
-        image: h.houses?.image_url 
-      })),
+      houses: housesWithDetails,
       factionApps: (factionRes.data || []) as { faction_name: string; status: string }[],
-   
       licenses: (licRes.data || []) as { id: number; license_type: string; status: string }[],
-    
       carPlates: (platesRes.data || []) as { id: number; plate_number: string; car_model: string; status: string }[],
     };
   },
