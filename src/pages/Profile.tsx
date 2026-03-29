@@ -89,6 +89,25 @@ const statusLabels: Record<string, string> = {
 };
 
 const Profile = () => {
+
+  const calculateHouseTime = (createdAt: string, days: number) => {
+  if (!createdAt) return "0 ДН.";
+  
+  const start = new Date(createdAt).getTime();
+  const duration = days * 24 * 60 * 60 * 1000; // переводимо дні в мілісекунди
+  const expiry = start + duration;
+  const now = new Date().getTime();
+  
+  const diff = expiry - now;
+
+  if (diff <= 0) return "ЗЛЕТІВ";
+
+  const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+  return d > 0 ? `${d} ДН. ${h} Г.` : `${h} ГОД.`;
+};
+  
   const navigate = useNavigate();
 
   const nick = localStorage.getItem("crp_nick") || "Гравець";
@@ -439,7 +458,9 @@ const loadData = useCallback(async () => {
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                           <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10">
                             <Clock className="w-3 h-3 text-primary" />
-                            <span className="text-[10px] font-bold text-white">{h.rental_days || 0} ДН.</span>
+                            <span className="text-[10px] font-bold text-white">
+  {calculateHouseTime(h.created_at, h.rental_days || 7)}
+</span>
                           </div>
                           <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
                             <p className="text-sm font-black text-white drop-shadow">{h.name}</p>
@@ -458,7 +479,9 @@ const loadData = useCallback(async () => {
                               <p className="text-xs font-semibold text-foreground">{h.name}</p>
                               <div className="flex items-center gap-1">
                                 <Clock className="w-3 h-3 text-primary" />
-                                <span className="text-[10px] text-primary font-bold">{h.rental_days || 0} дн.</span>
+                                <span className="text-[10px] text-primary font-bold">
+  {calculateHouseTime(h.created_at, h.rental_days || 7)}
+</span>
                               </div>
                             </div>
                             <p className="text-[10px] text-yellow-400 font-bold">{h.price.toLocaleString()}€</p>
