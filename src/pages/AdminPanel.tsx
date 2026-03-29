@@ -168,8 +168,7 @@ const AdminPanel = () => {
       </div>
     );
   }
-
-  // ── TAB CONTENT ──
+// ── TAB CONTENT ──
   if (tab) {
     if (tab === "restrictions") {
       return (
@@ -230,29 +229,82 @@ const AdminPanel = () => {
             <p className="text-[10px] text-muted-foreground">Адмін панель</p>
           </div>
         </div>
-        {tab === "sos"           && <SosTab />}
-        {tab === "news"          && <NewsTab />}
-        {tab === "houses"        && <HousesTab />}
-        {tab === "wanted"        && <WantedTab />}
-        {tab === "election"      && <ElectionTab />}
-        {tab === "documents"     && <DocumentsTab />}
-        {tab === "factions"      && <FactionAppsTab />}
-        {tab === "applications"  && <AdminAppsTab />}
-        {tab === "tokens"        && <TokensTab />}
-        {tab === "voice"         && <VoiceTab />}
-        {tab === "licenses"      && <LicensesTab />}
-        {tab === "plates"        && <PlatesTab />} 
-        {tab === "house_requests"&& <HouseRequestsTab />}
-        {tab === "add_faction"   && <AddFactionTab />}
+
+        {tab === "sos"             && <SosTab />}
+        {tab === "news"            && <NewsTab />}
+        {tab === "houses"          && <HousesTab />}
+        {tab === "wanted"          && <WantedTab />}
+        {tab === "election"        && <ElectionTab />}
+        {tab === "documents"       && <DocumentsTab />}
+        {tab === "factions"        && <FactionAppsTab />}
+        {tab === "applications"    && <AdminAppsTab />}
+        {tab === "tokens"          && <TokensTab />}
+        {tab === "voice"           && <VoiceTab />}
+        {tab === "licenses"        && <LicensesTab />}
+        {tab === "plates"          && <PlatesTab />} 
+        {tab === "house_requests"  && <HouseRequestsTab />}
+        {tab === "add_faction"     && <AddFactionTab />}
         {tab === "manage_factions" && <ManageFactionsTab />}
         {tab === "bans"            && <BansTab />}
         {tab === "debug"           && <DebugTab />}
+
+        {tab === "nft" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className="liquid-glass-card p-5 rounded-3xl border border-primary/20 bg-primary/5">
+              <h3 className="text-[10px] font-black mb-4 uppercase text-primary tracking-widest flex items-center gap-2">
+                <Plus className="w-4 h-4" /> Додати NFT Подарунок
+              </h3>
+              <div className="space-y-3">
+                <input id="n-name" placeholder="Назва" className={inputClass} />
+                <div className="grid grid-cols-2 gap-2">
+                  <input id="n-price" type="number" placeholder="Ціна CR" className={inputClass} />
+                  <input id="n-img" placeholder="URL картинки" className={inputClass} />
+                </div>
+                <GradientButton variant="green" className="w-full py-3 text-[10px] font-black" onClick={async () => {
+                  const name = (document.getElementById('n-name') as HTMLInputElement).value;
+                  const price = Number((document.getElementById('n-price') as HTMLInputElement).value);
+                  const img = (document.getElementById('n-img') as HTMLInputElement).value;
+                  if(!name || !img || price <= 0) return toast.error("Заповни всі поля!");
+                  const { data, error } = await supabase.from('nft_gifts').insert([{ name, price, image_url: img }]).select();
+                  if(!error && data) {
+                    setNftGifts([data[0], ...nftGifts]);
+                    toast.success("NFT додано!");
+                    (document.getElementById('n-name') as HTMLInputElement).value = "";
+                    (document.getElementById('n-price') as HTMLInputElement).value = "";
+                    (document.getElementById('n-img') as HTMLInputElement).value = "";
+                  }
+                }}>ОПУБЛІКУВАТИ</GradientButton>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-[10px] font-bold text-muted-foreground uppercase px-2">Зараз у продажу</h3>
+              {nftGifts.map(gift => (
+                <div key={gift.id} className="liquid-glass-card p-3 rounded-2xl flex items-center justify-between border border-white/5 bg-white/5 mb-2">
+                  <div className="flex items-center gap-3">
+                    <img src={gift.image_url} className="w-10 h-10 object-contain bg-black/40 rounded-lg p-1" alt="" />
+                    <div>
+                      <div className="text-[11px] font-bold text-foreground">{gift.name}</div>
+                      <div className="text-[10px] text-primary font-black">{gift.price} CR</div>
+                    </div>
+                  </div>
+                  <button onClick={async () => {
+                      if(!confirm("Видалити?")) return;
+                      const { error } = await supabase.from('nft_gifts').delete().eq('id', gift.id);
+                      if(!error) setNftGifts(nftGifts.filter(g => g.id !== gift.id));
+                    }} className="p-2 text-red-500/40 hover:text-red-500">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   // ── MENU ──
-  return (
     <div className="min-h-screen pb-20 px-4 pt-4">
       <PageHeader title="АДМІН ПАНЕЛЬ" subtitle="Управління сервером" backTo="/profile" />
 
