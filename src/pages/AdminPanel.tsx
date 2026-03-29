@@ -296,7 +296,7 @@ const AdminPanel = () => {
                       if(!error) setNftGifts(nftGifts.filter(g => g.id !== gift.id));
                     }} className="p-2 text-red-500/40 hover:text-red-500">
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                 </button>
                 </div>
               ))}
             </div>
@@ -307,6 +307,7 @@ const AdminPanel = () => {
   }
 
   // ── MENU ──
+  return (
     <div className="min-h-screen pb-20 px-4 pt-4">
       <PageHeader title="АДМІН ПАНЕЛЬ" subtitle="Управління сервером" backTo="/profile" />
 
