@@ -379,29 +379,50 @@ export const store = {
   },
   setAdminApps: (_: AdminApplication[]) => {},
 
-  // ── CITY VOICE ────────────────────────────────────────────────────────────
+  // ── CITY VOICE ──
   getCityVoice: async (): Promise<CityVoiceItem[]> => {
     const { data } = await supabase.from("city_voice").select("*").order("created_at", { ascending: false });
     if (!data) return [];
-    return data.map((r: Record<string, unknown>) => ({
-      id: r.id as number,
-      author: r.username as string,
-      text: r.message as string,
-      type: (r.type as "idea" | "petition") || "idea",
-      likes: (r.likes as number) || 0,
-      dislikes: (r.dislikes as number) || 0,
-      status: ((r.status === "pending" ? "active" : r.status) as CityVoiceItem["status"]),
+    return data.map((r: any) => ({
+      id: r.id,
+      author: r.username,
+      text: r.message,
+      type: r.type || "idea",
+      likes: r.likes || 0,
+      dislikes: r.dislikes || 0,
+      status: r.status === "pending" ? "active" : r.status,
     }));
   },
-  submitCityVoice: async (author: string, text: string, type: "idea" | "petition") => {
-    await supabase.from("city_voice").insert({ username: author, message: text, type, status: "pending" });
+
+  incrementCityVoiceLikes: async (id: number) => {
+    const { data } = await supabase.from("city_voice").select("likes").eq("id", id).single();
+    await supabase.from("city_voice").update({ likes: (data?.likes || 0) + 1 }).eq("id", id);
   },
+
+  decrementCityVoiceLikes: async (id: number) => {
+    const { data } = await supabase.from("city_voice").select("likes").eq("id", id).single();
+    await supabase.from("city_voice").update({ likes: Math.max(0, (data?.likes || 0) - 1) }).eq("id", id);
+  },
+
+  incrementCityVoiceDislikes: async (id: number) => {
+    const { data } = await supabase.from("city_voice").select("dislikes").eq("id", id).single();
+    await supabase.from("city_voice").update({ dislikes: (data?.dislikes || 0) + 1 }).eq("id", id);
+  },
+
+  decrementCityVoiceDislikes: async (id: number) => {
+    const { data } = await supabase.from("city_voice").select("dislikes").eq("id", id).single();
+    await supabase.from("city_voice").update({ dislikes: Math.max(0, (data?.dislikes || 0) - 1) }).eq("id", id);
+  },
+
+  submitCityVoice: async (author: string, text: string, type: "idea" | "petition") => {
+    await supabase.from("city_voice").insert({ username: author, message: text, type, status: "pending", likes: 0, dislikes: 0 });
+  },
+
   updateCityVoiceStatus: async (id: number, status: "approved" | "rejected") => {
     await supabase.from("city_voice").update({ status }).eq("id", id);
   },
-  deleteCityVoice: async (id: number) => { await supabase.from("city_voice").delete().eq("id", id); },
-  setCityVoice: (_: CityVoiceItem[]) => {},
 
+  deleteCityVoice: async (id: number) => { await supabase.from("city_voice").delete().eq("id", id); },
   // ── MAYOR ELECTION ────────────────────────────────────────────────────────
   getCandidates: async (): Promise<MayorCandidate[]> => {
     const { data } = await supabase.from("mayor_election").select("*").order("votes", { ascending: false });
