@@ -489,73 +489,71 @@ const loadData = useCallback(async () => {
           </div>
         </div>
       </div>
-{/* ═══ ЯРУС 1: ЛІЦЕНЗІЇ (Стильні теги) ═══ */}
-<div className="space-y-4 mb-6 px-1">
-  {profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any) => (
-    <div key={item.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl transition-all hover:scale-[1.02]"
-         style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
-      <div className="absolute inset-[1px] rounded-[15px] overflow-hidden" style={{ background: passportBg }}>
-        
-        {/* НИЖНИЙ ГЛОУ (НЕОН) */}
-        <div className="absolute inset-x-0 bottom-0 h-full pointer-events-none opacity-40" 
-             style={{ background: `radial-gradient(circle at 50% 120%, hsl(var(--primary) / 0.6) 0%, transparent 75%)` }} />
+{/* ═══ ЯРУС 1: ЛІЦЕНЗІЇ ═══ */}
+      <div className="space-y-4 mb-6 px-1">
+        {profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any) => (
+          <div key={item.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
+               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
+            <div className="relative rounded-[15px] overflow-hidden px-5 py-4 flex items-center gap-4" style={{ background: passportBg }}>
+              
+              {/* Світіння фону */}
+              <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-40" 
+                   style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.6) 0%, transparent 80%)` }} />
 
-        <div className="relative z-10 flex items-center px-5 py-4 gap-4">
-          <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0">
-            <Shield className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[8px] text-muted-foreground uppercase tracking-[0.2em] font-black mb-2 opacity-60">АКТИВНИЙ ДОЗВІЛ</p>
-            <div className="flex flex-wrap gap-1.5">
-              {(item.license_type || "Ліцензія").split(',').map((tag: string, i: number) => (
-                <div key={i} className="px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/5 backdrop-blur-md shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                  <span className="text-[9px] font-black uppercase tracking-tight text-primary italic whitespace-nowrap">
-                    {tag.trim()}
-                  </span>
+              <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
+                <Shield className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
+              </div>
+
+              <div className="flex-1 min-w-0 z-10">
+                <p className="text-[8px] text-muted-foreground uppercase tracking-[0.2em] font-black mb-2 opacity-60">ДОКУМЕНТ ПІДТВЕРДЖЕНО</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(item.license_type || "Ліцензія").split(',').map((tag: string, i: number) => (
+                    <div key={i} className="px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/10 backdrop-blur-md shadow-[0_0_10px_rgba(var(--primary-rgb),0.1)]">
+                      <span className="text-[9px] font-black uppercase tracking-tight text-primary italic whitespace-nowrap">
+                        {tag.trim()}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+              <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
             </div>
           </div>
-          <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12"><Trident /></div>
-        </div>
+        ))}
       </div>
-    </div>
-  ))}
-</div>
-      {/* ═══ ЯРУС 2: ТРАНСПОРТ (Авто + Номери) ═══ */}
-<div className="space-y-4 mb-8 px-1">
-  {((profileData as any).cars || []).map((car: any) => (
-    <div key={car.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-xl"
-         style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
-      <div className="absolute inset-[1px] rounded-[15px] overflow-hidden" style={{ background: passportBg }}>
-        
-        {/* ГЛОУ ЭФФЕКТ */}
-        <div className="absolute inset-x-0 bottom-0 h-full pointer-events-none opacity-30" 
-             style={{ background: `radial-gradient(circle at 50% 120%, hsl(var(--primary) / 0.5) 0%, transparent 70%)` }} />
 
-        <div className="relative z-10 flex items-center px-5 py-5 gap-4">
-          <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0">
-            <Car className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
-          </div>
-          <div className="flex-1 flex items-center justify-between min-w-0">
-            <div>
-              <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-black mb-1 opacity-50">ТЕХПАСПОРТ</p>
-              <p className="text-sm font-black text-white italic tracking-tighter leading-none mb-1 truncate max-w-[120px]">
-                {car.car_model || "ТРАНСПОРТ"}
-              </p>
+      {/* ═══ ЯРУС 2: ТРАНСПОРТ ═══ */}
+      <div className="space-y-4 mb-10 px-1">
+        {((profileData as any).cars || []).map((car: any) => (
+          <div key={car.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
+               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
+            <div className="relative rounded-[15px] overflow-hidden px-5 py-5 flex items-center gap-4" style={{ background: passportBg }}>
+              
+              {/* Світіння фону */}
+              <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-30" 
+                   style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.5) 0%, transparent 80%)` }} />
+
+              <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
+                <Car className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
+              </div>
+
+              <div className="flex-1 flex items-center justify-between min-w-0 z-10">
+                <div>
+                  <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-black mb-1 opacity-50">ВЛАСНІСТЬ</p>
+                  <p className="text-sm font-black text-white italic tracking-tighter leading-none mb-1 truncate max-w-[110px]">
+                    {car.car_model || "ТРАНСПОРТ"}
+                  </p>
+                </div>
+                
+                <div className="shrink-0 scale-[1.2] origin-right mr-1 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
+                   <PlateBadge plate={car.plate_number} />
+                </div>
+              </div>
+              <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
             </div>
-            
-            {/* УВЕЛИЧЕННЫЙ НОМЕРНОЙ ЗНАК */}
-            <div className="shrink-0 scale-[1.2] origin-right mr-1 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]">
-               <PlateBadge plate={car.plate_number} />
-            </div>
           </div>
-          <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12"><Trident /></div>
-        </div>
+        ))}
       </div>
-    </div>
-  ))}
-</div>
       {/* Кнопка адмін панелі — тільки для прийнятих адмінів */}
       {isApprovedAdmin && (
         <div className="mt-4 animate-fade-in">
