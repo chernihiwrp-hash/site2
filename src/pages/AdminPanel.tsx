@@ -230,6 +230,7 @@ const AdminPanel = () => {
           </div>
         </div>
 
+        {/* ── Вкладки ── */}
         {tab === "sos"             && <SosTab />}
         {tab === "news"            && <NewsTab />}
         {tab === "houses"          && <HousesTab />}
@@ -248,6 +249,7 @@ const AdminPanel = () => {
         {tab === "bans"            && <BansTab />}
         {tab === "debug"           && <DebugTab />}
 
+        {/* Твій новий блок NFT */}
         {tab === "nft" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
             <div className="liquid-glass-card p-5 rounded-3xl border border-primary/20 bg-primary/5">
@@ -255,10 +257,10 @@ const AdminPanel = () => {
                 <Plus className="w-4 h-4" /> Додати NFT Подарунок
               </h3>
               <div className="space-y-3">
-                <input id="n-name" placeholder="Назва" className={inputClass} />
+                <input id="n-name" placeholder="Назва" className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-primary/50" />
                 <div className="grid grid-cols-2 gap-2">
-                  <input id="n-price" type="number" placeholder="Ціна CR" className={inputClass} />
-                  <input id="n-img" placeholder="URL картинки" className={inputClass} />
+                  <input id="n-price" type="number" placeholder="Ціна CR" className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-primary/50" />
+                  <input id="n-img" placeholder="URL картинки" className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-primary/50" />
                 </div>
                 <GradientButton variant="green" className="w-full py-3 text-[10px] font-black" onClick={async () => {
                   const name = (document.getElementById('n-name') as HTMLInputElement).value;
