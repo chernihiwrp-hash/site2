@@ -10,7 +10,7 @@ import {
   Link, Image, Type, Radio, UserCheck, Building2, Car, FileText, Gavel,
   MessageSquare, Wallet, ShieldCheck, Zap, RefreshCw, Crown, Lock, Eye,
   EyeOff, Settings, UserCog, Search, Star, Palette,
-  Skull, Flame, Target, BookOpen, Scale, User, UserMinus, Clock
+  Skull, Flame, Target, BookOpen, Scale, User, UserMinus, Clock, Gift
 } from "lucide-react";
 import { toast } from "sonner";
 import { store, supabase, getBalance, addBalance, subtractBalance } from "../lib/store";
@@ -45,26 +45,30 @@ const isSuperAdmin = () =>
 type TabId =
   "sos" | "applications" | "factions" | "licenses" | "plates" | "house_requests" |
   "news" | "houses" | "wanted" | "election" | "documents" |
-  "add_faction" | "voice" | "tokens" | "manage_factions" | "debug" | "bans";
+  "add_faction" | "voice" | "tokens" | "nft" | "manage_factions" | "debug" | "bans";
 
 const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boolean }[] = [
-  { id: "sos",           label: "SOS Сигнали",          icon: AlertTriangle, sub: "Realtime",    danger: true },
-  { id: "applications",  label: "Заявки адміністратора", icon: Users,         sub: "Заявки" },
-  { id: "factions",      label: "Заявки у фракції",      icon: Shield,        sub: "Заявки" },
-  { id: "licenses",      label: "Ліцензії",             icon: FileCheck,     sub: "Управління" },
-  { id: "plates",        label: "Номери",               icon: Car,           sub: "Управління" },
-  { id: "house_requests",label: "Купівля будинків",       icon: Home,          sub: "Управління" },
-  { id: "news",          label: "Новини та оновлення",    icon: Newspaper,     sub: "Управління" },
-  { id: "houses",        label: "Управління будинками",  icon: Building2,     sub: "Управління" },
-  { id: "wanted",        label: "Розшук",                icon: Crosshair,     sub: "Управління", danger: true },
-  { id: "election",      label: "Вибори мера",           icon: Vote,          sub: "Управління" },
-  { id: "documents",     label: "Документи",             icon: ScrollText,    sub: "Управління" },
-  { id: "add_faction",   label: "Додати фракцію",         icon: ShieldAlert,   sub: "Управління" },
-  { id: "voice",         label: "Голос міста",           icon: Megaphone,     sub: "Управління" },
-  { id: "tokens",        label: "Токени CR",             icon: Coins,         sub: "Фінанси" },
-  { id: "manage_factions",label: "Управління фракціями",   icon: ShieldAlert,   sub: "Фракції" },
-  { id: "bans",            label: "Бани гравців",           icon: UserX,         sub: "Безпека", danger: true },
-  { id: "debug",           label: "Діагностика",            icon: Settings,      sub: "Debug" },
+  { id: "sos",            label: "SOS Сигнали",           icon: AlertTriangle, sub: "Realtime",    danger: true },
+  { id: "applications",   label: "Заявки адміністратора", icon: Users,          sub: "Заявки" },
+  { id: "factions",       label: "Заявки у фракції",      icon: Shield,         sub: "Заявки" },
+  { id: "licenses",       label: "Ліцензії",              icon: FileCheck,      sub: "Управління" },
+  { id: "plates",         label: "Номери",                icon: Car,            sub: "Управління" },
+  { id: "house_requests", label: "Купівля будинків",       icon: Home,           sub: "Управління" },
+  { id: "news",           label: "Новини та оновлення",    icon: Newspaper,      sub: "Управління" },
+  { id: "houses",         label: "Управління будинками",  icon: Building2,      sub: "Управління" },
+  { id: "wanted",         label: "Розшук",                icon: Crosshair,      sub: "Управління", danger: true },
+  { id: "election",       label: "Вибори мера",            icon: Vote,           sub: "Управління" },
+  { id: "documents",      label: "Документи",              icon: ScrollText,     sub: "Управління" },
+  { id: "add_faction",    label: "Додати фракцію",          icon: ShieldAlert,    sub: "Управління" },
+  { id: "voice",          label: "Голос міста",            icon: Megaphone,      sub: "Управління" },
+  { id: "tokens",         label: "Токени CR",              icon: Coins,          sub: "Фінанси" },
+  
+  // ДОДАЙ ЦЕЙ РЯДОК СЮДИ:
+  { id: "nft",            label: "NFT Подарунки",          icon: Gift,           sub: "Магазин" },
+  
+  { id: "manage_factions", label: "Управління фракціями",   icon: ShieldAlert,    sub: "Фракції" },
+  { id: "bans",            label: "Бани гравців",            icon: UserX,          sub: "Безпека", danger: true },
+  { id: "debug",           label: "Діагностика",             icon: Settings,       sub: "Debug" },
 ];
 
 const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
@@ -72,7 +76,7 @@ const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
   plates: false, 
   house_requests: false, news: false, houses: false, wanted: false,
   election: false, documents: false, add_faction: false, voice: false, 
-  tokens: false, manage_factions: false, debug: false, bans: false,
+  tokens: false, nft: false, manage_factions: false, debug: false, bans: false,
 };
 
 const DEFAULT_PERMS: Record<TabId, boolean> = {
@@ -80,7 +84,7 @@ const DEFAULT_PERMS: Record<TabId, boolean> = {
   plates: true, 
   house_requests: true, news: true, houses: true, wanted: true,
   election: true, documents: true, add_faction: true, voice: true, 
-  tokens: true, manage_factions: true, debug: true, bans: true,
+  tokens: true, nft: true, manage_factions: true, debug: true, bans: true,
 };
 
 const getAdminPerms = (nick: string): Record<TabId, boolean> => {
