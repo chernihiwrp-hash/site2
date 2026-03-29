@@ -1701,31 +1701,31 @@ const VoiceTab = () => {
   );
 };
 
-// ─── NFT GIFTS TAB (ВНУТРІШНЄ GUI) ──────────────────────────────────────────
+// ─── NFT GIFTS TAB (ПОЛНЫЙ КОД С ГУИ) ──────────────────────────────────────────
 const NftGiftsTab = ({ nftGifts, setNftGifts }: { nftGifts: any[], setNftGifts: any }) => {
   const inputClass = "w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-[11px] text-foreground focus:outline-none focus:border-primary/50 transition-all";
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-      {/* ФОРМА ДОДАВАННЯ */}
+      {/* ФОРМА ДОБАВЛЕНИЯ (ТО ЧТО ТЫ ИСКАЛ) */}
       <div className="liquid-glass-card p-5 rounded-3xl border border-primary/20 bg-primary/5">
         <h3 className="text-[10px] font-black mb-4 uppercase text-primary tracking-widest flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Додати Новий Подарунок
+          <Plus className="w-4 h-4" /> Додати Новий NFT Подарунок
         </h3>
         
         <div className="space-y-3">
           <div>
-            <label className="text-[9px] text-muted-foreground uppercase ml-2 mb-1 block font-bold">Назва подарунка</label>
-            <input id="n-name" placeholder="Напр: Діамантова каблучка" className={inputClass} />
+            <label className="text-[9px] text-muted-foreground uppercase ml-2 mb-1 block">Назва</label>
+            <input id="n-name" placeholder="Напр: Золота Роза" className={inputClass} />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[9px] text-muted-foreground uppercase ml-2 mb-1 block font-bold">Ціна (CR)</label>
-              <input id="n-price" type="number" placeholder="1000" className={inputClass} />
+              <label className="text-[9px] text-muted-foreground uppercase ml-2 mb-1 block">Ціна (CR)</label>
+              <input id="n-price" type="number" placeholder="500" className={inputClass} />
             </div>
             <div>
-              <label className="text-[9px] text-muted-foreground uppercase ml-2 mb-1 block font-bold">Посилання на фото</label>
+              <label className="text-[9px] text-muted-foreground uppercase ml-2 mb-1 block">URL Картинки</label>
               <input id="n-img" placeholder="imgur.com/..." className={inputClass} />
             </div>
           </div>
@@ -1736,7 +1736,7 @@ const NftGiftsTab = ({ nftGifts, setNftGifts }: { nftGifts: any[], setNftGifts: 
             const imgEl = document.getElementById('n-img') as HTMLInputElement;
             
             if(!nameEl.value || !imgEl.value || Number(priceEl.value) <= 0) {
-              return toast.error("Заповни всі поля коректно!");
+              return toast.error("Заповни всі поля!");
             }
 
             const { data, error } = await supabase.from('nft_gifts').insert([{ 
@@ -1747,42 +1747,38 @@ const NftGiftsTab = ({ nftGifts, setNftGifts }: { nftGifts: any[], setNftGifts: 
             
             if(!error && data) {
               setNftGifts([data[0], ...nftGifts]);
-              toast.success("Подарунок додано!");
+              toast.success("Додано!");
               nameEl.value = ""; priceEl.value = ""; imgEl.value = "";
             } else {
-              toast.error("Помилка бази даних");
+              toast.error("Помилка БД");
             }
-          }}>ОПУБЛІКУВАТИ В МАГАЗИН</GradientButton>
+          }}>ОПУБЛІКУВАТИ</GradientButton>
         </div>
       </div>
 
-      {/* СПИСОК ПОДАРУНКІВ */}
+      {/* СПИСОК УЖЕ СОЗДАННЫХ */}
       <div className="space-y-2">
-        <h3 className="text-[10px] font-bold text-muted-foreground uppercase px-2 flex justify-between">
-          <span>Товари в продажу</span>
-          <span className="text-primary">{nftGifts.length}</span>
-        </h3>
-        
+        <h3 className="text-[10px] font-bold text-muted-foreground uppercase px-2">Товари в продажу</h3>
         {nftGifts.length === 0 ? (
-          <div className="text-center py-10 opacity-20 text-[10px] uppercase font-black tracking-widest">Подарків ще немає</div>
+          <div className="text-center py-10 opacity-20 text-[10px] uppercase font-black">Поки порожньо</div>
         ) : (
           nftGifts.map(gift => (
             <div key={gift.id} className="liquid-glass-card p-3 rounded-2xl flex items-center justify-between border border-white/5 bg-white/5">
               <div className="flex items-center gap-3">
-                <img src={gift.image_url} className="w-12 h-12 object-contain bg-black/40 rounded-xl p-1 border border-white/5" alt="" />
+                <img src={gift.image_url} className="w-10 h-10 object-contain bg-black/40 rounded-lg p-1" alt="" />
                 <div>
-                  <div className="text-[11px] font-bold text-foreground leading-none mb-1">{gift.name}</div>
-                  <div className="text-[10px] text-primary font-black uppercase tracking-tighter">{gift.price} CR</div>
+                  <div className="text-[11px] font-bold text-foreground">{gift.name}</div>
+                  <div className="text-[10px] text-primary font-black">{gift.price} CR</div>
                 </div>
               </div>
               <button onClick={async () => {
-                  if(!confirm("Видалити цей товар?")) return;
+                  if(!confirm("Видалити?")) return;
                   const { error } = await supabase.from('nft_gifts').delete().eq('id', gift.id);
                   if(!error) {
                     setNftGifts(nftGifts.filter((g: any) => g.id !== gift.id));
                     toast.success("Видалено");
                   }
-                }} className="p-2.5 rounded-xl hover:bg-red-500/10 text-red-500/40 hover:text-red-500 transition-all">
+                }} className="p-2 text-red-500/40 hover:text-red-500 transition-colors">
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
