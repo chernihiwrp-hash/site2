@@ -76,6 +76,7 @@ export type NftGift = {
   name: string;
   price: number;
   image_url: string;
+  sold?: boolean;
   created_at?: string;
 };
 
@@ -120,6 +121,18 @@ export const store = {
     });
     
     if (error) throw new Error(error.message);
+    return true;
+  },
+
+  /**
+   * Перемикає статус sold для NFT (true/false).
+   */
+  toggleNftSold: async (id: string, sold: boolean): Promise<boolean> => {
+    const { error } = await supabase
+      .from("nft_gifts")
+      .update({ sold })
+      .eq("id", id);
+    if (error) { console.error("toggleNftSold error:", error.message); return false; }
     return true;
   },
 
