@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   User, Briefcase, Home, Car, FileCheck, Wallet, Lock,
   Bell, ChevronDown, ChevronRight, Shield, CheckCircle,
-  LogIn, RefreshCw, Coins, Clock
+  LogIn, RefreshCw, Coins, Clock, Settings
 } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { useNavigate } from "react-router-dom";
@@ -10,9 +10,11 @@ import { toast } from "sonner";
 import { store, supabase, getBalance } from "../lib/store";
 import type { Notification } from "../lib/store";
 
+// --- ДОПОМІЖНІ КОМПОНЕНТИ ---
+
 const getTelegramUser = () => {
   try {
-    const tg = (window as Window & { Telegram?: { WebApp?: { initDataUnsafe?: { user?: { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string } } } } }).Telegram;
+    const tg = (window as any).Telegram;
     return tg?.WebApp?.initDataUnsafe?.user || null;
   } catch { return null; }
 };
@@ -68,6 +70,24 @@ const Trident = () => (
   </svg>
 );
 
+// Компонент літаючих NFT навколо ави
+const FloatingNFT = ({ url, index, total }: { url: string; index: number; total: number }) => {
+  const angle = (index / total) * 360;
+  return (
+    <div 
+      className="absolute top-1/2 left-1/2 w-6 h-6 rounded-full border border-white/20 overflow-hidden z-20 shadow-lg animate-float-nft"
+      style={{
+        '--angle': `${angle}deg`,
+        transform: `rotate(${angle}deg) translate(48px) rotate(-${angle}deg)`,
+      } as any}
+    >
+      <img src={url} className="w-full h-full object-cover" alt="nft" />
+    </div>
+  );
+};
+
+// --- ТИПИ ТА КОНСТАНТИ ---
+
 type ProfileData = {
   houses: { 
     id: number; 
@@ -76,9 +96,11 @@ type ProfileData = {
     image?: string;  
     rental_days?: number; 
     photos?: string[];    
+    created_at?: string;
   }[];
   factionApps: { faction_name: string; status: string }[];
   licenses: { id: number; license_type: string; plate_number: string | null; status: string }[];
+  cars?: { id: number; car_model: string; plate_number: string }[];
 };
 
 const statusColors: Record<string, string> = {
@@ -88,30 +110,13 @@ const statusLabels: Record<string, string> = {
   approved: "Прийнято", pending: "На розгляді", rejected: "Відхилено", review: "На розгляді",
 };
 
+// --- ОСНОВНИЙ КОМПОНЕНТ ---
+
 const Profile = () => {
-
-  const calculateHouseTime = (createdAt: string, days: number) => {
-  if (!createdAt) return "0 ДН.";
-  
-  const start = new Date(createdAt).getTime();
-  const duration = days * 24 * 60 * 60 * 1000; // переводимо дні в мілісекунди
-  const expiry = start + duration;
-  const now = new Date().getTime();
-  
-  const diff = expiry - now;
-
-  if (diff <= 0) return "ЗЛЕТІВ";
-
-  const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-  return d > 0 ? `${d} ДН. ${h} Г.` : `${h} ГОД.`;
-};
-  
   const navigate = useNavigate();
-
   const nick = localStorage.getItem("crp_nick") || "Гравець";
-  
+
+  // --- СТЕЙТИ ---
   const [showAdminInput, setShowAdminInput] = useState(false);
   const [adminCode, setAdminCode] = useState("");
   const [isApprovedAdmin, setIsApprovedAdmin] = useState(false);
@@ -119,97 +124,92 @@ const Profile = () => {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
   const [isTg, setIsTg] = useState(false);
-  const [tgUser, setTgUser] = useState<{ id: number; first_name: string; last_name?: string; username?: string; photo_url?: string } | null>(null);
-  const [profileData, setProfileData] = useState<ProfileData>({ houses: [], factionApps: [], licenses: [] });
+  const [tgUser, setTgUser] = useState<any>(null);
+  const [profileData, setProfileData] = useState<ProfileData>({ houses: [], factionApps: [], licenses: [], cars: [] });
   const [balance, setBalanceState] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // NFT стейти
+  const [ownedNfts, setOwnedNfts] = useState<any[]>([]);
+  const [selectedNfts, setSelectedNfts] = useState<any[]>([]); 
+  const [isHovered, setIsHovered] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
 
-const loadData = useCallback(async () => {
+  // --- ЛОГІКА ---
+
+  const calculateHouseTime = (createdAt: string | undefined, days: number) => {
+    if (!createdAt) return "0 ДН.";
+    const start = new Date(createdAt).getTime();
+    const expiry = start + (days * 24 * 60 * 60 * 1000);
+    const diff = expiry - new Date().getTime();
+    if (diff <= 0) return "ЗЛЕТІВ";
+    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    return d > 0 ? `${d} ДН. ${h} Г.` : `${h} ГОД.`;
+  };
+
+  const toggleNft = (nft: any) => {
+    const isSelected = selectedNfts.find(n => n.id === nft.id);
+    if (isSelected) {
+      setSelectedNfts(selectedNfts.filter(n => n.id !== nft.id));
+    } else {
+      if (selectedNfts.length >= 6) {
+        toast.error("Максимум 6 предметів на орбіті!");
+        return;
+      }
+      setSelectedNfts([...selectedNfts, nft]);
+    }
+  };
+
+  const loadData = useCallback(async () => {
+    if (!nick) return;
     setRefreshing(true);
     try {
-  
       const data = await store.getPlayerProfile(nick);
-      
-  
       const carsData = await store.getCarPlates(nick);
-
-      setProfileData({
-        ...data,
-  
-        cars: carsData || []
-      });
-
+      const nfts = await store.getUserNfts(nick); 
+      
+      setOwnedNfts(nfts || []); 
+      setProfileData({ ...data, cars: carsData || [] });
       setBalanceState(getBalance(nick));
 
-      if (store && typeof (store as any).getNotifications === 'function') {
+      if (store && (store as any).getNotifications) {
         const notifs = await (store as any).getNotifications(nick);
-        setNotifications(notifs);
+        setNotifications(notifs || []);
       }
     } catch (e) {
-      console.error("Ошибка загрузки:", e);
+      console.error("Помилка завантаження:", e);
     } finally {
       setRefreshing(false);
     }
   }, [nick]);
 
+  const markRead = async () => { 
+    await store.markNotificationsRead(nick); 
+    setNotifications(notifications.map(n => ({ ...n, read: true }))); 
+  };
+
   useEffect(() => {
     const user = getTelegramUser();
     if (user) { setTgUser(user); setIsTg(true); }
     else {
-      const tg = (window as Window & { Telegram?: { WebApp?: unknown } }).Telegram;
+      const tg = (window as any).Telegram;
       if (tg?.WebApp) setIsTg(true);
     }
     loadData();
   }, [loadData]);
 
-  const unread = notifications.filter(n => !n.read).length;
-  const markRead = async () => { await store.markNotificationsRead(nick); setNotifications(notifications.map(n => ({ ...n, read: true }))); };
-  // Перевіряємо чи прийнятий адміністратором
   useEffect(() => {
     if (!nick) return;
-    // Суперадмін завжди має доступ
     if (nick.toLowerCase() === "t1kron1x") { setIsApprovedAdmin(true); return; }
-    // Перевіряємо заявку на адміна
-    supabase.from("admin_applications")
-      .select("status")
-      .ilike("username", nick)
-      .eq("status", "approved")
-      .maybeSingle()
+    supabase.from("admin_applications").select("status").ilike("username", nick).eq("status", "approved").maybeSingle()
       .then(({ data }) => { if (data) setIsApprovedAdmin(true); });
-    // Або перевіряємо права в admin_perms
-    supabase.from("admin_perms")
-      .select("perms")
-      .eq("username", nick.toLowerCase())
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.perms) {
-          const perms = data.perms as Record<string, boolean>;
-          if (Object.values(perms).some(Boolean)) setIsApprovedAdmin(true);
-        }
-      });
   }, [nick]);
 
-  // Theme reactive state for passport
-  const [, forceUpdate] = useState(0);
-  useEffect(() => {
-    const observer = new MutationObserver(() => forceUpdate(n => n + 1));
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme-id"] });
-    return () => observer.disconnect();
-  }, []);
-  const passportBg = document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))";
-  const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
-
-  const handleAdmin = () => {
-    if (adminCode === "5319son") { navigate("/admin-panel"); toast.success("Доступ відкрито"); }
-    else toast.error("Невірний код");
-    setAdminCode(""); setShowAdminInput(false);
-  };
-
+  const unread = notifications.filter(n => !n.read).length;
   const name = tgUser ? `${tgUser.first_name}${tgUser.last_name ? " " + tgUser.last_name : ""}` : nick;
   const uid = tgUser ? String(tgUser.id) : "000001";
-  const uname = tgUser?.username ? `@${tgUser.username}` : null;
   const regDate = new Date().toLocaleDateString("uk-UA");
-
   const activeFaction = profileData.factionApps.find(a => a.status === "approved")?.faction_name || null;
   const pendingFaction = profileData.factionApps.find(a => a.status === "pending")?.faction_name || null;
   const firstHouse = profileData.houses[0] || null;
@@ -230,7 +230,7 @@ const loadData = useCallback(async () => {
         </div>
       </div>
 
-      {/* Notifications */}
+      {/* Сповіщення */}
       {showNotifs && (
         <div className="mb-4 liquid-glass-card rounded-2xl p-3 animate-fade-in">
           <div className="flex items-center justify-between mb-2">
@@ -242,7 +242,8 @@ const loadData = useCallback(async () => {
             : <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {notifications.slice(0, 8).map(n => (
                   <div key={n.id} className={`text-[10px] p-2 rounded-xl ${n.read ? "text-muted-foreground" : "text-foreground bg-primary/8 border border-primary/12"}`}>
-                    <p>{n.text}</p><span className="text-[8px] text-muted-foreground">{n.date}</span>
+                    <p>{n.text}</p>
+                    <span className="text-[8px] text-muted-foreground">{n.date}</span>
                   </div>
                 ))}
               </div>
@@ -250,356 +251,164 @@ const loadData = useCallback(async () => {
         </div>
       )}
 
-      {/* Not Telegram */}
-      {!isTg && (
-        <div className="mb-4 rounded-2xl p-4 liquid-glass animate-fade-in id-card-animated" style={{
-          border: `1px solid ${passportBorder}`,
-          transition: "border 0.6s ease, box-shadow 0.6s ease"
-        }}>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center shrink-0"><LogIn className="w-4 h-4 text-primary" /></div>
-            <div>
-              <p className="text-sm font-semibold">Увійдіть через бота</p>
-              <a href="https://t.me/CHERNIHIVSITE_BOT" target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary font-medium">@CHERNIHIVSITE_BOT</a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ PASSPORT CARD ═══ */}
-      <div className="mb-4 animate-fade-in">
+      {/* ПАСПОРТ */}
+      <div className="mb-4 animate-fade-in" 
+           onMouseEnter={() => setIsHovered(true)} 
+           onMouseLeave={() => setIsHovered(false)}>
         <div className="rounded-2xl overflow-hidden relative select-none"
-          style={{
-            border: "1px solid hsl(0 0% 100% / 0.12)",
-            boxShadow: "0 8px 32px hsl(0 0% 0% / 0.5)",
-          }}>
-
-          {/* BG image */}
+             style={{ border: "1px solid hsl(0 0% 100% / 0.12)", boxShadow: "0 8px 32px hsl(0 0% 0% / 0.5)" }}>
+          
           <div className="absolute inset-0">
-            <img
-              src="https://i.ibb.co/NbX6ZNs/images-2.jpg"
-              alt=""
-              className="w-full h-full object-cover"
-              style={{ opacity: 0.18 }}
-              onError={e => { e.currentTarget.style.display = "none"; }}
-            />
-            <div className="absolute inset-0" style={{
-              background: passportBg || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))",
-              transition: "background 0.6s ease"
-            }} />
-            {/* Theme color accent overlay */}
-            <div className="absolute inset-0 rounded-2xl" style={{
-              background: `radial-gradient(ellipse 80% 50% at 50% 100%, hsl(var(--primary) / 0.08) 0%, transparent 70%)`,
-              transition: "background 0.6s ease"
-            }} />
+            <img src="https://i.ibb.co/NbX6ZNs/images-2.jpg" alt="" className="w-full h-full object-cover opacity-20" />
+            <div className="absolute inset-0 bg-gradient-to-br from-zinc-900/95 to-black/95" />
           </div>
 
-          {/* Trident watermark */}
           <div className="absolute right-3 top-1/2 -translate-y-1/2 w-24 h-28 pointer-events-none">
             <Trident />
           </div>
 
-          {/* Header strip */}
-          <div className="relative flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.07)" }}>
+          {/* Шестерня редактора NFT (з'являється при наведенні) */}
+          {isHovered && ownedNfts.length > 0 && (
+            <button 
+              onClick={() => setShowEditor(true)}
+              className="absolute top-2 right-2 z-50 w-7 h-7 bg-black/50 backdrop-blur-md border border-white/10 rounded-lg flex items-center justify-center animate-fade-in"
+            >
+              <Settings className="w-4 h-4 text-primary" />
+            </button>
+          )}
+
+          <div className="relative px-4 pt-3 pb-2 border-b border-white/5 flex justify-between">
             <div>
-              <p className="text-[7px] text-muted-foreground/50 tracking-[0.3em] uppercase">Удостоверение</p>
-              <p className="text-[8px] text-muted-foreground/70 tracking-[0.15em] font-semibold uppercase">Chernihiv RP</p>
+              <p className="text-[7px] text-muted-foreground/50 tracking-widest uppercase">Удостоверение</p>
+              <p className="text-[8px] text-primary/70 font-bold uppercase">Chernihiv RP</p>
             </div>
             <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
           </div>
 
-          {/* Main row */}
-          <div className="relative px-4 py-3 flex items-start gap-3">
-            <div className="w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0" style={{ border: "1.5px solid hsl(0 0% 100% / 0.15)" }}>
-              {tgUser?.photo_url ? (
-                <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
-                  <User className="w-8 h-8 text-primary/30" />
-                </div>
-              )}
+          <div className="relative px-4 py-4 flex items-start gap-4">
+            {/* Аватарка з орбітою */}
+            <div className="relative shrink-0">
+              <div className="w-[72px] h-[72px] rounded-2xl overflow-hidden relative z-10 border-2 border-white/10 shadow-xl">
+                {tgUser?.photo_url ? (
+                  <img src={tgUser.photo_url} className="w-full h-full object-cover" alt="avatar" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
+                    <User className="w-8 h-8 opacity-40" />
+                  </div>
+                )}
+              </div>
+              {/* Рендер обраних NFT */}
+              {selectedNfts.map((nft, i) => (
+                <FloatingNFT key={nft.id} url={nft.image_url} index={i} total={selectedNfts.length} />
+              ))}
             </div>
+
             <div className="flex-1 min-w-0">
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
-              <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
-              {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <CheckCircle className="w-3 h-3 text-primary shrink-0" />
-                <span className="text-xs text-primary font-semibold">Верифіковано</span>
+              <p className="text-[7px] text-muted-foreground/40 uppercase mb-0.5">Ім'я</p>
+              <p className="text-base font-bold truncate">{name}</p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <CheckCircle className="w-3 h-3 text-primary" />
+                <span className="text-[10px] text-primary font-bold">Верифіковано</span>
                 <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 mt-2">
                 <Coins className="w-3 h-3 text-yellow-400/70" />
-                <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
+                <span className="text-xs font-bold text-yellow-400">{balance} CR</span>
               </div>
             </div>
           </div>
 
-          {/* Bottom stats */}
-          <div className="relative px-4 pb-3 grid grid-cols-2 gap-2">
-            {/* Faction with gradient */}
-            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{
-                background: activeFaction
-                  ? "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--secondary) / 0.08))"
-                  : "hsl(0 0% 100% / 0.05)",
-                border: activeFaction
-                  ? "1px solid hsl(var(--primary) / 0.25)"
-                  : "1px solid hsl(0 0% 100% / 0.07)",
-              }}>
-              <Shield className="w-3 h-3 shrink-0" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 40%)" }} />
-              <div>
-                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Фракція</p>
-                <p className="text-[10px] font-medium truncate" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 60%)" }}>
-                  {activeFaction || (pendingFaction ? `${pendingFaction}...` : "Немає")}
-                </p>
-              </div>
+          <div className="relative px-4 pb-4 grid grid-cols-2 gap-2">
+            <div className="bg-white/5 border border-white/5 p-2 rounded-xl">
+              <p className="text-[7px] text-muted-foreground/40 uppercase">Фракція</p>
+              <p className="text-[10px] font-bold text-primary truncate">{activeFaction || "Відсутня"}</p>
             </div>
-            {/* House */}
-            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{
-                background: firstHouse ? "hsl(142 71% 45% / 0.1)" : "hsl(0 0% 100% / 0.05)",
-                border: firstHouse ? "1px solid hsl(142 71% 45% / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)",
-              }}>
-              <Home className="w-3 h-3 shrink-0" style={{
-                color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 40%)",
-                filter: firstHouse ? "drop-shadow(0 0 4px hsl(142 71% 45% / 0.8))" : "none",
-              }} />
-              <div>
-                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Дім</p>
-                <p className="text-[10px] font-medium truncate" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 60%)" }}>
-                  {firstHouse?.name || "Немає"}
-                </p>
-              </div>
+            <div className="bg-white/5 border border-white/5 p-2 rounded-xl">
+              <p className="text-[7px] text-muted-foreground/40 uppercase">Дім</p>
+              <p className="text-[10px] font-bold text-green-400 truncate">{firstHouse?.name || "Немає"}</p>
             </div>
-          </div>
-
-          {/* Machine line */}
-          <div className="relative px-4 py-1.5" style={{ borderTop: "1px solid hsl(0 0% 100% / 0.05)", background: "hsl(0 0% 100% / 0.02)" }}>
-            <p className="text-[6px] text-muted-foreground/20 font-mono tracking-widest text-center truncate">
-              CHERNIHIV RP &lt;&lt; {nick.toUpperCase()} &lt;&lt; {uid.slice(-8)}
-            </p>
           </div>
         </div>
       </div>
 
       {/* Діяльність */}
       <div className="mb-2">
-        <button onClick={() => setShowActivity(!showActivity)}
-          className="w-full liquid-glass-card rounded-2xl px-4 py-3.5 flex items-center justify-between transition-all active:scale-[0.98]">
+        <button onClick={() => setShowActivity(!showActivity)} className="w-full liquid-glass-card rounded-2xl px-4 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/12 flex items-center justify-center">
-              <Briefcase className="w-4 h-4 text-primary" />
-            </div>
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center"><Briefcase className="w-4 h-4 text-primary" /></div>
             <div className="text-left">
-              <p className="text-sm font-medium">Моя діяльність</p>
-              <p className="text-[10px] text-muted-foreground">
-                {activeFaction ? `Фракція: ${activeFaction}` : pendingFaction ? `Очікує: ${pendingFaction}` : "Немає активної діяльності"}
-              </p>
+              <p className="text-sm font-medium">Діяльність</p>
+              <p className="text-[10px] text-muted-foreground">{activeFaction ? `Фракція: ${activeFaction}` : "Немає"}</p>
             </div>
           </div>
-          {showActivity ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+          {showActivity ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
         {showActivity && (
-          <div className="mt-1 liquid-glass rounded-2xl p-4 animate-fade-in">
-            {profileData.factionApps.length > 0 ? (
-              <div className="space-y-2">
-                {profileData.factionApps.slice(0, 5).map((a, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-xs text-foreground">{a.faction_name}</span>
-                    </div>
-                    <span className={`text-[10px] font-semibold ${statusColors[a.status] || "text-muted-foreground"}`}>
-                      {statusLabels[a.status] || a.status}
-                    </span>
-                  </div>
-                ))}
+          <div className="mt-1 liquid-glass rounded-2xl p-4 animate-fade-in space-y-2">
+            {profileData.factionApps.length > 0 ? profileData.factionApps.map((a, i) => (
+              <div key={i} className="flex justify-between text-xs">
+                <span>{a.faction_name}</span>
+                <span className={statusColors[a.status]}>{statusLabels[a.status]}</span>
               </div>
-            ) : (
-              <div>
-                <p className="text-xs text-muted-foreground text-center py-2 mb-3">Немає активної діяльності</p>
-                <GradientButton variant="green" className="w-full text-xs py-2" onClick={() => navigate("/factions")}>
-                  Переглянути фракції
-                </GradientButton>
-              </div>
-            )}
+            )) : <p className="text-xs text-muted-foreground text-center">Діяльність відсутня</p>}
           </div>
         )}
       </div>
 
-{/* Дома */}
-      <div className="mb-2">
-        <div className="liquid-glass-card rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}>
+      {/* Автомобілі */}
+      <div className="space-y-3 mb-6">
+        {profileData.cars?.map(car => (
+          <div key={car.id} className="liquid-glass-card rounded-2xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: "hsl(142 71% 45% / 0.12)", border: "1px solid hsl(142 71% 45% / 0.25)", boxShadow: "0 0 12px hsl(142 71% 45% / 0.2)" }}>
-                <Home className="w-4 h-4" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center"><Car className="w-4 h-4 text-primary" /></div>
+              <div>
+                <p className="text-[8px] text-muted-foreground uppercase">Транспорт</p>
+                <p className="text-xs font-bold">{car.car_model}</p>
               </div>
-              <p className="text-sm font-medium">Мої дома</p>
             </div>
-            <button onClick={() => navigate("/houses")} className="text-[10px] text-primary flex items-center gap-0.5">
-              Переглянути <ChevronRight className="w-3 h-3" />
-            </button>
+            <PlateBadge plate={car.plate_number} />
           </div>
-          <div className="px-4 py-3">
-            {profileData.houses.length > 0 ? (
-              <div className="space-y-2">
-                {profileData.houses.map(h => {
-                  const photo = h.photos?.find((p: string) => p.startsWith("http")) || h.image;
-                  return (
-                    <div key={h.id} className="rounded-xl overflow-hidden"
-                      style={{ background: "hsl(142 71% 45% / 0.05)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
-                      {photo && (
-                        <div className="relative h-28 overflow-hidden">
-                          <img src={photo} alt={h.name} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                          <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10">
-                            <Clock className="w-3 h-3 text-primary" />
-                            <span className="text-[10px] font-bold text-white">
-  {calculateHouseTime(h.created_at, h.rental_days || 7)}
-</span>
-                          </div>
-                          <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
-                            <p className="text-sm font-black text-white drop-shadow">{h.name}</p>
-                            <span className="text-[10px] font-bold text-yellow-400">{h.price.toLocaleString()}€</span>
-                          </div>
-                        </div>
-                      )}
-                      {!photo && (
-                        <div className="flex items-center gap-3 p-3">
-                          <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
-                            style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
-                            <Home className="w-5 h-5" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                              <p className="text-xs font-semibold text-foreground">{h.name}</p>
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-primary" />
-                                <span className="text-[10px] text-primary font-bold">
-  {calculateHouseTime(h.created_at, h.rental_days || 7)}
-</span>
-                              </div>
-                            </div>
-                            <p className="text-[10px] text-yellow-400 font-bold">{h.price.toLocaleString()}€</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="relative overflow-hidden rounded-xl p-4 flex items-center gap-4"
-                style={{ background: "linear-gradient(135deg, hsl(142 71% 45% / 0.06), hsl(142 71% 45% / 0.02))", border: "1px solid hsl(142 71% 45% / 0.15)" }}>
-                <div className="relative w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center"
-                  style={{ background: "hsl(142 71% 45% / 0.1)", border: "1.5px solid hsl(142 71% 45% / 0.3)" }}>
-                  <Home className="w-7 h-7" style={{ color: "hsl(142 71% 45%)" }} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold" style={{ color: "hsl(142 71% 45%)" }}>Немає будинку</p>
-                  <button onClick={() => navigate("/houses")}
-                    className="mt-2 text-[10px] font-semibold px-2.5 py-1 rounded-lg"
-                    style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.25)", color: "hsl(142 71% 45%)" }}>
-                    Переглянути →
+        ))}
+      </div>
+
+      {/* МОДАЛКА РЕДАКТОРА NFT */}
+      {showEditor && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-end animate-fade-in">
+          <div className="w-full bg-zinc-900 rounded-t-[32px] p-6 border-t border-white/10 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-bold">Ваші NFT предмети</h2>
+              <button onClick={() => setShowEditor(false)} className="text-primary font-bold text-sm">Готово</button>
+            </div>
+            <div className="grid grid-cols-4 gap-3 max-h-[40vh] overflow-y-auto">
+              {ownedNfts.map(nft => {
+                const isSelected = selectedNfts.find(n => n.id === nft.id);
+                return (
+                  <button 
+                    key={nft.id} 
+                    onClick={() => toggleNft(nft)}
+                    className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-all ${isSelected ? 'border-primary shadow-[0_0_15px_hsl(var(--primary)/0.5)]' : 'border-white/5 opacity-60'}`}
+                  >
+                    <img src={nft.image_url} className="w-full h-full object-cover" alt="nft" />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                        <CheckCircle className="w-6 h-6 text-white" />
+                      </div>
+                    )}
                   </button>
-                </div>
-              </div>
-            )}
+                );
+              })}
+            </div>
+            <p className="text-center text-[10px] text-muted-foreground mt-6 uppercase tracking-widest">Обрано {selectedNfts.length} з 6</p>
           </div>
         </div>
-      </div>
-{/* ═══ ЯРУС 1: ЛІЦЕНЗІЇ ═══ */}
-      <div className="space-y-4 mb-6 px-1">
-        {profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any) => (
-          <div key={item.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
-               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
-            <div className="relative rounded-[15px] overflow-hidden px-5 py-4 flex items-center gap-4" style={{ background: passportBg }}>
-              
-              {/* Світіння фону */}
-              <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-40" 
-                   style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.6) 0%, transparent 80%)` }} />
+      )}
 
-              {/* ЗАМІНЕНО: Іконка Shield на FileCheck (Документ) */}
-              <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
-                <FileCheck className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
-              </div>
-
-              <div className="flex-1 min-w-0 z-10">
-                <p className="text-[8px] text-muted-foreground uppercase tracking-[0.2em] font-black mb-2 opacity-60">ЛІЦЕНЗІЯ</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(item.license_type || "Ліцензія").split(',').map((tag: string, i: number) => (
-                    <div key={i} className="px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/10 backdrop-blur-md">
-                      <span className="text-[9px] font-black uppercase tracking-tight text-primary italic whitespace-nowrap">
-                        {tag.trim()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ═══ ЯРУС 2: ТРАНСПОРТ ═══ */}
-      <div className="space-y-4 mb-10 px-1">
-        {((profileData as any).cars || []).map((car: any) => (
-          <div key={car.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
-               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
-            <div className="relative rounded-[15px] overflow-hidden px-5 py-5 flex items-center gap-4" style={{ background: passportBg }}>
-              
-              {/* Світіння фону */}
-              <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-30" 
-                   style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.5) 0%, transparent 80%)` }} />
-
-              <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
-                <Car className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
-              </div>
-
-              <div className="flex-1 flex items-center justify-between min-w-0 z-10">
-                <div>
-                  <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-black mb-1 opacity-50">НОМЕРИ АВТО</p>
-                  <p className="text-[7px] text-primary/40 uppercase font-bold tracking-tighter mb-0.5">МОДЕЛЬ АВТО</p>
-                  <p className="text-sm font-black text-white italic tracking-tighter leading-none truncate max-w-[110px]">
-                    {car.car_model || "НЕВІДОМО"}
-                  </p>
-                </div>
-                
-                <div className="shrink-0 scale-[1.2] origin-right mr-1 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
-                   <PlateBadge plate={car.plate_number} />
-                </div>
-              </div>
-              <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
-            </div>
-          </div>
-        ))}
-      </div>
-      {/* Кнопка адмін панелі — тільки для прийнятих адмінів */}
+      {/* Адмін-панель */}
       {isApprovedAdmin && (
-        <div className="mt-4 animate-fade-in">
-          <button onClick={() => navigate("/admin-panel")}
-            className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl transition-all active:scale-[0.98] hover:scale-[1.01]"
-            style={{
-              background: "linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--secondary) / 0.06))",
-              border: "1px solid hsl(var(--primary) / 0.25)",
-              boxShadow: "0 0 20px hsl(var(--primary) / 0.1)",
-            }}>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: "hsl(var(--primary) / 0.15)", border: "1px solid hsl(var(--primary) / 0.3)", boxShadow: "0 0 12px hsl(var(--primary) / 0.3)" }}>
-              <Shield className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 4px hsl(var(--primary)))" }} />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-sm font-bold text-foreground">Адмін панель</p>
-              <p className="text-[10px] text-muted-foreground">Управління сервером</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-primary" />
-          </button>
-        </div>
+        <button onClick={() => navigate("/admin-panel")} className="w-full mt-4 flex items-center gap-3 px-4 py-4 rounded-2xl bg-primary/10 border border-primary/20 active:scale-95 transition-all">
+          <Shield className="w-5 h-5 text-primary" />
+          <span className="text-sm font-bold">Адмін-панель</span>
+        </button>
       )}
     </div>
   );
