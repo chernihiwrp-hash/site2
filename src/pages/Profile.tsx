@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   User, Briefcase, Home, Car, FileCheck, Wallet, Lock,
   Bell, ChevronDown, ChevronRight, Shield, CheckCircle,
-  LogIn, RefreshCw, Coins, Clock, Settings2, RotateCcw, Zap, X
+  LogIn, RefreshCw, Coins, Clock, Settings, X
 } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +12,7 @@ import type { Notification } from "../lib/store";
 
 const getTelegramUser = () => {
   try {
-    const tg = (window as any).Telegram;
+    const tg = (window as Window & { Telegram?: { WebApp?: { initDataUnsafe?: { user?: { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string } } } } }).Telegram;
     return tg?.WebApp?.initDataUnsafe?.user || null;
   } catch { return null; }
 };
@@ -24,228 +24,49 @@ const Trident = () => (
 );
 
 type ProfileData = {
-  houses: any[];
+  houses: { 
+    id: number; 
+    name: string; 
+    price: number; 
+    image?: string;  
+    rental_days?: number; 
+    photos?: string[];    
+    created_at?: string;
+  }[];
   factionApps: { faction_name: string; status: string }[];
-  licenses: any[];
+  licenses: { id: number; license_type: string; plate_number: string | null; status: string }[];
 };
 
-type OrbitSettings = {
-  enabled: boolean;
-  speed: number;     // секунди на повний оберт (менше = швидше)
-  radius: number;    // радіус орбіти в пікселях
+const statusColors: Record<string, string> = {
+  approved: "text-primary", pending: "text-yellow-400", rejected: "text-destructive", review: "text-yellow-400",
+};
+const statusLabels: Record<string, string> = {
+  approved: "Прийнято", pending: "На розгляді", rejected: "Відхилено", review: "На розгляді",
 };
 
-const DEFAULT_ORBIT: OrbitSettings = { enabled: true, speed: 12, radius: 68 };
-
-const NftBubble = ({ url, size = 38, visible, delay }: { url: string; size?: number; visible: boolean; delay: number }) => {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    if (!visible) { setMounted(false); return; }
-    const t = setTimeout(() => setMounted(true), delay);
-    return () => clearTimeout(t);
-  }, [visible, delay]);
-
-  const svgId = `mask-${Math.random().toString(36).slice(2)}`;
-
-  return (
+const PlateBadge = ({ plate }: { plate: string }) => (
+  <div style={{
+    display: "inline-flex", alignItems: "stretch", borderRadius: 6,
+    border: "2px solid #333", background: "#fff", overflow: "hidden",
+    height: 28, boxShadow: "0 2px 8px rgba(0,0,0,0.5)", flexShrink: 0,
+  }}>
     <div style={{
-      position: "absolute",
-      width: size,
-      height: size,
-      opacity: mounted ? 1 : 0,
-      transform: mounted ? "scale(1)" : "scale(0.3)",
-      transition: `all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}ms`,
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      width: 18, borderRight: "1.5px solid #333", background: "#fff", gap: 1,
     }}>
-      {/* Glow */}
-      <div style={{
-        position: "absolute",
-        inset: -size * 0.4,
-        borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(var(--primary) / 0.5) 20%, transparent 70%)",
-        filter: "blur(12px)",
-        zIndex: -1,
-      }} />
-
-      <svg width={size} height={size} style={{ display: "block" }}>
-        <defs>
-          <radialGradient id={`${svgId}-fade`} cx="50%" cy="50%" r="50%">
-            <stop offset="42%" stopColor="white" stopOpacity="1" />
-            <stop offset="76%" stopColor="white" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="white" stopOpacity="0" />
-          </radialGradient>
-          <mask id={svgId}>
-            <circle cx={size/2} cy={size/2} r={size/2} fill={`url(#${svgId}-fade)`} />
-          </mask>
-        </defs>
-        <image
-          href={url}
-          x="0" y="0"
-          width={size} height={size}
-          mask={`url(#${svgId})`}
-          preserveAspectRatio="xMidYMid slice"
-        />
-      </svg>
-    </div>
-  );
-};
-
-const NftOrbit = ({
-  avatarSize,
-  orbitSettings,
-  nfts,
-  visible,
-}: {
-  avatarSize: number;
-  orbitSettings: OrbitSettings;
-  nfts: any[];
-  visible: boolean;
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const angleRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
-  const lastTimeRef = useRef(0);
-
-  const nftSize = 38;
-  const { enabled, speed, radius } = orbitSettings;
-  const count = nfts.length || 0;
-
-  useEffect(() => {
-    if (!enabled || speed <= 0 || count === 0) {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      return;
-    }
-
-    const degreesPerMs = 360 / (speed * 1000);
-
-    const animate = (now: number) => {
-      if (lastTimeRef.current) {
-        const delta = now - lastTimeRef.current;
-        angleRef.current = (angleRef.current + degreesPerMs * delta) % 360;
-
-        if (containerRef.current) {
-          const items = containerRef.current.querySelectorAll<HTMLDivElement>(".nft-item");
-          items.forEach((el, i) => {
-            const baseAngle = (360 / count) * i;
-            const currentAngle = baseAngle + angleRef.current;
-            const rad = (currentAngle * Math.PI) / 180;
-
-            const x = Math.cos(rad) * radius - nftSize / 2;
-            const y = Math.sin(rad) * radius - nftSize / 2;
-
-            el.style.transform = `translate(${x}px, ${y}px)`;
-          });
-        }
-      }
-      lastTimeRef.current = now;
-      rafRef.current = requestAnimationFrame(animate);
-    };
-
-    rafRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [enabled, speed, radius, count]);
-
-  if (count === 0) return null;
-
-  return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0 pointer-events-none"
-      style={{ width: avatarSize, height: avatarSize }}
-    >
-      {nfts.slice(0, 8).map((nft, i) => (
-        <div
-          key={nft.id}
-          className="nft-item absolute"
-          style={{
-            width: nftSize,
-            height: nftSize,
-            left: avatarSize / 2 - nftSize / 2,
-            top: avatarSize / 2 - nftSize / 2,
-            transform: `translate(0px, 0px)`,
-          }}
-        >
-          <NftBubble
-            url={nft.image_url}
-            size={nftSize}
-            visible={visible}
-            delay={i * 80}
-          />
-        </div>
-      ))}
-    </div>
-  );
-};
-
-const OrbitSettingsPanel = ({
-  settings,
-  onChange,
-  onClose,
-}: {
-  settings: OrbitSettings;
-  onChange: (s: OrbitSettings) => void;
-  onClose: () => void;
-}) => (
-  <div className="liquid-glass-card rounded-2xl p-5 mb-4 animate-fade-in">
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-2">
-        <RotateCcw className="w-4 h-4 text-primary" />
-        <span className="font-semibold">Налаштування орбіти NFT</span>
+      <div style={{ width: 12, height: 8, overflow: "hidden", borderRadius: 1, border: "0.5px solid #ccc" }}>
+        <div style={{ width: "100%", height: "50%", background: "#005BBB" }} />
+        <div style={{ width: "100%", height: "50%", background: "#FFD500" }} />
       </div>
-      <button onClick={onClose} className="text-muted-foreground">
-        <X size={18} />
-      </button>
+      <span style={{ fontSize: 5, fontWeight: 900, color: "#111", fontFamily: "Arial", lineHeight: 1 }}>UA</span>
     </div>
-
-    <div className="space-y-6">
-      {/* Toggle */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm">Обертання увімкнено</span>
-        <button
-          onClick={() => onChange({ ...settings, enabled: !settings.enabled })}
-          className={`w-11 h-6 rounded-full relative transition-colors ${settings.enabled ? "bg-primary" : "bg-zinc-700"}`}
-        >
-          <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${settings.enabled ? "left-6" : "left-0.5"}`} />
-        </button>
-      </div>
-
-      {/* Speed */}
-      <div className={settings.enabled ? "" : "opacity-50 pointer-events-none"}>
-        <div className="flex justify-between text-sm mb-2">
-          <span>Швидкість обертання</span>
-          <span className="font-mono text-primary">{settings.speed.toFixed(1)}s</span>
-        </div>
-        <input
-          type="range"
-          min={4}
-          max={30}
-          step={0.5}
-          value={settings.speed}
-          onChange={(e) => onChange({ ...settings, speed: parseFloat(e.target.value) })}
-          className="w-full accent-primary"
-        />
-      </div>
-
-      {/* Radius */}
-      <div className={settings.enabled ? "" : "opacity-50 pointer-events-none"}>
-        <div className="flex justify-between text-sm mb-2">
-          <span>Радіус орбіти</span>
-          <span className="font-mono text-primary">{settings.radius}px</span>
-        </div>
-        <input
-          type="range"
-          min={52}
-          max={92}
-          step={1}
-          value={settings.radius}
-          onChange={(e) => onChange({ ...settings, radius: parseFloat(e.target.value) })}
-          className="w-full accent-primary"
-        />
-      </div>
-    </div>
+    <span style={{
+      fontFamily: "'Arial Black', Arial, sans-serif", fontWeight: 900, fontSize: 11,
+      color: "#111", letterSpacing: "0.08em", padding: "0 7px",
+      display: "flex", alignItems: "center", textTransform: "uppercase", whiteSpace: "nowrap",
+    }}>
+      {plate}
+    </span>
   </div>
 );
 
@@ -253,152 +74,382 @@ const Profile = () => {
   const navigate = useNavigate();
   const nick = localStorage.getItem("crp_nick") || "Гравець";
 
-  const [orbitSettings, setOrbitSettings] = useState<OrbitSettings>(() => {
-    const saved = localStorage.getItem("crp_orbit_settings");
-    return saved ? JSON.parse(saved) : DEFAULT_ORBIT;
+  // === Орбіта налаштування ===
+  const [orbitSpeed, setOrbitSpeed] = useState<number>(() => {
+    return parseFloat(localStorage.getItem("orbit_speed") || "25");
+  });
+  const [orbitRadius, setOrbitRadius] = useState<number>(() => {
+    return parseFloat(localStorage.getItem("orbit_radius") || "75");
   });
 
-  const [showOrbitSettings, setShowOrbitSettings] = useState(false);
-  const [nftVisible, setNftVisible] = useState(false);
+  const [showAdminInput, setShowAdminInput] = useState(false);
+  const [adminCode, setAdminCode] = useState("");
+  const [isApprovedAdmin, setIsApprovedAdmin] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
+  const [isTg, setIsTg] = useState(false);
+  const [tgUser, setTgUser] = useState<any>(null);
+  const [profileData, setProfileData] = useState<ProfileData>({ houses: [], factionApps: [], licenses: [] });
+  const [balance, setBalanceState] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [availableNfts, setAvailableNfts] = useState<any[]>([]);
   const [selectedNftIds, setSelectedNftIds] = useState<string[]>([]);
+  const [showOrbitSettings, setShowOrbitSettings] = useState(false);
 
-  // ... інші стейти (notifications, tgUser, profileData тощо) — залиш як у тебе було
-
-  const AVATAR_SIZE = 82;
-
-  useEffect(() => {
-    localStorage.setItem("crp_orbit_settings", JSON.stringify(orbitSettings));
-  }, [orbitSettings]);
-
-  // Завантаження даних + NFT
   const loadData = useCallback(async () => {
-    // ... твій існуючий код завантаження профілю
+    setRefreshing(true);
+    try {
+      const data = await store.getPlayerProfile(nick);
+      const carsData = await store.getCarPlates(nick);
 
-    // Завантаження NFT
-    const { data: owned } = await supabase
-      .from('nft_owners')
-      .select('nft_id')
-      .eq('owner_nick', nick);
+      const { data: ownedData } = await supabase
+        .from('nft_owners')
+        .select('nft_id')
+        .eq('owner_nick', nick);
 
-    const ownedIds = owned?.map(o => o.nft_id) || [];
+      const ownedIds = ownedData?.map(item => item.nft_id) || [];
 
-    if (ownedIds.length > 0) {
-      const { data: nfts } = await supabase
-        .from('nft_gifts')
-        .select('*')
-        .in('id', ownedIds);
+      if (ownedIds.length > 0) {
+        const { data: nfts } = await supabase
+          .from('nft_gifts')
+          .select('*')
+          .in('id', ownedIds);
 
-      if (nfts) {
-        setAvailableNfts(nfts);
-        // Використовуємо збережені або перші 6
-        const saved = localStorage.getItem("orbit_nft_ids");
-        const valid = saved ? JSON.parse(saved).filter((id: string) => ownedIds.includes(id)) : [];
-        setSelectedNftIds(valid.length ? valid : nfts.slice(0, 6).map((n: any) => n.id));
+        if (nfts) {
+          setAvailableNfts(nfts);
+          
+          const saved = localStorage.getItem("orbit_nft_ids");
+          const parsedSaved = saved ? JSON.parse(saved) : [];
+          const validSelected = parsedSaved.filter((id: string) => ownedIds.includes(id));
+          
+          setSelectedNftIds(validSelected.length > 0 ? validSelected : nfts.slice(0, 6).map((n: any) => n.id));
+        }
+      } else {
+        setAvailableNfts([]);
+        setSelectedNftIds([]);
       }
+
+      setProfileData({ ...data, cars: carsData || [] });
+      setBalanceState(getBalance(nick));
+    } catch (e) {
+      console.error("Помилка завантаження профілю:", e);
+    } finally {
+      setRefreshing(false);
     }
   }, [nick]);
 
   useEffect(() => {
-    // ... твій код Telegram + loadData
+    const user = getTelegramUser();
+    if (user) {
+      setTgUser(user);
+      setIsTg(true);
+    } else {
+      const tg = (window as any).Telegram;
+      if (tg?.WebApp) setIsTg(true);
+    }
     loadData();
-    setTimeout(() => setNftVisible(true), 400);
   }, [loadData]);
 
-  const displayedNfts = availableNfts.filter(n => selectedNftIds.includes(n.id));
+  // Збереження налаштувань орбіти
+  useEffect(() => {
+    localStorage.setItem("orbit_speed", orbitSpeed.toString());
+    localStorage.setItem("orbit_radius", orbitRadius.toString());
+  }, [orbitSpeed, orbitRadius]);
+
+  // === Паспорт теми ===
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    const observer = new MutationObserver(() => forceUpdate(n => n + 1));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme-id"] });
+    return () => observer.disconnect();
+  }, []);
+
+  const passportBg = document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))";
+  const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
+
+  const name = tgUser ? `${tgUser.first_name}${tgUser.last_name ? " " + tgUser.last_name : ""}` : nick;
+  const uid = tgUser ? String(tgUser.id) : "000001";
+  const regDate = new Date().toLocaleDateString("uk-UA");
+
+  const activeFaction = profileData.factionApps.find(a => a.status === "approved")?.faction_name || null;
+  const pendingFaction = profileData.factionApps.find(a => a.status === "pending")?.faction_name || null;
+  const firstHouse = profileData.houses[0] || null;
+
+  const calculateHouseTime = (createdAt: string, days: number) => {
+    if (!createdAt) return "0 ДН.";
+    const start = new Date(createdAt).getTime();
+    const duration = days * 24 * 60 * 60 * 1000;
+    const expiry = start + duration;
+    const now = new Date().getTime();
+    const diff = expiry - now;
+
+    if (diff <= 0) return "ЗЛЕТІВ";
+
+    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+    return d > 0 ? `${d} ДН. ${h} Г.` : `${h} ГОД.`;
+  };
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-4">
-      {/* Header з кнопкою налаштувань орбіти */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-display text-xl font-bold tracking-wider neon-text-lime">ПРОФІЛЬ</h1>
-        <div className="flex gap-2">
-          <button onClick={() => setShowOrbitSettings(true)} className="w-9 h-9 liquid-glass rounded-xl flex items-center justify-center">
-            <Settings2 className="w-4 h-4" />
+        <div className="flex items-center gap-2">
+          <button onClick={loadData} disabled={refreshing} className="w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all">
+            <RefreshCw className={`w-4 h-4 text-muted-foreground ${refreshing ? "animate-spin" : ""}`} />
           </button>
-          {/* Refresh та Bell — як у тебе */}
+          <button onClick={() => setShowNotifs(!showNotifs)} className="relative w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all">
+            <Bell className="w-4 h-4 text-primary" />
+            {notifications.filter(n => !n.read).length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full text-[8px] flex items-center justify-center text-white font-bold">
+                {notifications.filter(n => !n.read).length}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* PASSPORT CARD */}
-      <div className="mb-6">
-        <div className="rounded-2xl overflow-hidden relative" style={{
-          border: "1px solid hsl(0 0% 100% / 0.12)",
-          boxShadow: "0 10px 40px hsl(0 0% 0% / 0.6)",
-        }}>
+      {/* PASSPORT CARD — оновлений дизайн */}
+      <div className="mb-4 animate-fade-in">
+        <div className="rounded-2xl overflow-hidden relative select-none"
+          style={{
+            border: "1px solid hsl(0 0% 100% / 0.12)",
+            boxShadow: "0 8px 32px hsl(0 0% 0% / 0.5)",
+          }}>
+
           {/* Background */}
           <div className="absolute inset-0">
-            <img src="https://i.ibb.co/NbX6ZNs/images-2.jpg" className="w-full h-full object-cover opacity-20" alt="" />
-            <div className="absolute inset-0" style={{ background: "linear-gradient(145deg, hsl(240 15% 8% / 0.96), hsl(0 0% 4% / 0.94))" }} />
+            <img src="https://i.ibb.co/NbX6ZNs/images-2.jpg" alt="" className="w-full h-full object-cover" style={{ opacity: 0.18 }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            <div className="absolute inset-0" style={{ background: passportBg, transition: "background 0.6s ease" }} />
+            <div className="absolute inset-0 rounded-2xl" style={{
+              background: `radial-gradient(ellipse 80% 50% at 50% 100%, hsl(var(--primary) / 0.08) 0%, transparent 70%)`,
+            }} />
           </div>
 
-          <Trident />
+          <Trident watermark />
 
-          {/* Header */}
-          <div className="relative px-5 pt-4 pb-2 flex justify-between border-b border-white/10">
+          {/* Header strip */}
+          <div className="relative flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.07)" }}>
             <div>
-              <p className="text-[7px] tracking-[2px] text-muted-foreground/60">УДОСТОВЕРЕНИЕ</p>
-              <p className="text-[8px] font-semibold text-muted-foreground/70">CHERNIHIV RP</p>
+              <p className="text-[7px] text-muted-foreground/50 tracking-[0.3em] uppercase">Удостоверение</p>
+              <p className="text-[8px] text-muted-foreground/70 tracking-[0.15em] font-semibold uppercase">Chernihiv RP</p>
             </div>
-            <p className="text-[8px] font-mono text-muted-foreground/60">#{String(tgUser?.id || "000001").slice(-6)}</p>
+            <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
           </div>
 
-          {/* Avatar + Orbit */}
-          <div className="relative px-5 py-6 flex gap-5">
-            <div className="relative" style={{ width: AVATAR_SIZE + 60, height: AVATAR_SIZE + 60 }}>
-              <NftOrbit
-                avatarSize={AVATAR_SIZE}
-                orbitSettings={orbitSettings}
-                nfts={displayedNfts}
-                visible={nftVisible}
-              />
-
-              {/* Avatar */}
-              <div className="absolute rounded-2xl overflow-hidden border border-white/20 shadow-xl" style={{
-                width: AVATAR_SIZE,
-                height: AVATAR_SIZE,
-                left: 30,
-                top: 30,
-                zIndex: 10,
-              }}>
+          {/* Main content */}
+          <div className="relative px-4 py-6 flex items-start gap-4">
+            {/* Аватарка + Орбіта */}
+            <div className="relative w-[110px] h-[110px] flex items-center justify-center shrink-0">
+              {/* Аватарка */}
+              <div 
+                className="relative w-[78px] h-[78px] rounded-2xl overflow-hidden z-30 cursor-pointer group"
+                style={{ border: "2px solid hsl(var(--primary) / 0.35)" }}
+                onClick={() => setShowOrbitSettings(true)}
+              >
                 {tgUser?.photo_url ? (
-                  <img src={tgUser.photo_url} alt="" className="w-full h-full object-cover" />
+                  <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
-                    <User className="w-12 h-12 text-primary/40" />
+                  <div className="w-full h-full flex items-center justify-center bg-primary/5">
+                    <User className="w-10 h-10 text-primary/40" />
                   </div>
                 )}
+
+                {/* Hover ефект з шестернею */}
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center rounded-2xl">
+                  <Settings className="w-5 h-5 text-white" />
+                </div>
+              </div>
+
+              {/* Орбіта NFT */}
+              <div className="absolute inset-0 pointer-events-none">
+                {availableNfts
+                  .filter(n => selectedNftIds.includes(n.id))
+                  .map((nft, index, arr) => {
+                    const angle = (index * (360 / arr.length) - 90) * (Math.PI / 180);
+                    const x = Math.cos(angle) * orbitRadius;
+                    const y = Math.sin(angle) * orbitRadius;
+
+                    return (
+                      <div
+                        key={nft.id}
+                        className="absolute left-1/2 top-1/2 nft-orbit-item"
+                        style={{
+                          transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+                          animation: `orbit ${orbitSpeed}s linear infinite`,
+                          animationDelay: `-${index * (orbitSpeed / arr.length)}s`,
+                        } as any}
+                      >
+                        <div className="relative w-11 h-11">
+                          {/* Посилене свічення */}
+                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/60 via-primary/30 to-transparent blur-md scale-125" />
+                          
+                          {/* NFT з сильною розтушовкою */}
+                          <img 
+                            src={nft.image_url} 
+                            className="w-full h-full object-cover rounded-full relative z-10"
+                            style={{
+                              maskImage: "radial-gradient(circle, black 38%, transparent 72%)",
+                              WebkitMaskImage: "radial-gradient(circle, black 38%, transparent 72%)",
+                              boxShadow: "0 0 12px hsl(var(--primary) / 0.6)",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
 
-            {/* Info */}
-            <div className="flex-1 pt-2">
-              <p className="text-base font-bold truncate">{tgUser ? `${tgUser.first_name} ${tgUser.last_name || ''}` : nick}</p>
-              <div className="flex items-center gap-2 mt-1 mb-3">
-                <CheckCircle className="w-4 h-4 text-primary" />
-                <span className="text-xs text-primary font-medium">Верифіковано</span>
+            {/* Інформація */}
+            <div className="flex-1 min-w-0 pt-1">
+              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">ІМ'Я</p>
+              <p className="text-lg font-bold text-foreground truncate leading-none mb-3">{name}</p>
+
+              <div className="flex items-center gap-1.5 mb-3">
+                <CheckCircle className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold text-primary tracking-wide">ВЕРИФІКОВАНО</span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Coins className="text-yellow-400" />
-                <span>{getBalance(nick)} CR</span>
+
+              <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-1">
+                  <Coins className="w-4 h-4 text-yellow-400" />
+                  <span className="font-semibold">{balance} CR</span>
+                </div>
+                <span className="text-xs text-muted-foreground/60">•</span>
+                <span className="text-xs text-muted-foreground">{regDate}</span>
               </div>
             </div>
           </div>
 
-          {/* Bottom stats + machine line — залиш як у тебе */}
+          {/* Bottom stats */}
+          <div className="relative px-4 pb-4 grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{
+              background: activeFaction ? "linear-gradient(135deg, hsl(var(--primary)/0.15), transparent)" : "hsl(0 0% 100% / 0.04)",
+              border: activeFaction ? "1px solid hsl(var(--primary)/0.3)" : "1px solid hsl(0 0% 100% / 0.08)",
+            }}>
+              <Shield className="w-4 h-4" style={{ color: activeFaction ? "hsl(var(--primary))" : "#666" }} />
+              <div>
+                <p className="text-[7px] text-muted-foreground/50">ФРАКЦІЯ</p>
+                <p className="text-xs font-medium" style={{ color: activeFaction ? "hsl(var(--primary))" : "#888" }}>
+                  {activeFaction || (pendingFaction ? `${pendingFaction}...` : "—")}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{
+              background: firstHouse ? "hsl(142 71% 45% / 0.08)" : "hsl(0 0% 100% / 0.04)",
+              border: firstHouse ? "1px solid hsl(142 71% 45% / 0.3)" : "1px solid hsl(0 0% 100% / 0.08)",
+            }}>
+              <Home className="w-4 h-4" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "#666" }} />
+              <div>
+                <p className="text-[7px] text-muted-foreground/50">БУДИНОК</p>
+                <p className="text-xs font-medium" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "#888" }}>
+                  {firstHouse?.name || "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-4 py-2 text-center border-t border-white/5 bg-black/30">
+            <p className="text-[6px] text-muted-foreground/30 font-mono tracking-[2px]">
+              CHERNIHIV RP • {nick.toUpperCase()} • {uid.slice(-8)}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Панель налаштувань орбіти */}
+      {/* === МОДАЛКА НАЛАШТУВАННЯ ОРБІТИ === */}
       {showOrbitSettings && (
-        <OrbitSettingsPanel
-          settings={orbitSettings}
-          onChange={setOrbitSettings}
-          onClose={() => setShowOrbitSettings(false)}
-        />
+        <div className="fixed inset-0 z-[999] flex items-end justify-center bg-black/80 backdrop-blur-xl" onClick={() => setShowOrbitSettings(false)}>
+          <div className="w-full max-w-md bg-zinc-950 border-t border-primary/30 rounded-t-3xl p-6 pb-10" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-lg font-bold">Налаштування орбіти</h2>
+                <p className="text-xs text-muted-foreground">Персоналізація NFT орбіти</p>
+              </div>
+              <button onClick={() => setShowOrbitSettings(false)} className="text-muted-foreground">
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Швидкість обертання */}
+            <div className="mb-6">
+              <div className="flex justify-between text-sm mb-2">
+                <span>Швидкість обертання</span>
+                <span className="text-primary font-mono">{orbitSpeed.toFixed(1)}s</span>
+              </div>
+              <input
+                type="range"
+                min="8"
+                max="60"
+                step="0.5"
+                value={orbitSpeed}
+                onChange={(e) => setOrbitSpeed(parseFloat(e.target.value))}
+                className="w-full accent-primary"
+              />
+            </div>
+
+            {/* Радіус орбіти */}
+            <div className="mb-8">
+              <div className="flex justify-between text-sm mb-2">
+                <span>Радіус орбіти</span>
+                <span className="text-primary font-mono">{orbitRadius}px</span>
+              </div>
+              <input
+                type="range"
+                min="55"
+                max="95"
+                step="1"
+                value={orbitRadius}
+                onChange={(e) => setOrbitRadius(parseFloat(e.target.value))}
+                className="w-full accent-primary"
+              />
+            </div>
+
+            {/* Попередній перегляд (міні) */}
+            <p className="text-xs text-muted-foreground mb-3">Попередній перегляд:</p>
+            <div className="mx-auto w-28 h-28 relative flex items-center justify-center border border-white/10 rounded-2xl bg-black/40">
+              {availableNfts.slice(0, 4).map((nft, i) => (
+                <div key={i} className="absolute w-8 h-8" style={{
+                  transform: `rotate(${i * 90}deg) translateX(${orbitRadius - 25}px)`,
+                  animation: `orbit ${orbitSpeed}s linear infinite`,
+                }}>
+                  <img src={nft.image_url} className="w-full h-full object-cover rounded-full" style={{
+                    maskImage: "radial-gradient(circle, black 35%, transparent 75%)",
+                  }} />
+                </div>
+              ))}
+              <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-primary/30 flex items-center justify-center z-10">
+                <User className="w-8 h-8 text-primary/50" />
+              </div>
+            </div>
+
+            {/* Кнопка закриття */}
+            <button onClick={() => setShowOrbitSettings(false)} className="mt-8 w-full py-3.5 bg-primary text-black font-semibold rounded-2xl active:scale-[0.985]">
+              Зберегти та закрити
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* Інша частина профілю (діяльність, будинки тощо) — копіюй з попередньої версії */}
+      {/* Решта компонентів (діяльність, будинки, ліцензії, транспорт тощо) — залиш без змін або додай за потребою */}
+      {/* ... (твій попередній код для домов, фракцій, ліцензій, авто) ... */}
+
+      {isApprovedAdmin && (
+        <div className="mt-6">
+          <button onClick={() => navigate("/admin-panel")} className="w-full flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/30">
+            <Shield className="w-6 h-6 text-primary" />
+            <div className="text-left">
+              <p className="font-bold">Адмін панель</p>
+              <p className="text-xs text-muted-foreground">Управління сервером</p>
+            </div>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
