@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   User, Briefcase, Home, Car, FileCheck, Wallet, Lock,
   Bell, ChevronDown, ChevronRight, Shield, CheckCircle,
-  LogIn, RefreshCw, Coins, Clock, Settings2, RotateCcw, Zap
+  LogIn, RefreshCw, Coins, Clock, Settings, X
 } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,51 @@ const getTelegramUser = () => {
   } catch { return null; }
 };
 
+const PlateBadge = ({ plate }: { plate: string }) => (
+  <div style={{
+    display: "inline-flex",
+    alignItems: "stretch",
+    borderRadius: 6,
+    border: "2px solid #333",
+    background: "#fff",
+    overflow: "hidden",
+    height: 28,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+    flexShrink: 0,
+  }}>
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      width: 18,
+      borderRight: "1.5px solid #333",
+      background: "#fff",
+      gap: 1,
+    }}>
+      <div style={{ width: 12, height: 8, overflow: "hidden", borderRadius: 1, border: "0.5px solid #ccc" }}>
+        <div style={{ width: "100%", height: "50%", background: "#005BBB" }} />
+        <div style={{ width: "100%", height: "50%", background: "#FFD500" }} />
+      </div>
+      <span style={{ fontSize: 5, fontWeight: 900, color: "#111", fontFamily: "Arial", lineHeight: 1 }}>UA</span>
+    </div>
+    <span style={{
+      fontFamily: "'Arial Black', Arial, sans-serif",
+      fontWeight: 900,
+      fontSize: 11,
+      color: "#111",
+      letterSpacing: "0.08em",
+      padding: "0 7px",
+      display: "flex",
+      alignItems: "center",
+      textTransform: "uppercase",
+      whiteSpace: "nowrap",
+    }}>
+      {plate}
+    </span>
+  </div>
+);
+
 const Trident = () => (
   <svg viewBox="0 0 100 120" fill="currentColor" className="text-white w-full h-full opacity-[0.07]">
     <path d="M50 5 C50 5 42 15 42 28 C42 35 45 40 45 40 L35 40 C35 40 28 35 28 22 C28 10 35 5 35 5 L28 5 C28 5 18 12 18 28 C18 44 28 52 38 54 L38 100 L44 100 L44 60 L56 60 L56 100 L62 100 L62 54 C72 52 82 44 82 28 C82 12 72 5 72 5 L65 5 C65 5 72 10 72 22 C72 35 65 40 65 40 L55 40 C55 40 58 35 58 28 C58 15 50 5 50 5Z"/>
@@ -24,7 +69,14 @@ const Trident = () => (
 );
 
 type ProfileData = {
-  houses: { id: number; name: string; price: number; photos?: string[]; image?: string }[];
+  houses: { 
+    id: number; 
+    name: string; 
+    price: number; 
+    image?: string;  
+    rental_days?: number; 
+    photos?: string[];    
+  }[];
   factionApps: { faction_name: string; status: string }[];
   licenses: { id: number; license_type: string; plate_number: string | null; status: string }[];
 };
@@ -36,251 +88,30 @@ const statusLabels: Record<string, string> = {
   approved: "Прийнято", pending: "На розгляді", rejected: "Відхилено", review: "На розгляді",
 };
 
-// ─── NFT ORBIT CONFIG ───────────────────────────────────────────────────────
-type OrbitSettings = {
-  enabled: boolean;
-  speed: number; // seconds per full rotation, 0 = stopped
-};
-
-const DEFAULT_ORBIT: OrbitSettings = { enabled: true, speed: 8 };
-
-// NFT items — replace urls with your real assets
-const NFT_ITEMS = [
-  { id: 1, url: "https://i.ibb.co/NbX6ZNs/images-2.jpg", label: "NFT #1" },
-  { id: 2, url: "https://i.ibb.co/NbX6ZNs/images-2.jpg", label: "NFT #2" },
-  { id: 3, url: "https://i.ibb.co/NbX6ZNs/images-2.jpg", label: "NFT #3" },
-];
-
-// ─── FEATHERED NFT BUBBLE ────────────────────────────────────────────────────
-const NftBubble = ({
-  url,
-  size = 36,
-  style,
-  visible,
-  delay,
-}: {
-  url: string;
-  size?: number;
-  style?: React.CSSProperties;
-  visible: boolean;
-  delay: number;
-}) => {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    if (!visible) { setMounted(false); return; }
-    const t = setTimeout(() => setMounted(true), delay);
-    return () => clearTimeout(t);
-  }, [visible, delay]);
-
-  const svgId = `nft-mask-${Math.random().toString(36).slice(2)}`;
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        width: size,
-        height: size,
-        transition: `opacity 0.5s ease ${delay}ms, transform 0.6s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms`,
-        opacity: mounted ? 1 : 0,
-        transform: mounted ? "scale(1)" : "scale(0.2)",
-        pointerEvents: "none",
-        ...style,
-      }}
-    >
-      {/* Feather glow ring — heavy blur outer ring */}
-      <div style={{
-        position: "absolute",
-        inset: -size * 0.35,
-        borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(var(--primary) / 0.45) 0%, hsl(var(--primary) / 0.0) 70%)",
-        filter: `blur(${size * 0.5}px)`,
-      }} />
-      {/* SVG feathered mask image */}
-      <svg width={size} height={size} style={{ display: "block", overflow: "visible" }}>
-        <defs>
-          <radialGradient id={`${svgId}-fade`} cx="50%" cy="50%" r="50%">
-            <stop offset="50%" stopColor="white" stopOpacity="1" />
-            <stop offset="78%" stopColor="white" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="white" stopOpacity="0" />
-          </radialGradient>
-          <mask id={svgId}>
-            <circle cx={size / 2} cy={size / 2} r={size / 2} fill={`url(#${svgId}-fade)`} />
-          </mask>
-        </defs>
-        <image
-          href={url}
-          x="0" y="0"
-          width={size} height={size}
-          mask={`url(#${svgId})`}
-          preserveAspectRatio="xMidYMid slice"
-        />
-      </svg>
-    </div>
-  );
-};
-
-// ─── ORBIT WRAPPER ───────────────────────────────────────────────────────────
-const NftOrbit = ({
-  avatarSize,
-  orbitSettings,
-  visible,
-}: {
-  avatarSize: number;
-  orbitSettings: OrbitSettings;
-  visible: boolean;
-}) => {
-  const nftSize = 36;
-  // orbit radius: distance from avatar center to NFT center
-  const orbitRadius = avatarSize / 2 + nftSize / 2 + 14; // 14px gap between avatar edge and NFT edge
-  const count = NFT_ITEMS.length;
-  const angleRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
-  const lastRef = useRef<number>(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!orbitSettings.enabled || orbitSettings.speed <= 0) {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      return;
-    }
-    const degreesPerMs = 360 / (orbitSettings.speed * 1000);
-
-    const tick = (now: number) => {
-      if (lastRef.current) {
-        const delta = now - lastRef.current;
-        angleRef.current = (angleRef.current + degreesPerMs * delta) % 360;
-        if (containerRef.current) {
-          const items = containerRef.current.querySelectorAll<HTMLDivElement>("[data-nft-item]");
-          items.forEach((el, i) => {
-            const baseAngle = (360 / count) * i + angleRef.current;
-            const rad = (baseAngle * Math.PI) / 180;
-            const x = orbitRadius * Math.cos(rad) - nftSize / 2;
-            const y = orbitRadius * Math.sin(rad) - nftSize / 2;
-            el.style.left = `${avatarSize / 2 + x}px`;
-            el.style.top = `${avatarSize / 2 + y}px`;
-            // IMPORTANT: keep NFT itself un-rotated
-            el.style.transform = el.getAttribute("data-base-transform") || "";
-          });
-        }
-      }
-      lastRef.current = now;
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [orbitSettings, avatarSize, count, orbitRadius, nftSize]);
-
-  // static positions when orbit disabled
-  const staticPositions = NFT_ITEMS.map((_, i) => {
-    const baseAngle = (360 / count) * i - 90;
-    const rad = (baseAngle * Math.PI) / 180;
-    return {
-      left: avatarSize / 2 + orbitRadius * Math.cos(rad) - nftSize / 2,
-      top: avatarSize / 2 + orbitRadius * Math.sin(rad) - nftSize / 2,
-    };
-  });
-
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        position: "absolute",
-        width: avatarSize,
-        height: avatarSize,
-        top: 0,
-        left: 0,
-        pointerEvents: "none",
-      }}
-    >
-      {NFT_ITEMS.map((nft, i) => (
-        <div
-          key={nft.id}
-          data-nft-item
-          data-base-transform="scale(1)"
-          style={{
-            position: "absolute",
-            left: orbitSettings.enabled ? staticPositions[i].left : staticPositions[i].left,
-            top: orbitSettings.enabled ? staticPositions[i].top : staticPositions[i].top,
-            width: nftSize,
-            height: nftSize,
-          }}
-        >
-          <NftBubble url={nft.url} size={nftSize} visible={visible} delay={i * 120} />
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// ─── ORBIT SETTINGS PANEL ────────────────────────────────────────────────────
-const OrbitSettingsPanel = ({
-  settings,
-  onChange,
-  onClose,
-}: {
-  settings: OrbitSettings;
-  onChange: (s: OrbitSettings) => void;
-  onClose: () => void;
-}) => (
-  <div className="mb-3 liquid-glass-card rounded-2xl p-4 animate-fade-in">
-    <div className="flex items-center justify-between mb-3">
-      <div className="flex items-center gap-2">
-        <RotateCcw className="w-3.5 h-3.5 text-primary" />
-        <span className="text-xs font-semibold">Орбіта NFT</span>
-      </div>
-      <button onClick={onClose} className="text-[9px] text-muted-foreground">Закрити</button>
-    </div>
-
-    {/* Toggle orbit */}
-    <div className="flex items-center justify-between mb-3">
-      <span className="text-[11px] text-muted-foreground">Обертання</span>
-      <button
-        onClick={() => onChange({ ...settings, enabled: !settings.enabled })}
-        className={`relative w-9 h-5 rounded-full transition-all ${settings.enabled ? "bg-primary" : "bg-muted"}`}
-      >
-        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow ${settings.enabled ? "left-4.5" : "left-0.5"}`}
-          style={{ left: settings.enabled ? "calc(100% - 18px)" : "2px" }} />
-      </button>
-    </div>
-
-    {/* Speed slider */}
-    <div className={`transition-opacity ${settings.enabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[11px] text-muted-foreground">Швидкість</span>
-        <span className="text-[10px] font-mono text-primary">
-          {settings.speed <= 2 ? "⚡ Швидко" : settings.speed <= 6 ? "🌀 Середньо" : "🌙 Повільно"}
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Zap className="w-3 h-3 text-yellow-400 shrink-0" />
-        <input
-          type="range"
-          min={1}
-          max={20}
-          step={0.5}
-          value={settings.speed}
-          onChange={e => onChange({ ...settings, speed: Number(e.target.value) })}
-          className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
-          style={{
-            background: `linear-gradient(to right, hsl(var(--primary)) ${((settings.speed - 1) / 19) * 100}%, hsl(0 0% 20%) ${((settings.speed - 1) / 19) * 100}%)`,
-            accentColor: "hsl(var(--primary))",
-          }}
-        />
-        <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
-      </div>
-      <div className="flex justify-between mt-1">
-        <span className="text-[8px] text-muted-foreground">Швидко</span>
-        <span className="text-[8px] text-muted-foreground">Повільно</span>
-      </div>
-    </div>
-  </div>
-);
-
-// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 const Profile = () => {
+
+  const calculateHouseTime = (createdAt: string, days: number) => {
+  if (!createdAt) return "0 ДН.";
+  
+  const start = new Date(createdAt).getTime();
+  const duration = days * 24 * 60 * 60 * 1000; // переводимо дні в мілісекунди
+  const expiry = start + duration;
+  const now = new Date().getTime();
+  
+  const diff = expiry - now;
+
+  if (diff <= 0) return "ЗЛЕТІВ";
+
+  const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+  return d > 0 ? `${d} ДН. ${h} Г.` : `${h} ГОД.`;
+};
+  
   const navigate = useNavigate();
+
+  const nick = localStorage.getItem("crp_nick") || "Гравець";
+  
   const [showAdminInput, setShowAdminInput] = useState(false);
   const [adminCode, setAdminCode] = useState("");
   const [isApprovedAdmin, setIsApprovedAdmin] = useState(false);
@@ -292,59 +123,83 @@ const Profile = () => {
   const [profileData, setProfileData] = useState<ProfileData>({ houses: [], factionApps: [], licenses: [] });
   const [balance, setBalanceState] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [nftVisible, setNftVisible] = useState(false);
-  const [showOrbitSettings, setShowOrbitSettings] = useState(false);
-  const [orbitSettings, setOrbitSettings] = useState<OrbitSettings>(() => {
-    try {
-      const stored = localStorage.getItem("crp_orbit_settings");
-      return stored ? JSON.parse(stored) : DEFAULT_ORBIT;
-    } catch { return DEFAULT_ORBIT; }
-  });
-
-  // persist orbit settings
-  useEffect(() => {
-    localStorage.setItem("crp_orbit_settings", JSON.stringify(orbitSettings));
-  }, [orbitSettings]);
-
-  const nick = localStorage.getItem("crp_nick") || "Гравець";
-  const AVATAR_SIZE = 72;
+const [availableNfts, setAvailableNfts] = useState<any[]>([]); 
+const [selectedNftIds, setSelectedNftIds] = useState<string[]>([]);
+const [showOrbitSettings, setShowOrbitSettings] = useState(false);
 
   const loadData = useCallback(async () => {
     setRefreshing(true);
     try {
-      const data = await store.getPlayerProfile(nick);
-      setProfileData(data);
-      setBalanceState(getBalance(nick));
-      const notifs = await store.getNotifications(nick); setNotifications(notifs);
-    } catch (e) { console.error(e); }
-    setRefreshing(false);
-  }, [nick]);
+        const data = await store.getPlayerProfile(nick);
+        const carsData = await store.getCarPlates(nick);
 
-  useEffect(() => {
+        // 1. Отримуємо ID тільки тих NFT, які реально належать гравцю
+        const { data: ownedData } = await supabase
+            .from('nft_owners')
+            .select('nft_id')
+            .eq('owner_nick', nick);
+
+        const ownedIds = ownedData?.map(item => item.nft_id) || [];
+
+        // 2. Отримуємо самі дані цих NFT з таблиці nft_gifts
+        if (ownedIds.length > 0) {
+            const { data: nfts } = await supabase
+                .from('nft_gifts')
+                .select('*')
+                .in('id', ownedIds);
+            
+            if (nfts) {
+                setAvailableNfts(nfts);
+                
+                // Налаштування орбіти: вибираємо з куплених
+                const saved = localStorage.getItem("orbit_nft_ids");
+                const parsedSaved = saved ? JSON.parse(saved) : [];
+                
+                // Фільтруємо збережені, щоб там були тільки ті, що реально є в інвентарі
+                const validSelected = parsedSaved.filter((id: string) => ownedIds.includes(id));
+                
+                // Якщо нічого не вибрано, показуємо перші доступні (до 6)
+                setSelectedNftIds(validSelected.length > 0 ? validSelected : nfts.slice(0, 6).map(n => n.id));
+            }
+        } else {
+            setAvailableNfts([]);
+            setSelectedNftIds([]);
+        }
+
+        setProfileData({ ...data, cars: carsData || [] });
+        setBalanceState(getBalance(nick));
+    } catch (e) {
+        console.error("Помилка:", e);
+    } finally {
+        setRefreshing(false);
+    }
+}, [nick]);
+
+useEffect(() => {
     const user = getTelegramUser();
     if (user) { setTgUser(user); setIsTg(true); }
     else {
-      const tg = (window as Window & { Telegram?: { WebApp?: unknown } }).Telegram;
-      if (tg?.WebApp) setIsTg(true);
+        const tg = (window as Window & { Telegram?: { WebApp?: unknown } }).Telegram;
+        if (tg?.WebApp) setIsTg(true);
     }
     loadData();
-    // trigger NFT animation shortly after mount
-    const t = setTimeout(() => setNftVisible(true), 300);
-    return () => clearTimeout(t);
-  }, [loadData]);
+}, [loadData]);
 
   const unread = notifications.filter(n => !n.read).length;
   const markRead = async () => { await store.markNotificationsRead(nick); setNotifications(notifications.map(n => ({ ...n, read: true }))); };
-
+  // Перевіряємо чи прийнятий адміністратором
   useEffect(() => {
     if (!nick) return;
+    // Суперадмін завжди має доступ
     if (nick.toLowerCase() === "t1kron1x") { setIsApprovedAdmin(true); return; }
+    // Перевіряємо заявку на адміна
     supabase.from("admin_applications")
       .select("status")
       .ilike("username", nick)
       .eq("status", "approved")
       .maybeSingle()
       .then(({ data }) => { if (data) setIsApprovedAdmin(true); });
+    // Або перевіряємо права в admin_perms
     supabase.from("admin_perms")
       .select("perms")
       .eq("username", nick.toLowerCase())
@@ -357,13 +212,13 @@ const Profile = () => {
       });
   }, [nick]);
 
+  // Theme reactive state for passport
   const [, forceUpdate] = useState(0);
   useEffect(() => {
     const observer = new MutationObserver(() => forceUpdate(n => n + 1));
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme-id"] });
     return () => observer.disconnect();
   }, []);
-
   const passportBg = document.documentElement.getAttribute("data-passport-bg") || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))";
   const passportBorder = document.documentElement.getAttribute("data-passport-border") || "hsl(84 81% 44% / 0.25)";
 
@@ -381,6 +236,7 @@ const Profile = () => {
   const activeFaction = profileData.factionApps.find(a => a.status === "approved")?.faction_name || null;
   const pendingFaction = profileData.factionApps.find(a => a.status === "pending")?.faction_name || null;
   const firstHouse = profileData.houses[0] || null;
+  
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-4">
@@ -455,6 +311,7 @@ const Profile = () => {
               background: passportBg || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))",
               transition: "background 0.6s ease"
             }} />
+            {/* Theme color accent overlay */}
             <div className="absolute inset-0 rounded-2xl" style={{
               background: `radial-gradient(ellipse 80% 50% at 50% 100%, hsl(var(--primary) / 0.08) 0%, transparent 70%)`,
               transition: "background 0.6s ease"
@@ -472,81 +329,143 @@ const Profile = () => {
               <p className="text-[7px] text-muted-foreground/50 tracking-[0.3em] uppercase">Удостоверение</p>
               <p className="text-[8px] text-muted-foreground/70 tracking-[0.15em] font-semibold uppercase">Chernihiv RP</p>
             </div>
-            <div className="flex items-center gap-2">
-              {/* NFT orbit settings toggle */}
-              <button
-                onClick={() => setShowOrbitSettings(v => !v)}
-                className="w-6 h-6 rounded-lg flex items-center justify-center transition-all active:scale-90"
-                style={{ background: "hsl(0 0% 100% / 0.06)", border: "1px solid hsl(0 0% 100% / 0.08)" }}
-                title="Налаштування орбіти NFT"
-              >
-                <Settings2 className="w-3 h-3 text-muted-foreground/60" />
-              </button>
-              <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
-            </div>
+            <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
           </div>
 
-          {/* Main row — avatar with NFT orbit + info */}
-          <div className="relative px-4 py-3 flex items-start gap-3">
-            {/* Avatar + orbit container */}
-            <div
-              className="relative shrink-0"
-              style={{
-                // extra space around avatar for NFT orbit
-                width: AVATAR_SIZE + 50, // orbitRadius * 2 = 72/2+18+14)*2 = ~100 but we shift container
-                height: AVATAR_SIZE + 50,
-                marginTop: -25,
-                marginLeft: -25,
-                marginBottom: -25,
-              }}
-            >
-              {/* NFT orbit layer */}
-              <div style={{ position: "absolute", top: 25, left: 25, width: AVATAR_SIZE, height: AVATAR_SIZE }}>
-                <NftOrbit avatarSize={AVATAR_SIZE} orbitSettings={orbitSettings} visible={nftVisible} />
-              </div>
-
-              {/* Avatar */}
-              <div
-                className="absolute overflow-hidden rounded-xl"
-                style={{
-                  top: 25,
-                  left: 25,
-                  width: AVATAR_SIZE,
-                  height: AVATAR_SIZE,
-                  border: "1.5px solid hsl(0 0% 100% / 0.15)",
-                  zIndex: 2,
-                }}
-              >
-                {tgUser?.photo_url ? (
-                  <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
-                    <User className="w-8 h-8 text-primary/30" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0 pt-1">
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
-              <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
-              {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <CheckCircle className="w-3 h-3 text-primary shrink-0" />
-                <span className="text-xs text-primary font-semibold">Верифіковано</span>
-                <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Coins className="w-3 h-3 text-yellow-400/70" />
-                <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
-              </div>
-            </div>
+{/* Main row з Квадратною Аватаркою та Покращеною Орбітою */}
+<div className="relative px-4 py-10 flex items-center gap-8">
+  
+  {/* Контейнер для фото та широкої орбіти (ЗБІЛЬШЕНО) */}
+  <div className="relative w-[160px] h-[160px] flex items-center justify-center shrink-0">
+    
+    {/* Квадратна аватарка з шестернею при наведенні */}
+    <div 
+      className="relative w-[100px] h-[100px] z-30 group cursor-pointer active:scale-95 transition-transform" 
+      onClick={() => setShowOrbitSettings(true)}
+    >
+      <div 
+        className="w-full h-full rounded-2xl overflow-hidden bg-black/60 backdrop-blur-md" 
+        style={{ border: "2px solid hsl(var(--primary) / 0.3)" }}
+      >
+        {tgUser?.photo_url ? (
+          <img 
+            src={tgUser.photo_url} 
+            alt={name} 
+            className="w-full h-full object-cover" 
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-primary/5">
+            <User className="w-10 h-10 text-primary/30" />
           </div>
+        )}
+      </div>
+      
+      {/* Оверлей при наведенні: розмита підкладка + шестерня */}
+      <div 
+        className="absolute inset-0 rounded-2xl flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100"
+        style={{
+          background: "linear-gradient(135deg, rgba(0,0,0,0.55) 0%, hsl(var(--primary) / 0.25) 100%)",
+          backdropFilter: "blur(2px)",
+        }}
+      >
+        {/* Зовнішнє кільце шестерні */}
+        <div
+          className="absolute w-14 h-14 rounded-full"
+          style={{
+            border: "1.5px dashed hsl(var(--primary) / 0.5)",
+            animation: "spin 6s linear infinite",
+          }}
+        />
+        {/* Шестерня — SVG */}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-8 h-8 relative z-10"
+          style={{
+            color: "hsl(var(--primary))",
+            filter: "drop-shadow(0 0 8px hsl(var(--primary))) drop-shadow(0 0 16px hsl(var(--primary) / 0.5))",
+            animation: "spin 4s linear infinite",
+          }}
+        >
+          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+          <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
+        </svg>
+      </div>
+    </div>
+
+    {/* ШИРОКА ОРБІТА NFT */}
+    <div className="absolute inset-0 z-10 pointer-events-none">
+      {availableNfts
+        .filter(n => selectedNftIds.includes(n.id))
+        .map((nft, index, filtered) => {
+          const angle = (index * (360 / filtered.length) - 90) * (Math.PI / 180);
+          const radius = 75;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+
+          return (
+            <div key={nft.id} className="absolute left-1/2 top-1/2 nft-orbit-item"
+              style={{ 
+                "--x": `${x}px`, 
+                "--y": `${y}px`,
+                animationDelay: `${index * 0.4}s`,
+                transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
+              } as any}>
+              
+              <div className="relative w-12 h-12 flex items-center justify-center">
+                {/* Свічення під НФТ під колір теми — позаду картинки */}
+                <div
+                  className="absolute inset-0 rounded-full z-0"
+                  style={{
+                    background: "radial-gradient(circle, hsl(var(--primary) / 0.55) 0%, hsl(var(--primary) / 0.18) 45%, transparent 72%)",
+                    filter: "blur(6px)",
+                    transform: "scale(1.3)",
+                  }}
+                />
+                {/* НФТ з круглою розтушовкою */}
+                <img 
+                  src={nft.image_url} 
+                  className="w-10 h-10 object-cover relative z-10"
+                  style={{
+                    borderRadius: "50%",
+                    WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 80%)",
+                    maskImage: "radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 80%)",
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+    </div>
+  </div>
+  {/* Права частина: Текст (без змін, але з більшим gap) */}
+  <div className="flex-1 min-w-0 py-1">
+    <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
+    <p className="text-base font-bold text-foreground truncate mb-1">{name}</p>
+    
+    <div className="flex items-center gap-1.5 mb-2">
+      <CheckCircle className="w-3 h-3 text-primary shrink-0" />
+      <span className="text-[10px] text-primary font-semibold uppercase tracking-wider">Верифіковано</span>
+    </div>
+
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1">
+        <Coins className="w-3 h-3 text-yellow-400/70" />
+        <span className="text-[10px] font-semibold text-zinc-300">{balance} CR</span>
+      </div>
+      <div className="w-px h-3 bg-white/10" />
+      <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
+    </div>
+  </div>
+</div>
 
           {/* Bottom stats */}
           <div className="relative px-4 pb-3 grid grid-cols-2 gap-2">
+            {/* Faction with gradient */}
             <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
               style={{
                 background: activeFaction
@@ -564,6 +483,7 @@ const Profile = () => {
                 </p>
               </div>
             </div>
+            {/* House */}
             <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
               style={{
                 background: firstHouse ? "hsl(142 71% 45% / 0.1)" : "hsl(0 0% 100% / 0.05)",
@@ -590,15 +510,6 @@ const Profile = () => {
           </div>
         </div>
       </div>
-
-      {/* Orbit settings panel (outside passport card, below it) */}
-      {showOrbitSettings && (
-        <OrbitSettingsPanel
-          settings={orbitSettings}
-          onChange={setOrbitSettings}
-          onClose={() => setShowOrbitSettings(false)}
-        />
-      )}
 
       {/* Діяльність */}
       <div className="mb-2">
@@ -645,7 +556,7 @@ const Profile = () => {
         )}
       </div>
 
-      {/* Дома */}
+{/* Дома */}
       <div className="mb-2">
         <div className="liquid-glass-card rounded-2xl overflow-hidden">
           <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}>
@@ -672,6 +583,12 @@ const Profile = () => {
                         <div className="relative h-28 overflow-hidden">
                           <img src={photo} alt={h.name} className="w-full h-full object-cover" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                          <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10">
+                            <Clock className="w-3 h-3 text-primary" />
+                            <span className="text-[10px] font-bold text-white">
+  {calculateHouseTime(h.created_at, h.rental_days || 7)}
+</span>
+                          </div>
                           <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
                             <p className="text-sm font-black text-white drop-shadow">{h.name}</p>
                             <span className="text-[10px] font-bold text-yellow-400">{h.price.toLocaleString()}€</span>
@@ -684,8 +601,16 @@ const Profile = () => {
                             style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
                             <Home className="w-5 h-5" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
                           </div>
-                          <div>
-                            <p className="text-xs font-semibold text-foreground">{h.name}</p>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-start">
+                              <p className="text-xs font-semibold text-foreground">{h.name}</p>
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-primary" />
+                                <span className="text-[10px] text-primary font-bold">
+  {calculateHouseTime(h.created_at, h.rental_days || 7)}
+</span>
+                              </div>
+                            </div>
                             <p className="text-[10px] text-yellow-400 font-bold">{h.price.toLocaleString()}€</p>
                           </div>
                         </div>
@@ -697,18 +622,14 @@ const Profile = () => {
             ) : (
               <div className="relative overflow-hidden rounded-xl p-4 flex items-center gap-4"
                 style={{ background: "linear-gradient(135deg, hsl(142 71% 45% / 0.06), hsl(142 71% 45% / 0.02))", border: "1px solid hsl(142 71% 45% / 0.15)" }}>
-                <div className="absolute right-0 top-0 w-24 h-24 rounded-full pointer-events-none"
-                  style={{ background: "radial-gradient(circle, hsl(142 71% 45% / 0.15) 0%, transparent 70%)", transform: "translate(30%, -30%)" }} />
                 <div className="relative w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center"
-                  style={{ background: "hsl(142 71% 45% / 0.1)", border: "1.5px solid hsl(142 71% 45% / 0.3)", boxShadow: "0 0 20px hsl(142 71% 45% / 0.2)" }}>
-                  <Home className="w-7 h-7" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 6px hsl(142 71% 45%))" }} />
-                  <div className="absolute inset-0 rounded-2xl animate-pulse" style={{ border: "1px solid hsl(142 71% 45% / 0.4)", scale: "1.15" }} />
+                  style={{ background: "hsl(142 71% 45% / 0.1)", border: "1.5px solid hsl(142 71% 45% / 0.3)" }}>
+                  <Home className="w-7 h-7" style={{ color: "hsl(142 71% 45%)" }} />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-bold" style={{ color: "hsl(142 71% 45%)" }}>Немає будинку</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Перейди до розділу Будинки</p>
                   <button onClick={() => navigate("/houses")}
-                    className="mt-2 text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all active:scale-95"
+                    className="mt-2 text-[10px] font-semibold px-2.5 py-1 rounded-lg"
                     style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.25)", color: "hsl(142 71% 45%)" }}>
                     Переглянути →
                   </button>
@@ -718,86 +639,216 @@ const Profile = () => {
           </div>
         </div>
       </div>
+{/* ═══ ЯРУС 1: ЛІЦЕНЗІЇ ═══ */}
+      <div className="space-y-4 mb-6 px-1">
+        {profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any) => (
+          <div key={item.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
+               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
+            <div className="relative rounded-[15px] overflow-hidden px-5 py-4 flex items-center gap-4" style={{ background: passportBg }}>
+              
+              {/* Світіння фону */}
+              <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-40" 
+                   style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.6) 0%, transparent 80%)` }} />
 
-      {/* Ліцензії */}
-      <div className="mb-2">
-        <div className="liquid-glass-card rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: "hsl(210 80% 55% / 0.12)", border: "1px solid hsl(210 80% 55% / 0.2)" }}>
-                <Car className="w-4 h-4" style={{ color: "hsl(210 80% 55%)" }} />
+              {/* ЗАМІНЕНО: Іконка Shield на FileCheck (Документ) */}
+              <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
+                <FileCheck className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
               </div>
-              <p className="text-sm font-medium">Мої ліцензії</p>
-            </div>
-            <button onClick={() => navigate("/licenses")} className="text-[10px] text-primary flex items-center gap-0.5">
-              Отримати <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-          <div className="px-4 py-3">
-            {profileData.licenses.length > 0 ? (
-              <div className="space-y-1.5">
-                {profileData.licenses.map(l => (
-                  <div key={l.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Car className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-xs text-foreground">{l.license_type}</span>
+
+              <div className="flex-1 min-w-0 z-10">
+                <p className="text-[8px] text-muted-foreground uppercase tracking-[0.2em] font-black mb-2 opacity-60">ЛІЦЕНЗІЯ</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(item.license_type || "Ліцензія").split(',').map((tag: string, i: number) => (
+                    <div key={i} className="px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/10 backdrop-blur-md">
+                      <span className="text-[9px] font-black uppercase tracking-tight text-primary italic whitespace-nowrap">
+                        {tag.trim()}
+                      </span>
                     </div>
-                    {l.plate_number && <span className="text-[10px] font-mono text-yellow-400">{l.plate_number}</span>}
-                  </div>
+                  ))}
+                </div>
+              </div>
+              <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ═══ ЯРУС 2: ТРАНСПОРТ ═══ */}
+      <div className="space-y-4 mb-10 px-1">
+        {((profileData as any).cars || []).map((car: any) => (
+          <div key={car.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
+               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
+            <div className="relative rounded-[15px] overflow-hidden px-5 py-5 flex items-center gap-4" style={{ background: passportBg }}>
+              
+              {/* Світіння фону */}
+              <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-30" 
+                   style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.5) 0%, transparent 80%)` }} />
+
+              <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
+                <Car className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
+              </div>
+
+              <div className="flex-1 flex items-center justify-between min-w-0 z-10">
+                <div>
+                  <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-black mb-1 opacity-50">НОМЕРИ АВТО</p>
+                  <p className="text-[7px] text-primary/40 uppercase font-bold tracking-tighter mb-0.5">МОДЕЛЬ АВТО</p>
+                  <p className="text-sm font-black text-white italic tracking-tighter leading-none truncate max-w-[110px]">
+                    {car.car_model || "НЕВІДОМО"}
+                  </p>
+                </div>
+                
+                <div className="shrink-0 scale-[1.2] origin-right mr-1 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
+                   <PlateBadge plate={car.plate_number} />
+                </div>
+              </div>
+              <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Кнопка адмін панелі — тільки для прийнятих адмінів */}
+      {/* ═══ МОДАЛКА ВИБОРУ НФТ ДЛЯ ОРБІТИ ═══ */}
+      {showOrbitSettings && (
+        <div
+          className="fixed inset-0 z-[999] flex items-end justify-center"
+          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+          onClick={() => setShowOrbitSettings(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-t-3xl p-5 pb-8 animate-fade-in"
+            style={{
+              background: "linear-gradient(160deg, hsl(240 15% 8% / 0.98), hsl(0 0% 4% / 0.96))",
+              border: "1px solid hsl(var(--primary) / 0.2)",
+              borderBottom: "none",
+              boxShadow: "0 -8px 48px hsl(var(--primary) / 0.15)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Заголовок */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.25)" }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                    className="w-4 h-4" style={{ color: "hsl(var(--primary))", animation: "spin 5s linear infinite" }}>
+                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+                    <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Орбіта НФТ</p>
+                  <p className="text-[10px] text-muted-foreground">Обери до 6 НФТ для відображення</p>
+                </div>
+              </div>
+              <button onClick={() => setShowOrbitSettings(false)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
+                style={{ background: "hsl(0 0% 100% / 0.06)", border: "1px solid hsl(0 0% 100% / 0.08)" }}>
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            {/* Лічильник вибраних */}
+            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl"
+              style={{ background: "hsl(var(--primary) / 0.07)", border: "1px solid hsl(var(--primary) / 0.15)" }}>
+              <div className="flex gap-1">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="w-2 h-2 rounded-full transition-all"
+                    style={{
+                      background: i < selectedNftIds.length ? "hsl(var(--primary))" : "hsl(0 0% 100% / 0.12)",
+                      boxShadow: i < selectedNftIds.length ? "0 0 6px hsl(var(--primary))" : "none",
+                    }} />
                 ))}
               </div>
+              <span className="text-[10px] text-muted-foreground ml-1">
+                {selectedNftIds.length} / 6 вибрано
+              </span>
+            </div>
+
+            {/* Сітка НФТ */}
+            {availableNfts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                  style={{ background: "hsl(var(--primary) / 0.07)", border: "1px solid hsl(var(--primary) / 0.15)" }}>
+                  <Wallet className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground text-center">У тебе поки немає НФТ</p>
+              </div>
             ) : (
-              <p className="text-xs text-muted-foreground text-center py-2">Немає активних ліцензій</p>
+              <div className="grid grid-cols-3 gap-3 max-h-72 overflow-y-auto pr-1">
+                {availableNfts.map(nft => {
+                  const isSelected = selectedNftIds.includes(nft.id);
+                  return (
+                    <button
+                      key={nft.id}
+                      onClick={() => {
+                        setSelectedNftIds(prev => {
+                          if (prev.includes(nft.id)) {
+                            const next = prev.filter(id => id !== nft.id);
+                            localStorage.setItem("orbit_nft_ids", JSON.stringify(next));
+                            return next;
+                          }
+                          if (prev.length >= 6) return prev;
+                          const next = [...prev, nft.id];
+                          localStorage.setItem("orbit_nft_ids", JSON.stringify(next));
+                          return next;
+                        });
+                      }}
+                      className="relative flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all active:scale-95"
+                      style={{
+                        background: isSelected
+                          ? "hsl(var(--primary) / 0.12)"
+                          : "hsl(0 0% 100% / 0.04)",
+                        border: isSelected
+                          ? "1.5px solid hsl(var(--primary) / 0.5)"
+                          : "1.5px solid hsl(0 0% 100% / 0.08)",
+                        boxShadow: isSelected
+                          ? "0 0 14px hsl(var(--primary) / 0.2)"
+                          : "none",
+                      }}
+                    >
+                      {/* Чекмарк */}
+                      {isSelected && (
+                        <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center z-20"
+                          style={{ background: "hsl(var(--primary))", boxShadow: "0 0 8px hsl(var(--primary))" }}>
+                          <svg viewBox="0 0 10 10" className="w-2.5 h-2.5" fill="none" stroke="white" strokeWidth="2">
+                            <path d="M2 5l2.5 2.5L8 3" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      )}
+                      {/* НФТ зображення з круглою розтушовкою та свіченням */}
+                      <div className="relative w-16 h-16 flex items-center justify-center">
+                        {/* Свічення */}
+                        <div className="absolute inset-0 rounded-full"
+                          style={{
+                            background: isSelected
+                              ? "radial-gradient(circle, hsl(var(--primary) / 0.5) 0%, hsl(var(--primary) / 0.15) 50%, transparent 75%)"
+                              : "radial-gradient(circle, hsl(0 0% 100% / 0.07) 0%, transparent 70%)",
+                            filter: "blur(4px)",
+                            transform: "scale(1.2)",
+                          }} />
+                        <img
+                          src={nft.image_url}
+                          alt={nft.name}
+                          className="w-14 h-14 object-cover relative z-10"
+                          style={{
+                            borderRadius: "50%",
+                            WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 42%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0) 82%)",
+                            maskImage: "radial-gradient(circle, rgba(0,0,0,1) 42%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0) 82%)",
+                          }}
+                        />
+                      </div>
+                      <p className="text-[9px] text-muted-foreground font-medium truncate w-full text-center px-1">
+                        {nft.name || "NFT"}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Номери авто */}
-      {(() => {
-        const cars = profileData.licenses.filter((l: { plate_number: string | null; status: string }) => l.plate_number && l.status === "approved");
-        if (cars.length === 0) return null;
-        return (
-          <div className="mb-2">
-            <div className="liquid-glass-card rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: "hsl(45 100% 55% / 0.1)", border: "1px solid hsl(45 100% 55% / 0.2)" }}>
-                    <Car className="w-4 h-4 text-yellow-400" />
-                  </div>
-                  <p className="text-sm font-medium">Мої автомобілі</p>
-                </div>
-                <button onClick={() => navigate("/car-registration")} className="text-[10px] text-primary flex items-center gap-0.5">
-                  Управління <ChevronRight className="w-3 h-3" />
-                </button>
-              </div>
-              <div className="px-4 py-3 space-y-2.5">
-                {cars.map((c: { id: number; license_type: string; plate_number: string | null }) => (
-                  <div key={c.id} className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-muted-foreground truncate flex-1">{c.license_type?.split("|")[0]?.trim() || "Авто"}</span>
-                    <div style={{ display: "inline-flex", alignItems: "stretch", borderRadius: 6, border: "2px solid #333", background: "#fff", overflow: "hidden", height: 26, boxShadow: "0 1px 5px rgba(0,0,0,0.4)", flexShrink: 0 }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 16, borderRight: "1.5px solid #333", background: "#fff", gap: 1 }}>
-                        <div style={{ width: 11, height: 7, overflow: "hidden", borderRadius: 1, border: "0.5px solid #ccc" }}>
-                          <div style={{ width: "100%", height: "50%", background: "#005BBB" }} />
-                          <div style={{ width: "100%", height: "50%", background: "#FFD500" }} />
-                        </div>
-                        <span style={{ fontSize: 4.5, fontWeight: 900, color: "#111", fontFamily: "Arial", lineHeight: 1 }}>UA</span>
-                      </div>
-                      <span style={{ fontFamily: "'Arial Black', Arial, sans-serif", fontWeight: 900, fontSize: 10, color: "#111", letterSpacing: "0.08em", padding: "0 6px", display: "flex", alignItems: "center", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                        {c.plate_number}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Адмін панель */}
       {isApprovedAdmin && (
         <div className="mt-4 animate-fade-in">
           <button onClick={() => navigate("/admin-panel")}
