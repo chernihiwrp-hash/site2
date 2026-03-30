@@ -338,7 +338,7 @@ useEffect(() => {
   {/* Контейнер для фото та широкої орбіти (ЗБІЛЬШЕНО) */}
   <div className="relative w-[160px] h-[160px] flex items-center justify-center shrink-0">
     
-    {/* Квадратна аватарка (ЗБІЛЬШЕНО) */}
+    {/* Квадратна аватарка з шестернею при наведенні */}
     <div 
       className="relative w-[100px] h-[100px] z-30 group cursor-pointer active:scale-95 transition-transform" 
       onClick={() => setShowOrbitSettings(true)}
@@ -360,8 +360,40 @@ useEffect(() => {
         )}
       </div>
       
-      <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity">
-        <Settings className="w-6 h-6 text-white/80 animate-spin-slow" />
+      {/* Оверлей при наведенні: розмита підкладка + шестерня */}
+      <div 
+        className="absolute inset-0 rounded-2xl flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100"
+        style={{
+          background: "linear-gradient(135deg, rgba(0,0,0,0.55) 0%, hsl(var(--primary) / 0.25) 100%)",
+          backdropFilter: "blur(2px)",
+        }}
+      >
+        {/* Зовнішнє кільце шестерні */}
+        <div
+          className="absolute w-14 h-14 rounded-full"
+          style={{
+            border: "1.5px dashed hsl(var(--primary) / 0.5)",
+            animation: "spin 6s linear infinite",
+          }}
+        />
+        {/* Шестерня — SVG */}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-8 h-8 relative z-10"
+          style={{
+            color: "hsl(var(--primary))",
+            filter: "drop-shadow(0 0 8px hsl(var(--primary))) drop-shadow(0 0 16px hsl(var(--primary) / 0.5))",
+            animation: "spin 4s linear infinite",
+          }}
+        >
+          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+          <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
+        </svg>
       </div>
     </div>
 
@@ -371,7 +403,7 @@ useEffect(() => {
         .filter(n => selectedNftIds.includes(n.id))
         .map((nft, index, filtered) => {
           const angle = (index * (360 / filtered.length) - 90) * (Math.PI / 180);
-          const radius = 75; // Збільшений радіус під велику аватарку
+          const radius = 75;
           const x = Math.cos(angle) * radius;
           const y = Math.sin(angle) * radius;
 
@@ -385,14 +417,23 @@ useEffect(() => {
               } as any}>
               
               <div className="relative w-12 h-12 flex items-center justify-center">
-                {/* САМА НФТ (Без рамок, з м'якою розтушовкою країв через mask-image) */}
+                {/* Свічення під НФТ під колір теми — позаду картинки */}
+                <div
+                  className="absolute inset-0 rounded-full z-0"
+                  style={{
+                    background: "radial-gradient(circle, hsl(var(--primary) / 0.55) 0%, hsl(var(--primary) / 0.18) 45%, transparent 72%)",
+                    filter: "blur(6px)",
+                    transform: "scale(1.3)",
+                  }}
+                />
+                {/* НФТ з круглою розтушовкою */}
                 <img 
                   src={nft.image_url} 
-                  className="w-10 h-10 object-contain relative z-10"
+                  className="w-10 h-10 object-cover relative z-10"
                   style={{
-                    // Робимо краї картинки прозорими (розтушовка)
-                    WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 75%)',
-                    maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 75%)'
+                    borderRadius: "50%",
+                    WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 80%)",
+                    maskImage: "radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 80%)",
                   }}
                 />
               </div>
@@ -666,6 +707,148 @@ useEffect(() => {
         ))}
       </div>
       {/* Кнопка адмін панелі — тільки для прийнятих адмінів */}
+      {/* ═══ МОДАЛКА ВИБОРУ НФТ ДЛЯ ОРБІТИ ═══ */}
+      {showOrbitSettings && (
+        <div
+          className="fixed inset-0 z-[999] flex items-end justify-center"
+          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+          onClick={() => setShowOrbitSettings(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-t-3xl p-5 pb-8 animate-fade-in"
+            style={{
+              background: "linear-gradient(160deg, hsl(240 15% 8% / 0.98), hsl(0 0% 4% / 0.96))",
+              border: "1px solid hsl(var(--primary) / 0.2)",
+              borderBottom: "none",
+              boxShadow: "0 -8px 48px hsl(var(--primary) / 0.15)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Заголовок */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.25)" }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                    className="w-4 h-4" style={{ color: "hsl(var(--primary))", animation: "spin 5s linear infinite" }}>
+                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+                    <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Орбіта НФТ</p>
+                  <p className="text-[10px] text-muted-foreground">Обери до 6 НФТ для відображення</p>
+                </div>
+              </div>
+              <button onClick={() => setShowOrbitSettings(false)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
+                style={{ background: "hsl(0 0% 100% / 0.06)", border: "1px solid hsl(0 0% 100% / 0.08)" }}>
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            {/* Лічильник вибраних */}
+            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl"
+              style={{ background: "hsl(var(--primary) / 0.07)", border: "1px solid hsl(var(--primary) / 0.15)" }}>
+              <div className="flex gap-1">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="w-2 h-2 rounded-full transition-all"
+                    style={{
+                      background: i < selectedNftIds.length ? "hsl(var(--primary))" : "hsl(0 0% 100% / 0.12)",
+                      boxShadow: i < selectedNftIds.length ? "0 0 6px hsl(var(--primary))" : "none",
+                    }} />
+                ))}
+              </div>
+              <span className="text-[10px] text-muted-foreground ml-1">
+                {selectedNftIds.length} / 6 вибрано
+              </span>
+            </div>
+
+            {/* Сітка НФТ */}
+            {availableNfts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                  style={{ background: "hsl(var(--primary) / 0.07)", border: "1px solid hsl(var(--primary) / 0.15)" }}>
+                  <Wallet className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground text-center">У тебе поки немає НФТ</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3 max-h-72 overflow-y-auto pr-1">
+                {availableNfts.map(nft => {
+                  const isSelected = selectedNftIds.includes(nft.id);
+                  return (
+                    <button
+                      key={nft.id}
+                      onClick={() => {
+                        setSelectedNftIds(prev => {
+                          if (prev.includes(nft.id)) {
+                            const next = prev.filter(id => id !== nft.id);
+                            localStorage.setItem("orbit_nft_ids", JSON.stringify(next));
+                            return next;
+                          }
+                          if (prev.length >= 6) return prev;
+                          const next = [...prev, nft.id];
+                          localStorage.setItem("orbit_nft_ids", JSON.stringify(next));
+                          return next;
+                        });
+                      }}
+                      className="relative flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all active:scale-95"
+                      style={{
+                        background: isSelected
+                          ? "hsl(var(--primary) / 0.12)"
+                          : "hsl(0 0% 100% / 0.04)",
+                        border: isSelected
+                          ? "1.5px solid hsl(var(--primary) / 0.5)"
+                          : "1.5px solid hsl(0 0% 100% / 0.08)",
+                        boxShadow: isSelected
+                          ? "0 0 14px hsl(var(--primary) / 0.2)"
+                          : "none",
+                      }}
+                    >
+                      {/* Чекмарк */}
+                      {isSelected && (
+                        <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center z-20"
+                          style={{ background: "hsl(var(--primary))", boxShadow: "0 0 8px hsl(var(--primary))" }}>
+                          <svg viewBox="0 0 10 10" className="w-2.5 h-2.5" fill="none" stroke="white" strokeWidth="2">
+                            <path d="M2 5l2.5 2.5L8 3" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      )}
+                      {/* НФТ зображення з круглою розтушовкою та свіченням */}
+                      <div className="relative w-16 h-16 flex items-center justify-center">
+                        {/* Свічення */}
+                        <div className="absolute inset-0 rounded-full"
+                          style={{
+                            background: isSelected
+                              ? "radial-gradient(circle, hsl(var(--primary) / 0.5) 0%, hsl(var(--primary) / 0.15) 50%, transparent 75%)"
+                              : "radial-gradient(circle, hsl(0 0% 100% / 0.07) 0%, transparent 70%)",
+                            filter: "blur(4px)",
+                            transform: "scale(1.2)",
+                          }} />
+                        <img
+                          src={nft.image_url}
+                          alt={nft.name}
+                          className="w-14 h-14 object-cover relative z-10"
+                          style={{
+                            borderRadius: "50%",
+                            WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 42%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0) 82%)",
+                            maskImage: "radial-gradient(circle, rgba(0,0,0,1) 42%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0) 82%)",
+                          }}
+                        />
+                      </div>
+                      <p className="text-[9px] text-muted-foreground font-medium truncate w-full text-center px-1">
+                        {nft.name || "NFT"}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {isApprovedAdmin && (
         <div className="mt-4 animate-fade-in">
           <button onClick={() => navigate("/admin-panel")}
