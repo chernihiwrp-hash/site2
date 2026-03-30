@@ -290,7 +290,7 @@ useEffect(() => {
         </div>
       )}
 
-      {/* ═══ PASSPORT CARD ═══ */}
+     {/* ═══ PASSPORT CARD ═══ */}
       <div className="mb-4 animate-fade-in">
         <div className="rounded-2xl overflow-hidden relative select-none"
           style={{
@@ -332,26 +332,27 @@ useEffect(() => {
             <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
           </div>
 
+
 {/* Main row з Квадратною Аватаркою та Покращеною Орбітою */}
 <div className="relative px-4 py-10 flex items-center gap-8">
   
-  {/* Контейнер для фото та широкої орбіти (ЗБІЛЬШЕНО) */}
+  {/* Контейнер для фото та орбіти */}
   <div className="relative w-[160px] h-[160px] flex items-center justify-center shrink-0">
     
-    {/* Квадратна аватарка з шестернею при наведенні */}
+    {/* Аватар */}
     <div 
-      className="relative w-[100px] h-[100px] z-30 group cursor-pointer active:scale-95 transition-transform" 
+      className="relative w-[100px] h-[100px] z-30 group cursor-pointer active:scale-95 transition-transform"
       onClick={() => setShowOrbitSettings(true)}
     >
       <div 
-        className="w-full h-full rounded-2xl overflow-hidden bg-black/60 backdrop-blur-md" 
+        className="w-full h-full rounded-2xl overflow-hidden bg-black/60 backdrop-blur-md"
         style={{ border: "2px solid hsl(var(--primary) / 0.3)" }}
       >
         {tgUser?.photo_url ? (
           <img 
-            src={tgUser.photo_url} 
-            alt={name} 
-            className="w-full h-full object-cover" 
+            src={tgUser.photo_url}
+            alt={name}
+            className="w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-primary/5">
@@ -359,16 +360,16 @@ useEffect(() => {
           </div>
         )}
       </div>
-      
-      {/* Оверлей при наведенні: розмита підкладка + шестерня */}
+
+      {/* Hover overlay */}
       <div 
-        className="absolute inset-0 rounded-2xl flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100"
+        className="absolute inset-0 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
         style={{
-          background: "linear-gradient(135deg, rgba(0,0,0,0.55) 0%, hsl(var(--primary) / 0.25) 100%)",
+          background: "linear-gradient(135deg, rgba(0,0,0,0.55), hsl(var(--primary) / 0.25))",
           backdropFilter: "blur(2px)",
         }}
       >
-        {/* Зовнішнє кільце шестерні */}
+        {/* Кольцо */}
         <div
           className="absolute w-14 h-14 rounded-full"
           style={{
@@ -376,64 +377,69 @@ useEffect(() => {
             animation: "spin 6s linear infinite",
           }}
         />
-        {/* Шестерня — SVG */}
+
+        {/* Шестерня */}
         <svg
           viewBox="0 0 24 24"
+          className="w-8 h-8 relative z-10"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-8 h-8 relative z-10"
           style={{
             color: "hsl(var(--primary))",
-            filter: "drop-shadow(0 0 8px hsl(var(--primary))) drop-shadow(0 0 16px hsl(var(--primary) / 0.5))",
+            filter: "drop-shadow(0 0 8px hsl(var(--primary)))",
             animation: "spin 4s linear infinite",
           }}
         >
           <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
-          <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
+          <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098L18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
         </svg>
       </div>
     </div>
 
-    {/* ШИРОКА ОРБІТА NFT */}
+    {/* NFT орбіта */}
     <div className="absolute inset-0 z-10 pointer-events-none">
       {availableNfts
         .filter(n => selectedNftIds.includes(n.id))
-        .map((nft, index, filtered) => {
-          const angle = (index * (360 / filtered.length) - 90) * (Math.PI / 180);
+        .map((nft, index, arr) => {
+          const angle = (index * (360 / arr.length) - 90) * (Math.PI / 180);
           const radius = 75;
+
           const x = Math.cos(angle) * radius;
           const y = Math.sin(angle) * radius;
 
           return (
-            <div key={nft.id} className="absolute left-1/2 top-1/2 nft-orbit-item"
-              style={{ 
-                "--x": `${x}px`, 
-                "--y": `${y}px`,
+            <div
+              key={nft.id}
+              className="absolute left-1/2 top-1/2 nft-orbit-item"
+              style={{
+                transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
                 animationDelay: `${index * 0.4}s`,
-                transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
-              } as any}>
-              
+              }}
+            >
               <div className="relative w-12 h-12 flex items-center justify-center">
-                {/* Свічення під НФТ під колір теми — позаду картинки */}
+                
+                {/* Glow */}
                 <div
-                  className="absolute inset-0 rounded-full z-0"
+                  className="absolute inset-0 rounded-full"
                   style={{
-                    background: "radial-gradient(circle, hsl(var(--primary) / 0.55) 0%, hsl(var(--primary) / 0.18) 45%, transparent 72%)",
+                    background: "radial-gradient(circle, hsl(var(--primary) / 0.55), transparent 70%)",
                     filter: "blur(6px)",
                     transform: "scale(1.3)",
                   }}
                 />
-                {/* НФТ з круглою розтушовкою */}
-                <img 
-                  src={nft.image_url} 
+
+                {/* NFT */}
+                <img
+                  src={nft.image_url}
+                  alt=""
                   className="w-10 h-10 object-cover relative z-10"
                   style={{
                     borderRadius: "50%",
-                    WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 80%)",
-                    maskImage: "radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 80%)",
+                    WebkitMaskImage:
+                      "radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0) 85%)",
+                    maskImage:
+                      "radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0) 85%)",
                   }}
                 />
               </div>
