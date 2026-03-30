@@ -236,6 +236,7 @@ useEffect(() => {
   const activeFaction = profileData.factionApps.find(a => a.status === "approved")?.faction_name || null;
   const pendingFaction = profileData.factionApps.find(a => a.status === "pending")?.faction_name || null;
   const firstHouse = profileData.houses[0] || null;
+  
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-4">
@@ -331,20 +332,20 @@ useEffect(() => {
             <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
           </div>
 
-          {/* Main row з Квадратною Аватаркою та Покращеною Орбітою */}
-<div className="relative px-4 py-8 flex items-center gap-8">
+{/* Main row з Квадратною Аватаркою та Покращеною Орбітою */}
+<div className="relative px-4 py-10 flex items-center gap-8">
   
-  {/* Контейнер для фото та широкої орбіти */}
-  <div className="relative w-[110px] h-[110px] flex items-center justify-center shrink-0">
+  {/* Контейнер для фото та широкої орбіти (ЗБІЛЬШЕНО) */}
+  <div className="relative w-[160px] h-[160px] flex items-center justify-center shrink-0">
     
-    {/* Квадратна аватарка (Клік тепер точно спрацює через z-30) */}
+    {/* Квадратна аватарка (ЗБІЛЬШЕНО) */}
     <div 
-      className="relative w-[72px] h-[72px] z-30 group cursor-pointer active:scale-95 transition-transform" 
+      className="relative w-[100px] h-[100px] z-30 group cursor-pointer active:scale-95 transition-transform" 
       onClick={() => setShowOrbitSettings(true)}
     >
       <div 
-        className="w-full h-full rounded-xl overflow-hidden bg-black/60 backdrop-blur-md" 
-        style={{ border: "1.5px solid hsl(var(--primary) / 0.2)" }}
+        className="w-full h-full rounded-2xl overflow-hidden bg-black/60 backdrop-blur-md" 
+        style={{ border: "2px solid hsl(var(--primary) / 0.3)" }}
       >
         {tgUser?.photo_url ? (
           <img 
@@ -354,25 +355,23 @@ useEffect(() => {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-primary/5">
-            <User className="w-8 h-8 text-primary/30" />
+            <User className="w-10 h-10 text-primary/30" />
           </div>
         )}
       </div>
       
-      {/* Налаштування при наведенні */}
-      <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
-        <Settings className="w-5 h-5 text-white/80 animate-spin-slow" />
+      <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity">
+        <Settings className="w-6 h-6 text-white/80 animate-spin-slow" />
       </div>
     </div>
 
-    {/* ШИРОКА ОРБІТА NFT (Тільки куплені) */}
+    {/* ШИРОКА ОРБІТА NFT */}
     <div className="absolute inset-0 z-10 pointer-events-none">
       {availableNfts
         .filter(n => selectedNftIds.includes(n.id))
         .map((nft, index, filtered) => {
-          // Математика: навіть якщо 1 NFT, вона буде зверху (-90 градусів)
           const angle = (index * (360 / filtered.length) - 90) * (Math.PI / 180);
-          const radius = 54; 
+          const radius = 75; // Збільшений радіус під велику аватарку
           const x = Math.cos(angle) * radius;
           const y = Math.sin(angle) * radius;
 
@@ -385,24 +384,23 @@ useEffect(() => {
                 transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
               } as any}>
               
-              <div className="relative w-9 h-9 flex items-center justify-center">
-                {/* РОЗТУШОВКА (Неонове світло під кожною NFT) */}
-                <div className="absolute inset-0 bg-primary/40 blur-[12px] rounded-full" />
-                
-                {/* САМА НФТ (Кругла, скруглена) */}
-                <div className="relative w-7 h-7 rounded-full overflow-hidden border border-white/20 bg-black/60 backdrop-blur-sm p-1 shadow-2xl">
-                  <img 
-                    src={nft.image_url} 
-                    className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]" 
-                  />
-                </div>
+              <div className="relative w-12 h-12 flex items-center justify-center">
+                {/* САМА НФТ (Без рамок, з м'якою розтушовкою країв через mask-image) */}
+                <img 
+                  src={nft.image_url} 
+                  className="w-10 h-10 object-contain relative z-10"
+                  style={{
+                    // Робимо краї картинки прозорими (розтушовка)
+                    WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 75%)',
+                    maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 75%)'
+                  }}
+                />
               </div>
             </div>
           );
         })}
     </div>
   </div>
-
   {/* Права частина: Текст (без змін, але з більшим gap) */}
   <div className="flex-1 min-w-0 py-1">
     <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
