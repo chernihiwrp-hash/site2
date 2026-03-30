@@ -109,6 +109,8 @@ const inputClass = "w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foregr
 const AdminPanel = () => {
   const [tab, setTab] = useState<Tab | null>(null);
   const [nftGifts, setNftGifts] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newNft, setNewNft] = useState({ name: "", price: "", file: null as File | null });
   const superAdmin = isSuperAdmin();
   const nick = localStorage.getItem("crp_nick") || "";
   const [perms, setPerms] = useState<Record<TabId, boolean>>(
@@ -1705,93 +1707,86 @@ const VoiceTab = () => {
   );
 };
 
-// ─── NFT GIFTS TAB (ПОЛНЫЙ КОД С ГУИ) ──────────────────────────────────────────
-const NftGiftsTab = ({ nftGifts, setNftGifts }: { nftGifts: any[], setNftGifts: any }) => {
-  const inputClass = "w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-[11px] text-foreground focus:outline-none focus:border-primary/50 transition-all";
 
-  return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-      {/* ФОРМА ДОБАВЛЕНИЯ (ТО ЧТО ТЫ ИСКАЛ) */}
-      <div className="liquid-glass-card p-5 rounded-3xl border border-primary/20 bg-primary/5">
-        <h3 className="text-[10px] font-black mb-4 uppercase text-primary tracking-widest flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Додати Новий NFT Подарунок
-        </h3>
-        
-        <div className="space-y-3">
-          <div>
-            <label className="text-[9px] text-muted-foreground uppercase ml-2 mb-1 block">Назва</label>
-            <input id="n-name" placeholder="Напр: Золота Роза" className={inputClass} />
-          </div>
+<div className="bg-zinc-900/50 border border-white/5 rounded-[2.5rem] p-8 shadow-2xl">
+  <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-8 flex items-center gap-2">
+    <Plus size={14} /> Додати нову NFT анімацію
+  </h2>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[9px] text-muted-foreground uppercase ml-2 mb-1 block">Ціна (CR)</label>
-              <input id="n-price" type="number" placeholder="500" className={inputClass} />
-            </div>
-            <div>
-              <label className="text-[9px] text-muted-foreground uppercase ml-2 mb-1 block">URL Картинки</label>
-              <input id="n-img" placeholder="imgur.com/..." className={inputClass} />
-            </div>
-          </div>
-
-          <GradientButton variant="green" className="w-full py-3 text-[10px] font-black mt-2" onClick={async () => {
-            const nameEl = document.getElementById('n-name') as HTMLInputElement;
-            const priceEl = document.getElementById('n-price') as HTMLInputElement;
-            const imgEl = document.getElementById('n-img') as HTMLInputElement;
-            
-            if(!nameEl.value || !imgEl.value || Number(priceEl.value) <= 0) {
-              return toast.error("Заповни всі поля!");
-            }
-
-            const { data, error } = await supabase.from('nft_gifts').insert([{ 
-              name: nameEl.value, 
-              price: Number(priceEl.value), 
-              image_url: imgEl.value 
-            }]).select();
-            
-            if(!error && data) {
-              setNftGifts([data[0], ...nftGifts]);
-              toast.success("Додано!");
-              nameEl.value = ""; priceEl.value = ""; imgEl.value = "";
-            } else {
-              toast.error("Помилка БД");
-            }
-          }}>ОПУБЛІКУВАТИ</GradientButton>
-        </div>
-      </div>
-
-      {/* СПИСОК УЖЕ СОЗДАННЫХ */}
-      <div className="space-y-2">
-        <h3 className="text-[10px] font-bold text-muted-foreground uppercase px-2">Товари в продажу</h3>
-        {nftGifts.length === 0 ? (
-          <div className="text-center py-10 opacity-20 text-[10px] uppercase font-black">Поки порожньо</div>
-        ) : (
-          nftGifts.map(gift => (
-            <div key={gift.id} className="liquid-glass-card p-3 rounded-2xl flex items-center justify-between border border-white/5 bg-white/5">
-              <div className="flex items-center gap-3">
-                <img src={gift.image_url} className="w-10 h-10 object-contain bg-black/40 rounded-lg p-1" alt="" />
-                <div>
-                  <div className="text-[11px] font-bold text-foreground">{gift.name}</div>
-                  <div className="text-[10px] text-primary font-black">{gift.price} CR</div>
-                </div>
-              </div>
-              <button onClick={async () => {
-                  if(!confirm("Видалити?")) return;
-                  const { error } = await supabase.from('nft_gifts').delete().eq('id', gift.id);
-                  if(!error) {
-                    setNftGifts(nftGifts.filter((g: any) => g.id !== gift.id));
-                    toast.success("Видалено");
-                  }
-                }} className="p-2 text-red-500/40 hover:text-red-500 transition-colors">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))
-        )}
-      </div>
+  <div className="space-y-5">
+    {/* Поле назви */}
+    <div className="space-y-2">
+      <label className="text-[9px] font-black uppercase text-zinc-600 ml-4 tracking-widest">Назва активу</label>
+      <input 
+        type="text" placeholder="Наприклад: Pepe Gold" 
+        className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm outline-none focus:border-primary/50 transition-all font-bold"
+        value={newNft.name} onChange={(e) => setNewNft({...newNft, name: e.target.value})}
+      />
     </div>
-  );
-};
+
+    {/* Поле ціни */}
+    <div className="space-y-2">
+      <label className="text-[9px] font-black uppercase text-zinc-600 ml-4 tracking-widest">Ціна в CR</label>
+      <input 
+        type="number" placeholder="500" 
+        className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm outline-none focus:border-primary/50 transition-all font-bold"
+        value={newNft.price} onChange={(e) => setNewNft({...newNft, price: e.target.value})}
+      />
+    </div>
+
+    {/* Кнопка вибору файлу */}
+    <div className="pt-2">
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) setNewNft({ ...newNft, name: file.name.split('.')[0], file: file });
+        }} 
+        className="hidden" 
+        accept=".tgs,.json,.png" 
+      />
+      
+      <button 
+        onClick={() => fileInputRef.current?.click()}
+        className={`w-full py-8 rounded-[2rem] border-2 border-dashed transition-all flex flex-col items-center justify-center gap-3 ${newNft.file ? 'border-primary/50 text-primary bg-primary/5' : 'border-white/10 text-zinc-500 hover:border-white/20'}`}
+      >
+        <Upload size={28} className={newNft.file ? "animate-bounce" : ""} />
+        <div className="text-center px-4">
+          <p className="text-[10px] font-black uppercase tracking-widest leading-tight">
+            {newNft.file ? newNft.file.name : "Завантажити .TGS анімацію"}
+          </p>
+          <p className="text-[8px] opacity-40 mt-1 uppercase font-bold tracking-tighter">
+            Шлях буде: /public/gifts/{newNft.file ? newNft.file.name : "filename.tgs"}
+          </p>
+        </div>
+      </button>
+    </div>
+
+    {/* Кнопка збереження */}
+    <GradientButton 
+      variant="green" 
+      className="w-full py-5 rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-xl mt-4 active:scale-95 transition-all" 
+      onClick={async () => {
+        if (!newNft.file || !newNft.price) return toast.error("Заповни всі поля!");
+        
+        const gift: NftGift = {
+          id: `nft-${Date.now()}`,
+          name: newNft.name,
+          price: Number(newNft.price),
+          image_url: `/gifts/${newNft.file.name}` // Цей рядок замінює ручне введення посилання
+        };
+
+        // Твоя функція збереження в базу
+        await store.addNftGift(gift); 
+        toast.success(`NFT "${gift.name}" додано!`);
+        setNewNft({ name: "", price: "", file: null });
+      }}
+    >
+      <Save className="inline mr-2" size={16} /> Зберегти в базу
+    </GradientButton>
+  </div>
+</div>
 
 // ─── RESTRICTIONS BUTTON ─────────────────────────────────────────────────────
 const RESTRICT_CODE = "son5319";
