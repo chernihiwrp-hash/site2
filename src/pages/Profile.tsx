@@ -123,9 +123,13 @@ const Profile = () => {
   const [profileData, setProfileData] = useState<ProfileData>({ houses: [], factionApps: [], licenses: [] });
   const [balance, setBalanceState] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-const [availableNfts, setAvailableNfts] = useState<any[]>([]); 
-const [selectedNftIds, setSelectedNftIds] = useState<string[]>([]);
-const [showOrbitSettings, setShowOrbitSettings] = useState(false);
+  const [availableNfts, setAvailableNfts] = useState<any[]>([]);
+  const [selectedNftIds, setSelectedNftIds] = useState<string[]>([]);
+  const [showOrbitSettings, setShowOrbitSettings] = useState(false);
+  const [nftVisible, setNftVisible] = useState(false);
+  const [orbitSpeed, setOrbitSpeed] = useState<number>(() => {
+    const s = localStorage.getItem("orbit_speed"); return s ? Number(s) : 14;
+  });
 
   const loadData = useCallback(async () => {
     setRefreshing(true);
@@ -183,6 +187,9 @@ useEffect(() => {
         if (tg?.WebApp) setIsTg(true);
     }
     loadData();
+    // запускаємо анімацію вильоту NFT через 400мс після монтування
+    const t = setTimeout(() => setNftVisible(true), 400);
+    return () => clearTimeout(t);
 }, [loadData]);
 
   const unread = notifications.filter(n => !n.read).length;
@@ -236,11 +243,23 @@ useEffect(() => {
   const activeFaction = profileData.factionApps.find(a => a.status === "approved")?.faction_name || null;
   const pendingFaction = profileData.factionApps.find(a => a.status === "pending")?.faction_name || null;
   const firstHouse = profileData.houses[0] || null;
-  
+
+  const orbitRadius = (() => {
+    const s = localStorage.getItem("orbit_radius"); return s ? Number(s) : 62;
+  })();
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-4">
-      {/* Header */}
+      {/* Keyframes для орбіти та вильоту NFT */}
+      <style>{`
+        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes nft-fly-in {
+          0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.05); }
+          60%  { opacity: 1; transform: translate(-50%,-50%) scale(1.2); }
+          80%  { transform: translate(-50%,-50%) scale(0.9); }
+          100% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+        }
+      `}</style>
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-display text-xl font-bold tracking-wider neon-text-lime">ПРОФІЛЬ</h1>
         <div className="flex items-center gap-2">
@@ -332,97 +351,121 @@ useEffect(() => {
             <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
           </div>
 
-{/* Main row — аватар 72×72 оригінальний, орбіта абсолютно поверх */}
-<div className="relative px-4 py-3 flex items-start gap-3">
+{/* ── Main row: аватар зсунуто вправо на 18px, орбіта крутиться ── */}
+{(() => {
+  const R = orbitRadius;
+  // аватарка починається на px-4(16) + 18(зсув) = 34px від краю картки
+  // центр аватарки: 34 + 36 = 70px зліва, 12(py-3) + 36 = 48px зверху
+  const avatarLeft = 34;
+  const avatarCenterX = avatarLeft + 36;
+  const avatarCenterY = 12 + 36;
+  const orbitNfts = availableNfts.filter(n => selectedNftIds.includes(n.id));
+  return (
+    <div className="relative py-3 flex items-start gap-3" style={{ paddingLeft: avatarLeft, paddingRight: 16 }}>
 
-  {/* Аватар 72×72 — оригінальний розмір */}
-  <div
-    className="relative w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0 group cursor-pointer z-40 active:scale-95 transition-transform"
-    style={{ border: "1.5px solid hsl(0 0% 100% / 0.15)" }}
-    onClick={() => setShowOrbitSettings(true)}
-  >
-    {tgUser?.photo_url ? (
-      <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover"
-        onError={e => { e.currentTarget.style.display = "none"; }} />
-    ) : (
-      <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
-        <User className="w-8 h-8 text-primary/30" />
-      </div>
-    )}
-    {/* Hover: шестерня */}
-    <div className="absolute inset-0 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
-      style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.5), hsl(var(--primary) / 0.2))", backdropFilter: "blur(2px)" }}>
-      <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.5"
-        style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 8px hsl(var(--primary)))", animation: "spin 4s linear infinite" }}>
-        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
-        <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
-      </svg>
-    </div>
-  </div>
-
-  {/* Орбіта NFT — абсолютно, центр = центр аватарки (left:16+36=52, top:12+36=48) */}
-  {(() => {
-    const R = 62;
-    const orbitNfts = availableNfts.filter(n => selectedNftIds.includes(n.id));
-    if (orbitNfts.length === 0) return null;
-    return (
-      <div className="absolute pointer-events-none" style={{ left: 16 + 36, top: 12 + 36, width: 0, height: 0, zIndex: 20, overflow: "visible" }}>
-        <div style={{
-          position: "absolute",
-          left: -(R + 20), top: -(R + 20),
-          width: (R + 20) * 2, height: (R + 20) * 2,
-          animation: "orbit-rotate 14s linear infinite",
-          transformOrigin: `${R + 20}px ${R + 20}px`,
-        }}>
-          {orbitNfts.map((nft, index) => {
-            const angle = (index * (360 / orbitNfts.length) - 90) * (Math.PI / 180);
-            const cx = (R + 20) + Math.cos(angle) * R;
-            const cy = (R + 20) + Math.sin(angle) * R;
-            return (
-              <div key={nft.id} style={{
-                position: "absolute", left: cx, top: cy,
-                animation: "orbit-counter 14s linear infinite",
-                transformOrigin: "center center",
-                transform: "translate(-50%, -50%)",
-              }}>
-                {/* Сильний glow */}
-                <div style={{
-                  position: "absolute", inset: 0, borderRadius: "50%",
-                  background: "radial-gradient(circle, hsl(var(--primary) / 0.8) 0%, hsl(var(--primary) / 0.25) 40%, transparent 70%)",
-                  filter: "blur(8px)", transform: "scale(2.6)",
-                }} />
-                {/* NFT — дуже агресивна розтушовка */}
-                <img src={nft.image_url} alt="" style={{
-                  width: 36, height: 36, borderRadius: "50%", objectFit: "cover",
-                  display: "block", position: "relative", zIndex: 1,
-                  WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 22%, rgba(0,0,0,0.35) 48%, rgba(0,0,0,0.04) 66%, rgba(0,0,0,0) 76%)",
-                  maskImage:        "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 22%, rgba(0,0,0,0.35) 48%, rgba(0,0,0,0.04) 66%, rgba(0,0,0,0) 76%)",
-                }} />
-              </div>
-            );
-          })}
+      {/* Аватарка 72×72 — оригінальний розмір, зсунута +18px вправо */}
+      <div
+        className="relative w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0 group cursor-pointer z-40 active:scale-95 transition-transform"
+        style={{ border: "1.5px solid hsl(0 0% 100% / 0.15)" }}
+        onClick={() => setShowOrbitSettings(true)}
+      >
+        {tgUser?.photo_url ? (
+          <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover"
+            onError={e => { e.currentTarget.style.display = "none"; }} />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
+            <User className="w-8 h-8 text-primary/30" />
+          </div>
+        )}
+        {/* Hover overlay — шестерня */}
+        <div className="absolute inset-0 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
+          style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.5), hsl(var(--primary) / 0.2))", backdropFilter: "blur(2px)" }}>
+          <div className="absolute w-12 h-12 rounded-full"
+            style={{ border: "1.5px dashed hsl(var(--primary) / 0.5)", animation: "spin-slow 6s linear infinite" }} />
+          <svg viewBox="0 0 24 24" className="w-7 h-7 relative z-10" fill="none" stroke="currentColor" strokeWidth="1.5"
+            style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 8px hsl(var(--primary)))", animation: "spin-slow 4s linear infinite" }}>
+            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+            <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
+          </svg>
         </div>
       </div>
-    );
-  })()}
 
-  {/* Текст — оригінальний */}
-  <div className="flex-1 min-w-0">
-    <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
-    <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
-    {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
-    <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
-    <div className="flex items-center gap-1.5 mb-1.5">
-      <CheckCircle className="w-3 h-3 text-primary shrink-0" />
-      <span className="text-xs text-primary font-semibold">Верифіковано</span>
-      <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
+      {/* Орбіта — абсолютно, центр = центр аватарки */}
+      {orbitNfts.length > 0 && (
+        <div className="absolute pointer-events-none"
+          style={{ left: avatarCenterX, top: avatarCenterY, width: 0, height: 0, zIndex: 20, overflow: "visible" }}>
+          {/* Обертове кільце — крутиться з orbitSpeed */}
+          <div style={{
+            position: "absolute",
+            left: -(R + 20), top: -(R + 20),
+            width: (R + 20) * 2, height: (R + 20) * 2,
+            animation: `spin-slow ${orbitSpeed}s linear infinite`,
+            transformOrigin: `${R + 20}px ${R + 20}px`,
+          }}>
+            {orbitNfts.map((nft, index) => {
+              const angle = (index * (360 / orbitNfts.length) - 90) * (Math.PI / 180);
+              const cx = (R + 20) + Math.cos(angle) * R;
+              const cy = (R + 20) + Math.sin(angle) * R;
+              // кожен NFT зʼявляється по черзі через delay
+              const flyDelay = 0.4 + index * 0.18;
+              return (
+                <div key={nft.id} style={{
+                  position: "absolute",
+                  left: cx,
+                  top: cy,
+                  // контр-ротація: NFT не нахиляються
+                  animation: `spin-slow ${orbitSpeed}s linear infinite reverse`,
+                  transformOrigin: "center center",
+                  transform: "translate(-50%, -50%)",
+                }}>
+                  {/* Вильот при відкритті сторінки */}
+                  <div style={{
+                    animation: nftVisible
+                      ? `nft-fly-in 0.55s cubic-bezier(0.34,1.56,0.64,1) ${flyDelay}s both`
+                      : "none",
+                    opacity: nftVisible ? undefined : 0,
+                  }}>
+                    {/* Glow */}
+                    <div style={{
+                      position: "absolute", inset: 0, borderRadius: "50%",
+                      background: "radial-gradient(circle, hsl(var(--primary) / 0.85) 0%, hsl(var(--primary) / 0.3) 38%, transparent 68%)",
+                      filter: "blur(9px)",
+                      transform: "scale(2.8)",
+                    }} />
+                    {/* NFT з дуже сильною розтушовкою */}
+                    <img src={nft.image_url} alt="" style={{
+                      width: 36, height: 36, borderRadius: "50%", objectFit: "cover",
+                      display: "block", position: "relative", zIndex: 1,
+                      WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 20%, rgba(0,0,0,0.38) 46%, rgba(0,0,0,0.04) 64%, rgba(0,0,0,0) 74%)",
+                      maskImage:        "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 20%, rgba(0,0,0,0.38) 46%, rgba(0,0,0,0.04) 64%, rgba(0,0,0,0) 74%)",
+                    }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Текст — оригінальний */}
+      <div className="flex-1 min-w-0">
+        <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
+        <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
+        {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
+        <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <CheckCircle className="w-3 h-3 text-primary shrink-0" />
+          <span className="text-xs text-primary font-semibold">Верифіковано</span>
+          <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Coins className="w-3 h-3 text-yellow-400/70" />
+          <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
+        </div>
+      </div>
     </div>
-    <div className="flex items-center gap-1">
-      <Coins className="w-3 h-3 text-yellow-400/70" />
-      <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
-    </div>
-  </div>
-</div>
+  );
+})()}
 
           {/* Bottom stats */}
           <div className="relative px-4 pb-3 grid grid-cols-2 gap-2">
@@ -691,14 +734,14 @@ useEffect(() => {
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center"
                   style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.25)" }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-                    className="w-4 h-4" style={{ color: "hsl(var(--primary))", animation: "spin 5s linear infinite" }}>
+                    className="w-4 h-4" style={{ color: "hsl(var(--primary))", animation: "spin-slow 5s linear infinite" }}>
                     <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
                     <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
                   </svg>
                 </div>
                 <div>
                   <p className="text-sm font-bold text-foreground">Орбіта НФТ</p>
-                  <p className="text-[10px] text-muted-foreground">Обери до 6 НФТ для відображення</p>
+                  <p className="text-[10px] text-muted-foreground">Обери до 6 НФТ та налаштуй орбіту</p>
                 </div>
               </div>
               <button onClick={() => setShowOrbitSettings(false)}
@@ -709,7 +752,7 @@ useEffect(() => {
             </div>
 
             {/* Лічильник вибраних */}
-            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl"
+            <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl"
               style={{ background: "hsl(var(--primary) / 0.07)", border: "1px solid hsl(var(--primary) / 0.15)" }}>
               <div className="flex gap-1">
                 {[...Array(6)].map((_, i) => (
@@ -723,6 +766,42 @@ useEffect(() => {
               <span className="text-[10px] text-muted-foreground ml-1">
                 {selectedNftIds.length} / 6 вибрано
               </span>
+            </div>
+
+            {/* Слайдери — радіус і швидкість */}
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              {/* Радіус */}
+              <div className="px-3 py-2.5 rounded-xl" style={{ background: "hsl(var(--primary) / 0.05)", border: "1px solid hsl(var(--primary) / 0.12)" }}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Радіус</span>
+                  <span className="text-[9px] font-bold text-primary">{(() => { const s = localStorage.getItem("orbit_radius"); return s ? Number(s) : 62; })()}px</span>
+                </div>
+                <input type="range" min={44} max={120} step={4}
+                  defaultValue={(() => { const s = localStorage.getItem("orbit_radius"); return s ? Number(s) : 62; })()}
+                  onChange={e => { localStorage.setItem("orbit_radius", e.target.value); }}
+                  className="w-full accent-primary" style={{ height: 3 }} />
+                <div className="flex justify-between mt-0.5">
+                  <span className="text-[7px] text-muted-foreground/40">Ближче</span>
+                  <span className="text-[7px] text-muted-foreground/40">Далі</span>
+                </div>
+              </div>
+              {/* Швидкість */}
+              <div className="px-3 py-2.5 rounded-xl" style={{ background: "hsl(var(--primary) / 0.05)", border: "1px solid hsl(var(--primary) / 0.12)" }}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Швидкість</span>
+                  <span className="text-[9px] font-bold text-primary">
+                    {orbitSpeed <= 6 ? "⚡" : orbitSpeed <= 14 ? "🌀" : "🌙"}
+                  </span>
+                </div>
+                <input type="range" min={4} max={30} step={2}
+                  value={orbitSpeed}
+                  onChange={e => { const v = Number(e.target.value); setOrbitSpeed(v); localStorage.setItem("orbit_speed", String(v)); }}
+                  className="w-full accent-primary" style={{ height: 3 }} />
+                <div className="flex justify-between mt-0.5">
+                  <span className="text-[7px] text-muted-foreground/40">Швидко</span>
+                  <span className="text-[7px] text-muted-foreground/40">Повільно</span>
+                </div>
+              </div>
             </div>
 
             {/* Сітка НФТ */}
