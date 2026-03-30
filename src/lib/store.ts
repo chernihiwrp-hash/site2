@@ -70,6 +70,7 @@ export const subtractBalance = (nick: string, amount: number): boolean => {
   return true;
 };
 
+// Залишаємо тільки цей тип, він тепер універсальний
 export type NftGift = {
   id: string;
   name: string;
@@ -78,13 +79,7 @@ export type NftGift = {
   created_at?: string;
 };
 
-export type OwnedGift = {
-  id: string;
-  name: string;
-  image: string;
-  bought_at: string;
-};
-
+// Тип OwnedGift можна видаляти, він більше не використовується
 // ─── NOTIFICATIONS HELPERS ────────────────────────────────────────────────────
 const _getNotifs = (): Notification[] => {
   try { return JSON.parse(localStorage.getItem("crp_notifications") || "[]"); } catch { return []; }
@@ -129,71 +124,90 @@ export const store = {
   },
 
   /**
-   * Обробляє купівлю NFT: перевіряє баланс, списує гроші та додає предмет у масив користувача.
+   * Обробляє купівлю NFT: перевіряє баланс, списує гроші та додає запис у nft_owners.
    */
   buyNftGift: async (nick: string, gift: NftGift): Promise<boolean> => {
-    const balance = getBalance(nick);
-    if (balance < gift.price) return false;
+    try {
+      const balance = getBalance(nick);
+      if (balance < gift.price) return false;
 
-    // Отримуємо поточний список подарунків користувача
-    const { data: userData, error: fetchError } = await supabase
-      .from("users")
-      .select("owned_gifts")
-      .ilike("username", nick)
-      .single();
+      // 1. Списуємо баланс локально (localStorage)
+      const success = subtractBalance(nick, gift.price);
+      
+      if (success) {
+        // 2. Додаємо запис про власника в окрему таблицю nft_owners
+        const { error: insertError } = await supabase
+          .from("nft_owners")
+          .insert({
+            owner_nick: nick,
+            nft_id: gift.id
+          });
 
-    if (fetchError) return false;
-    
-    const currentGifts = (userData?.owned_gifts || []) as OwnedGift[];
-    
-    const newGift: OwnedGift = {
-      id: gift.id,
-      name: gift.name,
-      image: gift.image_url,
-      bought_at: new Date().toISOString()
-    };
+        if (insertError) {
+          console.error("Помилка БД при купівлі:", insertError.message);
+          // Повертаємо баланс назад у localStorage, якщо запис у БД зірвався
+          addBalance(nick, gift.price);
+          return false;
+        }
 
-    // Списуємо баланс локально (localStorage)
-    const success = subtractBalance(nick, gift.price);
-    
-    if (success) {
-      // Оновлюємо дані в Supabase (баланс і масив подарунків)
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({ 
-          owned_gifts: [...currentGifts, newGift],
-          balance: balance - gift.price 
-        })
-        .ilike("username", nick);
-        
-      return !updateError;
+        // 3. Оновлюємо баланс у таблиці users в Supabase для синхронізації
+        await supabase
+          .from("users")
+          .update({ balance: balance - gift.price })
+          .ilike("username", nick);
+          
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error("Критична помилка при купівлі NFT:", e);
+      return false;
     }
-    return false;
   },
 
   /**
-   * Повертає масив куплених NFT для конкретного гравця (для відображення в профілі).
+   * Повертає список куплених NFT для конкретного гравця (через таблицю nft_owners).
    */
-  getUserGifts: async (nick: string): Promise<OwnedGift[]> => {
-    const { data, error } = await supabase
-      .from("users")
-      .select("owned_gifts")
-      .ilike("username", nick)
-      .single();
-    
-    if (error) return [];
-    return (data?.owned_gifts || []) as OwnedGift[];
+  getUserGifts: async (nick: string): Promise<NftGift[]> => {
+    try {
+      // 1. Отримуємо ID всіх подарунків, які належать цьому ніку
+      const { data: owners, error: ownerError } = await supabase
+        .from("nft_owners")
+        .select("nft_id")
+        .eq("owner_nick", nick);
+
+      if (ownerError || !owners || owners.length === 0) return [];
+
+      const giftIds = owners.map(o => o.nft_id);
+
+      // 2. Дістаємо повні дані (назву, ціну, картинку) цих NFT з головної таблиці
+      const { data: nfts, error: nftError } = await supabase
+        .from("nft_gifts")
+        .select("*")
+        .in("id", giftIds);
+
+      if (nftError) {
+        console.error("Помилка отримання даних NFT:", nftError.message);
+        return [];
+      }
+      
+      return (nfts || []) as NftGift[];
+    } catch (e) {
+      console.error("Помилка getUserGifts:", e);
+      return [];
+    }
   },
 
   /**
    * Видаляє NFT з магазину (використовується в адмін-панелі).
    */
   deleteNftGift: async (id: string) => {
+    // При видаленні NFT з магазину, записи в nft_owners видаляться автоматично, 
+    // якщо ти налаштував CASCADE DELETE у Supabase.
     const { error } = await supabase.from("nft_gifts").delete().eq("id", id);
     if (error) throw new Error(error.message);
     return true;
   },
-
   // ── LICENSES & PLATES (ДОБАВЛЯЕМ НОВОЕ, НЕ УДАЛЯЯ СТАРОЕ) ──────────────────
   
   getLicenseApplications: async (): Promise<LicenseApplication[]> => {
