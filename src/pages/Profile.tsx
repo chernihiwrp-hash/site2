@@ -91,36 +91,13 @@ const statusLabels: Record<string, string> = {
 
 // ─── CSS для NFT орбіти та анімацій ────────────────────────────────────────
 const orbitStyles = `
-  @keyframes nft-pop-in {
-    0%   { opacity: 0; transform: scale(0.2); }
-    60%  { opacity: 1; transform: scale(1.15); }
-    100% { opacity: 1; transform: scale(1); }
-  }
-  @keyframes nft-float {
-    0%, 100% { transform: scale(1); }
-    50%       { transform: scale(1.08); }
-  }
-  .nft-orbit-item {
-    animation: nft-pop-in 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards,
-               nft-float 3s ease-in-out infinite;
-    animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.55s);
-    opacity: 0;
-  }
   @keyframes orbit-rotate {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
   }
-  @keyframes orbit-item-counter {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(-360deg); }
-  }
-  .orbit-ring {
-    animation: orbit-rotate var(--orbit-duration, 12s) linear infinite;
-    transform-origin: center center;
-  }
-  .orbit-item-wrapper {
-    animation: orbit-item-counter var(--orbit-duration, 12s) linear infinite;
-    transform-origin: center center;
+  @keyframes orbit-counter {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to   { transform: translate(-50%, -50%) rotate(-360deg); }
   }
   @keyframes spin-slow {
     from { transform: rotate(0deg); }
@@ -369,92 +346,103 @@ const Profile = () => {
             <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
           </div>
 
-          {/* ── Main row ── */}
+          {/* ── Main row (Doc1 layout: великий аватар + орбіта + текст) ── */}
           {(() => {
-            const avatarSize = 72;
-            // контейнер орбіти = аватар + радіус з двох боків + запас під іконку (16)
-            const orbitSize = avatarSize + orbitRadius * 2 + 16;
-            const orbitDuration = "14s";
+            const AVATAR = 100;
+            const R = orbitRadius; // радіус орбіти
+            const CONTAINER = AVATAR + R * 2 + 24; // контейнер повністю вміщує орбіту
             return (
-              <div className="relative px-4 py-3 flex items-center gap-0">
+              <div className="relative px-4 py-3 flex items-center gap-2">
 
-                {/* Орбітальний контейнер — строго квадрат, з overflow visible */}
+                {/* ── Контейнер аватара з орбітою ── */}
                 <div
                   className="relative shrink-0 cursor-pointer group"
-                  style={{ width: orbitSize, height: orbitSize }}
+                  style={{ width: CONTAINER, height: CONTAINER }}
                   onClick={() => setShowOrbitSettings(true)}
                 >
-                  {/* Обертове кільце — крутиться, NFT всередині */}
+                  {/* Обертове кільце з NFT */}
                   {orbitNfts.length > 0 && (
                     <div
-                      className="orbit-ring absolute inset-0"
-                      style={{ "--orbit-duration": orbitDuration } as React.CSSProperties}
+                      className="absolute inset-0"
+                      style={{
+                        animation: "orbit-rotate 14s linear infinite",
+                        transformOrigin: "center center",
+                      }}
                     >
                       {orbitNfts.map((nft, index) => {
                         const angle = (index * (360 / orbitNfts.length) - 90) * (Math.PI / 180);
-                        const cx = orbitSize / 2 + Math.cos(angle) * orbitRadius;
-                        const cy = orbitSize / 2 + Math.sin(angle) * orbitRadius;
+                        const cx = CONTAINER / 2 + Math.cos(angle) * R;
+                        const cy = CONTAINER / 2 + Math.sin(angle) * R;
                         return (
                           <div
                             key={nft.id}
-                            className="absolute nft-orbit-item orbit-item-wrapper"
+                            className="absolute"
                             style={{
                               left: cx,
                               top: cy,
                               transform: "translate(-50%, -50%)",
-                              "--delay": `${index * 0.12}s`,
-                              "--orbit-duration": orbitDuration,
-                            } as React.CSSProperties}
+                              // контр-обертання щоб картинка не перекидалась
+                              animation: "orbit-counter 14s linear infinite",
+                              transformOrigin: "center center",
+                            }}
                           >
-                            <div className="relative w-8 h-8 flex items-center justify-center">
-                              <div className="absolute inset-0 rounded-full" style={{
-                                background: "radial-gradient(circle, hsl(var(--primary) / 0.6), transparent 70%)",
-                                filter: "blur(5px)",
-                                transform: "scale(1.5)",
-                              }} />
-                              <img
-                                src={nft.image_url}
-                                alt=""
-                                className="w-7 h-7 object-cover relative z-10"
-                                style={{
-                                  borderRadius: "50%",
-                                  WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0) 85%)",
-                                  maskImage: "radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0) 85%)",
-                                }}
-                              />
-                            </div>
+                            {/* Glow */}
+                            <div style={{
+                              position: "absolute",
+                              inset: 0,
+                              borderRadius: "50%",
+                              background: "radial-gradient(circle, hsl(var(--primary) / 0.7) 0%, hsl(var(--primary) / 0.25) 45%, transparent 75%)",
+                              filter: "blur(7px)",
+                              transform: "scale(2)",
+                            }} />
+                            {/* NFT з сильною растушовкою */}
+                            <img
+                              src={nft.image_url}
+                              alt=""
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                position: "relative",
+                                zIndex: 1,
+                                display: "block",
+                                WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.2) 70%, rgba(0,0,0,0) 88%)",
+                                maskImage: "radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.2) 70%, rgba(0,0,0,0) 88%)",
+                              }}
+                            />
                           </div>
                         );
                       })}
                     </div>
                   )}
 
-                  {/* Аватар — строго по центру контейнера, поверх орбіти */}
+                  {/* Аватар 100×100 — по центру контейнера */}
                   <div
-                    className="absolute rounded-xl overflow-hidden z-20"
+                    className="absolute z-20 group/av"
                     style={{
-                      width: avatarSize,
-                      height: avatarSize,
+                      width: AVATAR,
+                      height: AVATAR,
                       left: "50%",
                       top: "50%",
                       transform: "translate(-50%, -50%)",
-                      border: "1.5px solid hsl(0 0% 100% / 0.15)",
+                      borderRadius: 16,
+                      overflow: "hidden",
+                      border: "2px solid hsl(var(--primary) / 0.3)",
                     }}
                   >
                     {tgUser?.photo_url ? (
-                      <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover"
-                        onError={e => { e.currentTarget.style.display = "none"; }} />
+                      <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
-                        <User className="w-8 h-8 text-primary/30" />
+                      <div className="w-full h-full flex items-center justify-center bg-primary/5">
+                        <User className="w-10 h-10 text-primary/30" />
                       </div>
                     )}
-                    <div
-                      className="absolute inset-0 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
-                      style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.5), hsl(var(--primary) / 0.2))", backdropFilter: "blur(2px)" }}
-                    >
-                      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5"
-                        style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 6px hsl(var(--primary)))", animation: "spin-slow 4s linear infinite" }}>
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/av:opacity-100 transition-all duration-300"
+                      style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.55), hsl(var(--primary) / 0.25))", backdropFilter: "blur(2px)" }}>
+                      <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="1.5"
+                        style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 8px hsl(var(--primary)))", animation: "spin-slow 4s linear infinite" }}>
                         <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
                         <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098L18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
                       </svg>
@@ -463,19 +451,20 @@ const Profile = () => {
                 </div>
 
                 {/* Текст праворуч */}
-                <div className="flex-1 min-w-0 pl-2">
+                <div className="flex-1 min-w-0 py-1">
                   <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
-                  <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
-                  {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
-                  <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
-                  <div className="flex items-center gap-1.5 mb-1.5">
+                  <p className="text-base font-bold text-foreground truncate mb-1">{name}</p>
+                  <div className="flex items-center gap-1.5 mb-2">
                     <CheckCircle className="w-3 h-3 text-primary shrink-0" />
-                    <span className="text-xs text-primary font-semibold">Верифіковано</span>
-                    <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
+                    <span className="text-[10px] text-primary font-semibold uppercase tracking-wider">Верифіковано</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Coins className="w-3 h-3 text-yellow-400/70" />
-                    <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <Coins className="w-3 h-3 text-yellow-400/70" />
+                      <span className="text-[10px] font-semibold text-zinc-300">{balance} CR</span>
+                    </div>
+                    <div className="w-px h-3 bg-white/10" />
+                    <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
                   </div>
                 </div>
               </div>
