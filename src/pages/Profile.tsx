@@ -253,12 +253,8 @@ useEffect(() => {
       {/* Keyframes для орбіти та вильоту NFT */}
       <style>{`
         @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes nft-fly-in {
-          0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.05); }
-          60%  { opacity: 1; transform: translate(-50%,-50%) scale(1.2); }
-          80%  { transform: translate(-50%,-50%) scale(0.9); }
-          100% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-        }
+        @keyframes orbit-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes orbit-counter-spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
       `}</style>
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-display text-xl font-bold tracking-wider neon-text-lime">ПРОФІЛЬ</h1>
@@ -351,104 +347,120 @@ useEffect(() => {
             <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
           </div>
 
-{/* ── Main row: аватар зсунуто вправо на 18px, орбіта крутиться ── */}
+{/* ── Main row: аватар + орбіта в одному wrapper ── */}
 {(() => {
   const R = orbitRadius;
-  // аватарка починається на px-4(16) + 18(зсув) = 34px від краю картки
-  // центр аватарки: 34 + 36 = 70px зліва, 12(py-3) + 36 = 48px зверху
-  const avatarLeft = 34;
-  const avatarCenterX = avatarLeft + 36;
-  const avatarCenterY = 12 + 36;
+  const AV = 72; // розмір аватарки
+  const NW = 36; // розмір NFT
+  // wrapper достатньо великий щоб вмістити орбіту з усіх сторін
+  const wrapSize = AV + (R + NW) * 2;
   const orbitNfts = availableNfts.filter(n => selectedNftIds.includes(n.id));
   return (
-    <div className="relative py-3 flex items-start gap-3" style={{ paddingLeft: avatarLeft, paddingRight: 16 }}>
+    <div className="relative py-3 flex items-start gap-3" style={{ paddingLeft: 16, paddingRight: 16 }}>
 
-      {/* Аватарка 72×72 — оригінальний розмір, зсунута +18px вправо */}
+      {/* Wrapper — містить аватарку і орбіту, overflow visible */}
       <div
-        className="relative w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0 group cursor-pointer z-40 active:scale-95 transition-transform"
-        style={{ border: "1.5px solid hsl(0 0% 100% / 0.15)" }}
+        className="shrink-0 relative cursor-pointer"
+        style={{
+          width: wrapSize,
+          height: wrapSize,
+          marginTop: -(wrapSize - AV) / 2,
+          marginBottom: -(wrapSize - AV) / 2,
+          marginLeft: -(wrapSize - AV) / 2,
+          marginRight: -(wrapSize - AV) / 2 + 8,
+          zIndex: 30,
+        }}
         onClick={() => setShowOrbitSettings(true)}
       >
-        {tgUser?.photo_url ? (
-          <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover"
-            onError={e => { e.currentTarget.style.display = "none"; }} />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
-            <User className="w-8 h-8 text-primary/30" />
+        {/* NFT орбіта — кожен NFT обертається навколо центра wrapper'а */}
+        {orbitNfts.map((nft, index) => {
+          const baseAngle = (index * (360 / orbitNfts.length) - 90) * (Math.PI / 180);
+          const cx = wrapSize / 2 + Math.cos(baseAngle) * R;
+          const cy = wrapSize / 2 + Math.sin(baseAngle) * R;
+          const flyDelay = 0.35 + index * 0.15;
+          // Кут повороту для orbit-rotate через CSS custom property
+          const deg = (index * 360 / orbitNfts.length) - 90;
+          return (
+            <div key={nft.id} style={{
+              position: "absolute",
+              left: wrapSize / 2,
+              top: wrapSize / 2,
+              width: 0,
+              height: 0,
+              // кожен NFT крутиться навколо центру аватарки
+              animation: `orbit-spin ${orbitSpeed}s linear infinite`,
+              transformOrigin: "0 0",
+            }}>
+              {/* NFT позиціонований на радіусі, контр-ротує щоб не нахилятись */}
+              <div style={{
+                position: "absolute",
+                left: -NW / 2,
+                top: -R - NW / 2,
+                width: NW,
+                height: NW,
+                animation: `orbit-counter-spin ${orbitSpeed}s linear infinite`,
+                transformOrigin: `${NW / 2}px ${R + NW / 2}px`,
+              }}>
+                {/* Вильот при першому відкритті */}
+                <div style={{
+                  width: NW, height: NW,
+                  opacity: nftVisible ? 1 : 0,
+                  transform: nftVisible ? "scale(1)" : "scale(0)",
+                  transition: `opacity 0.4s ease ${flyDelay}s, transform 0.5s cubic-bezier(0.34,1.56,0.64,1) ${flyDelay}s`,
+                }}>
+                  {/* Glow */}
+                  <div style={{
+                    position: "absolute", inset: 0, borderRadius: "50%",
+                    background: "radial-gradient(circle, hsl(var(--primary) / 0.9) 0%, hsl(var(--primary) / 0.3) 40%, transparent 70%)",
+                    filter: "blur(8px)", transform: "scale(2.6)",
+                  }} />
+                  {/* NFT з сильною розтушовкою */}
+                  <img src={nft.image_url} alt="" style={{
+                    width: NW, height: NW, borderRadius: "50%", objectFit: "cover",
+                    display: "block", position: "relative", zIndex: 1,
+                    WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 22%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0) 72%)",
+                    maskImage:        "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 22%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0) 72%)",
+                  }} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Аватарка — точно в центрі wrapper'а */}
+        <div
+          className="absolute rounded-xl overflow-hidden group"
+          style={{
+            left: (wrapSize - AV) / 2,
+            top: (wrapSize - AV) / 2,
+            width: AV,
+            height: AV,
+            border: "1.5px solid hsl(0 0% 100% / 0.15)",
+            zIndex: 10,
+          }}
+        >
+          {tgUser?.photo_url ? (
+            <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover"
+              onError={e => { e.currentTarget.style.display = "none"; }} />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
+              <User className="w-8 h-8 text-primary/30" />
+            </div>
+          )}
+          {/* Hover overlay — шестерня */}
+          <div className="absolute inset-0 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
+            style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.5), hsl(var(--primary) / 0.2))", backdropFilter: "blur(2px)" }}>
+            <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.5"
+              style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 8px hsl(var(--primary)))", animation: "spin-slow 4s linear infinite" }}>
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+              <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
+            </svg>
           </div>
-        )}
-        {/* Hover overlay — шестерня */}
-        <div className="absolute inset-0 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
-          style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.5), hsl(var(--primary) / 0.2))", backdropFilter: "blur(2px)" }}>
-          <div className="absolute w-12 h-12 rounded-full"
-            style={{ border: "1.5px dashed hsl(var(--primary) / 0.5)", animation: "spin-slow 6s linear infinite" }} />
-          <svg viewBox="0 0 24 24" className="w-7 h-7 relative z-10" fill="none" stroke="currentColor" strokeWidth="1.5"
-            style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 8px hsl(var(--primary)))", animation: "spin-slow 4s linear infinite" }}>
-            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
-            <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
-          </svg>
         </div>
       </div>
 
-      {/* Орбіта — абсолютно, центр = центр аватарки */}
-      {orbitNfts.length > 0 && (
-        <div className="absolute pointer-events-none"
-          style={{ left: avatarCenterX, top: avatarCenterY, width: 0, height: 0, zIndex: 20, overflow: "visible" }}>
-          {/* Обертове кільце — крутиться з orbitSpeed */}
-          <div style={{
-            position: "absolute",
-            left: -(R + 20), top: -(R + 20),
-            width: (R + 20) * 2, height: (R + 20) * 2,
-            animation: `spin-slow ${orbitSpeed}s linear infinite`,
-            transformOrigin: `${R + 20}px ${R + 20}px`,
-          }}>
-            {orbitNfts.map((nft, index) => {
-              const angle = (index * (360 / orbitNfts.length) - 90) * (Math.PI / 180);
-              const cx = (R + 20) + Math.cos(angle) * R;
-              const cy = (R + 20) + Math.sin(angle) * R;
-              // кожен NFT зʼявляється по черзі через delay
-              const flyDelay = 0.4 + index * 0.18;
-              return (
-                <div key={nft.id} style={{
-                  position: "absolute",
-                  left: cx,
-                  top: cy,
-                  // контр-ротація: NFT не нахиляються
-                  animation: `spin-slow ${orbitSpeed}s linear infinite reverse`,
-                  transformOrigin: "center center",
-                  transform: "translate(-50%, -50%)",
-                }}>
-                  {/* Вильот при відкритті сторінки */}
-                  <div style={{
-                    animation: nftVisible
-                      ? `nft-fly-in 0.55s cubic-bezier(0.34,1.56,0.64,1) ${flyDelay}s both`
-                      : "none",
-                    opacity: nftVisible ? undefined : 0,
-                  }}>
-                    {/* Glow */}
-                    <div style={{
-                      position: "absolute", inset: 0, borderRadius: "50%",
-                      background: "radial-gradient(circle, hsl(var(--primary) / 0.85) 0%, hsl(var(--primary) / 0.3) 38%, transparent 68%)",
-                      filter: "blur(9px)",
-                      transform: "scale(2.8)",
-                    }} />
-                    {/* NFT з дуже сильною розтушовкою */}
-                    <img src={nft.image_url} alt="" style={{
-                      width: 36, height: 36, borderRadius: "50%", objectFit: "cover",
-                      display: "block", position: "relative", zIndex: 1,
-                      WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 20%, rgba(0,0,0,0.38) 46%, rgba(0,0,0,0.04) 64%, rgba(0,0,0,0) 74%)",
-                      maskImage:        "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 20%, rgba(0,0,0,0.38) 46%, rgba(0,0,0,0.04) 64%, rgba(0,0,0,0) 74%)",
-                    }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Текст — оригінальний */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pt-1">
         <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
         <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
         {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
