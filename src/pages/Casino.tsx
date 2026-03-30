@@ -47,6 +47,10 @@ const GLOBAL_STYLES = `
     0%,100% { opacity: .6; }
     50%     { opacity: 1; }
   }
+  @keyframes sold-pulse {
+    0%,100% { opacity: 1; }
+    50%     { opacity: 0.65; }
+  }
 `;
 
 /* ─── Animated media ─────────────────────────────────────────────── */
@@ -88,7 +92,6 @@ const PurchaseSuccess = ({ gift, onClose }: { gift: NftGift; onClose: () => void
     <div className="fixed inset-0 z-[200] flex items-center justify-center"
       style={{ perspective: "900px", pointerEvents: "none" }}>
 
-      {/* Particles */}
       {particles.map((p, i) => (
         <div key={i} className="absolute left-1/2 top-1/2 rounded-full"
           style={{
@@ -102,7 +105,6 @@ const PurchaseSuccess = ({ gift, onClose }: { gift: NftGift; onClose: () => void
         />
       ))}
 
-      {/* Card */}
       <div className="relative flex flex-col items-center gap-5 px-10 py-8"
         style={{
           background: "linear-gradient(150deg, hsl(0 0% 8%/0.97), hsl(0 0% 3%/0.98))",
@@ -110,14 +112,10 @@ const PurchaseSuccess = ({ gift, onClose }: { gift: NftGift; onClose: () => void
           borderRadius: 36,
           boxShadow: "0 0 0 1px hsl(var(--primary)/0.07), 0 40px 80px rgba(0,0,0,.8), 0 0 80px hsl(var(--primary)/0.18)",
           animation: "success-in 0.55s cubic-bezier(0.34,1.5,0.64,1) forwards",
-        }}
-      >
-        {/* Radial top glow */}
+        }}>
         <div className="absolute inset-0 rounded-[36px] pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 80% 55% at 50% 0%, hsl(var(--primary)/0.14) 0%, transparent 70%)" }}
-        />
+          style={{ background: "radial-gradient(ellipse 80% 55% at 50% 0%, hsl(var(--primary)/0.14) 0%, transparent 70%)" }} />
 
-        {/* NFT image */}
         <div className="relative">
           <div className="absolute inset-0 rounded-full" style={{
             background: "radial-gradient(circle, hsl(var(--primary)/0.45) 0%, transparent 65%)",
@@ -132,7 +130,6 @@ const PurchaseSuccess = ({ gift, onClose }: { gift: NftGift; onClose: () => void
             }}>
             <GiftMedia url={gift.image_url} className="w-full h-full p-3" />
           </div>
-          {/* Check badge */}
           <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center"
             style={{
               background: "hsl(var(--primary))",
@@ -143,17 +140,13 @@ const PurchaseSuccess = ({ gift, onClose }: { gift: NftGift; onClose: () => void
           </div>
         </div>
 
-        {/* Text */}
         <div className="flex flex-col items-center gap-1 relative z-10">
           <p className="text-[9px] font-black uppercase tracking-[0.35em]"
-            style={{ color: "hsl(var(--primary))" }}>
-            Придбано успішно
-          </p>
+            style={{ color: "hsl(var(--primary))" }}>Придбано успішно</p>
           <p className="text-xl font-black text-white uppercase italic tracking-tight">{gift.name}</p>
           <p className="text-[10px] text-zinc-500 font-bold mt-0.5">Предмет додано до вашого інвентарю</p>
         </div>
 
-        {/* Drain bar */}
         <div className="relative w-full h-[2px] rounded-full overflow-hidden"
           style={{ background: "hsl(0 0% 100% / 0.07)" }}>
           <div className="absolute inset-y-0 left-0 rounded-full"
@@ -171,37 +164,68 @@ const PurchaseSuccess = ({ gift, onClose }: { gift: NftGift; onClose: () => void
 /* ─── NFT card ───────────────────────────────────────────────────── */
 const NftCard = ({ gift, index, onClick }: { gift: NftGift; index: number; onClick: () => void }) => {
   const [hovered, setHovered] = useState(false);
+  const isSold = !!gift.sold;
 
   return (
-    <div onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
+    <div
+      onClick={isSold ? undefined : onClick}
+      onMouseEnter={() => !isSold && setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="relative cursor-pointer"
-      style={{ animation: `card-enter 0.5s ${index * 0.07}s cubic-bezier(0.34,1.15,0.64,1) both` }}>
-
+      className="relative"
+      style={{
+        animation: `card-enter 0.5s ${index * 0.07}s cubic-bezier(0.34,1.15,0.64,1) both`,
+        cursor: isSold ? "not-allowed" : "pointer",
+        opacity: isSold ? 0.72 : 1,
+      }}
+    >
       <div className="relative rounded-[28px] p-[1px] transition-all duration-450"
         style={{
-          background: hovered
+          background: isSold
+            ? "linear-gradient(135deg, hsl(0 70% 50% / 0.25), hsl(0 70% 50% / 0.06))"
+            : hovered
             ? "linear-gradient(135deg, hsl(var(--primary)/0.55), hsl(var(--primary)/0.08) 55%, hsl(var(--primary)/0.35))"
             : "linear-gradient(135deg, hsl(0 0% 100% / 0.06), hsl(0 0% 100% / 0.02))",
-          boxShadow: hovered
+          boxShadow: isSold
+            ? "0 4px 16px rgba(0,0,0,.3)"
+            : hovered
             ? "0 0 40px hsl(var(--primary)/0.22), 0 18px 36px rgba(0,0,0,.45)"
             : "0 4px 16px rgba(0,0,0,.3)",
-          transform: hovered ? "translateY(-5px) scale(1.025)" : "translateY(0) scale(1)",
+          transform: hovered && !isSold ? "translateY(-5px) scale(1.025)" : "translateY(0) scale(1)",
           transition: "all 0.38s cubic-bezier(0.34,1,0.64,1)",
         }}>
 
         <div className="relative rounded-[27px] overflow-hidden flex flex-col items-center p-4 gap-3"
           style={{ background: "linear-gradient(170deg, #0d0d0d, #070707)" }}>
 
-          {/* Top glow beam */}
-          <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-28 h-16 rounded-full transition-all duration-600"
-            style={{
-              background: "hsl(var(--primary)/0.3)",
-              filter: "blur(18px)",
-              opacity: hovered ? 1 : 0,
-              animation: hovered ? "glow-breathe 2s ease-in-out infinite" : "none",
-            }} />
+          {/* Top glow beam — тільки якщо не SOLD */}
+          {!isSold && (
+            <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-28 h-16 rounded-full transition-all duration-600"
+              style={{
+                background: "hsl(var(--primary)/0.3)",
+                filter: "blur(18px)",
+                opacity: hovered ? 1 : 0,
+                animation: hovered ? "glow-breathe 2s ease-in-out infinite" : "none",
+              }} />
+          )}
+
+          {/* SOLD overlay */}
+          {isSold && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[27px]"
+              style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)" }}>
+              <div className="px-4 py-1.5 rounded-xl"
+                style={{
+                  background: "hsl(0 70% 50% / 0.15)",
+                  border: "1.5px solid hsl(0 70% 50% / 0.5)",
+                  boxShadow: "0 0 18px hsl(0 70% 50% / 0.3)",
+                  animation: "sold-pulse 2s ease-in-out infinite",
+                }}>
+                <span className="text-sm font-black uppercase tracking-[0.25em]"
+                  style={{ color: "hsl(0 70% 55%)", textShadow: "0 0 12px hsl(0 70% 50% / 0.8)" }}>
+                  SOLD
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Media */}
           <div className="relative w-full aspect-square rounded-[20px] flex items-center justify-center overflow-hidden"
@@ -212,11 +236,10 @@ const NftCard = ({ gift, index, onClick }: { gift: NftGift; index: number; onCli
             <div className="absolute inset-0 rounded-[20px] transition-opacity duration-500"
               style={{
                 background: "radial-gradient(circle at 50% 50%, hsl(var(--primary)/0.14) 0%, transparent 65%)",
-                opacity: hovered ? 1 : 0,
+                opacity: hovered && !isSold ? 1 : 0,
               }} />
             <GiftMedia url={gift.image_url}
-              className="w-4/5 h-4/5 relative z-10 drop-shadow-2xl"
-              style={{ transform: hovered ? "scale(1.07)" : "scale(1)", transition: "transform 0.5s ease" } as any} />
+              className="w-4/5 h-4/5 relative z-10 drop-shadow-2xl" />
           </div>
 
           {/* Name / price */}
@@ -228,14 +251,29 @@ const NftCard = ({ gift, index, onClick }: { gift: NftGift; index: number; onCli
                 {gift.name}
               </p>
             </div>
-            <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl"
-              style={{
-                background: "hsl(var(--primary)/0.1)",
-                border: "1px solid hsl(var(--primary)/0.2)",
-              }}>
-              <Coins className="w-3 h-3" style={{ color: "hsl(var(--primary))" }} />
-              <span className="text-[10px] font-black text-white">{gift.price}</span>
-            </div>
+
+            {/* Ціна або SOLD badge внизу картки */}
+            {isSold ? (
+              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl"
+                style={{
+                  background: "hsl(0 70% 50% / 0.1)",
+                  border: "1px solid hsl(0 70% 50% / 0.3)",
+                }}>
+                <span className="text-[10px] font-black uppercase tracking-wider"
+                  style={{ color: "hsl(0 70% 55%)" }}>
+                  SOLD
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl"
+                style={{
+                  background: "hsl(var(--primary)/0.1)",
+                  border: "1px solid hsl(var(--primary)/0.2)",
+                }}>
+                <Coins className="w-3 h-3" style={{ color: "hsl(var(--primary))" }} />
+                <span className="text-[10px] font-black text-white">{gift.price}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -287,11 +325,23 @@ const Casino = () => {
 
   const handleBuyNft = () => {
     if (!selectedGift) return;
+    // Подвійна перевірка на sold (на випадок якщо стан не оновився)
+    if (selectedGift.sold) {
+      toast.error("Цей предмет вже продано");
+      setSelectedGift(null);
+      return;
+    }
     store.buyNftGift(nick, selectedGift);
     setBalance(getBalance(nick));
     const bought = selectedGift;
     setSelectedGift(null);
     setTimeout(() => setPurchasedGift(bought), 150);
+  };
+
+  // Відкрити модалку тільки якщо не sold
+  const handleCardClick = (gift: NftGift) => {
+    if (gift.sold) return;
+    setSelectedGift(gift);
   };
 
   return (
@@ -372,7 +422,6 @@ const Casino = () => {
                   animation: `card-enter 0.42s ${i * 0.055}s cubic-bezier(0.34,1.15,0.64,1) both`,
                 }}>
                 <div className="relative rounded-[23px] p-4 flex items-center gap-4" style={{ background: "#0a0a0a" }}>
-                  {/* Swatch */}
                   <div className="w-14 h-14 rounded-xl shrink-0 overflow-hidden relative border border-white/10"
                     style={{ background: theme.preview }}>
                     {isActive && (
@@ -406,13 +455,13 @@ const Casino = () => {
       {activeTab === "gifts" && (
         <div className="grid grid-cols-2 gap-4">
           {gifts.map((gift, i) => (
-            <NftCard key={gift.id} gift={gift} index={i} onClick={() => setSelectedGift(gift)} />
+            <NftCard key={gift.id} gift={gift} index={i} onClick={() => handleCardClick(gift)} />
           ))}
         </div>
       )}
 
-      {/* ── Modal ── */}
-      {selectedGift && (
+      {/* ── Modal (тільки якщо не sold) ── */}
+      {selectedGift && !selectedGift.sold && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6"
           style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(20px)", animation: "fade-backdrop 0.28s ease" }}
           onClick={() => setSelectedGift(null)}>
@@ -439,7 +488,6 @@ const Casino = () => {
             </button>
 
             <div className="relative z-10 flex flex-col items-center text-center px-8 pt-10 pb-8 gap-6">
-              {/* Badge */}
               <div className="flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3" style={{ color: "hsl(var(--primary))" }} />
                 <span className="text-[9px] font-black uppercase tracking-[0.34em]"
@@ -450,7 +498,6 @@ const Casino = () => {
                 {selectedGift.name}
               </h2>
 
-              {/* Image */}
               <div className="relative w-52 h-52 flex items-center justify-center">
                 <div className="absolute inset-0 rounded-full"
                   style={{ background: "hsl(var(--primary)/0.18)", filter: "blur(48px)", animation: "halo-pulse 2s ease-in-out infinite" }} />
@@ -464,7 +511,6 @@ const Casino = () => {
                 </div>
               </div>
 
-              {/* Price */}
               <div className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl"
                 style={{ background: "hsl(0 0% 100%/0.03)", border: "1px solid hsl(0 0% 100%/0.06)" }}>
                 <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Вартість</span>
@@ -477,7 +523,6 @@ const Casino = () => {
                 </div>
               </div>
 
-              {/* CTA */}
               <button onClick={handleBuyNft}
                 className="w-full py-4 rounded-[20px] font-black uppercase text-[11px] tracking-widest text-black relative overflow-hidden transition-all active:scale-[0.97] duration-200"
                 style={{
