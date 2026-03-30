@@ -130,32 +130,46 @@ const [showOrbitSettings, setShowOrbitSettings] = useState(false);
   const loadData = useCallback(async () => {
     setRefreshing(true);
     try {
-        // 1. Завантажуємо основний профіль та машини
         const data = await store.getPlayerProfile(nick);
         const carsData = await store.getCarPlates(nick);
 
-        // 2. ЗАВАНТАЖУЄМО NFT З ТАБЛИЦІ
-        const { data: nfts } = await supabase.from('nft_gifts').select('*');
-        if (nfts) {
-            setAvailableNfts(nfts);
-            // Витягуємо з пам'яті, які саме NFT користувач поставив на орбіту
-            const saved = localStorage.getItem("orbit_nft_ids");
-            setSelectedNftIds(saved ? JSON.parse(saved) : nfts.slice(0, 6).map(n => n.id));
+        // 1. Отримуємо ID тільки тих NFT, які реально належать гравцю
+        const { data: ownedData } = await supabase
+            .from('nft_owners')
+            .select('nft_id')
+            .eq('owner_nick', nick);
+
+        const ownedIds = ownedData?.map(item => item.nft_id) || [];
+
+        // 2. Отримуємо самі дані цих NFT з таблиці nft_gifts
+        if (ownedIds.length > 0) {
+            const { data: nfts } = await supabase
+                .from('nft_gifts')
+                .select('*')
+                .in('id', ownedIds);
+            
+            if (nfts) {
+                setAvailableNfts(nfts);
+                
+                // Налаштування орбіти: вибираємо з куплених
+                const saved = localStorage.getItem("orbit_nft_ids");
+                const parsedSaved = saved ? JSON.parse(saved) : [];
+                
+                // Фільтруємо збережені, щоб там були тільки ті, що реально є в інвентарі
+                const validSelected = parsedSaved.filter((id: string) => ownedIds.includes(id));
+                
+                // Якщо нічого не вибрано, показуємо перші доступні (до 6)
+                setSelectedNftIds(validSelected.length > 0 ? validSelected : nfts.slice(0, 6).map(n => n.id));
+            }
+        } else {
+            setAvailableNfts([]);
+            setSelectedNftIds([]);
         }
 
-        setProfileData({
-            ...data,
-            cars: carsData || []
-        });
-
+        setProfileData({ ...data, cars: carsData || [] });
         setBalanceState(getBalance(nick));
-
-        if (store && typeof (store as any).getNotifications === 'function') {
-            const notifs = await (store as any).getNotifications(nick);
-            setNotifications(notifs);
-        }
     } catch (e) {
-        console.error("Помилка завантаження:", e);
+        console.error("Помилка:", e);
     } finally {
         setRefreshing(false);
     }
@@ -317,30 +331,29 @@ useEffect(() => {
             <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
           </div>
 
-          {/* Main row з Квадратною Авататаркою та Широкою Орбітою */}
-<div className="relative px-4 py-6 flex items-center gap-8">
+          {/* Main row з Квадратною Аватаркою та Покращеною Орбітою */}
+<div className="relative px-4 py-8 flex items-center gap-8">
   
   {/* Контейнер для фото та широкої орбіти */}
-  <div className="relative w-[100px] h-[100px] flex items-center justify-center shrink-0">
+  <div className="relative w-[110px] h-[110px] flex items-center justify-center shrink-0">
     
-    {/* Квадратна аватарка (як у тебе була) */}
+    {/* Квадратна аватарка (Клік тепер точно спрацює через z-30) */}
     <div 
-      className="relative w-[72px] h-[72px] z-20 group cursor-pointer" 
+      className="relative w-[72px] h-[72px] z-30 group cursor-pointer active:scale-95 transition-transform" 
       onClick={() => setShowOrbitSettings(true)}
     >
       <div 
-        className="w-full h-full rounded-xl overflow-hidden bg-black/60 backdrop-blur-md transition-transform active:scale-95" 
-        style={{ border: "1.5px solid hsl(0 0% 100% / 0.15)" }}
+        className="w-full h-full rounded-xl overflow-hidden bg-black/60 backdrop-blur-md" 
+        style={{ border: "1.5px solid hsl(var(--primary) / 0.2)" }}
       >
         {tgUser?.photo_url ? (
           <img 
             src={tgUser.photo_url} 
             alt={name} 
             className="w-full h-full object-cover" 
-            onError={e => { e.currentTarget.style.display = "none"; }} 
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
+          <div className="w-full h-full flex items-center justify-center bg-primary/5">
             <User className="w-8 h-8 text-primary/30" />
           </div>
         )}
@@ -352,30 +365,37 @@ useEffect(() => {
       </div>
     </div>
 
-    {/* ШИРОКА ОРБІТА NFT */}
+    {/* ШИРОКА ОРБІТА NFT (Тільки куплені) */}
     <div className="absolute inset-0 z-10 pointer-events-none">
       {availableNfts
         .filter(n => selectedNftIds.includes(n.id))
-        .slice(0, 6)
         .map((nft, index, filtered) => {
-          const angle = (index * (360 / filtered.length)) * (Math.PI / 180);
-          const radius = 52; // ЗБІЛЬШЕНО: тепер іконки літають ширше від квадрата
+          // Математика: навіть якщо 1 NFT, вона буде зверху (-90 градусів)
+          const angle = (index * (360 / filtered.length) - 90) * (Math.PI / 180);
+          const radius = 54; 
           const x = Math.cos(angle) * radius;
           const y = Math.sin(angle) * radius;
 
           return (
-            <div key={nft.id} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-float"
+            <div key={nft.id} className="absolute left-1/2 top-1/2 nft-orbit-item"
               style={{ 
-                transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
-                animationDelay: `${index * 0.4}s`
-              }}>
-              <div className="relative w-8 h-8 flex items-center justify-center">
-                {/* М'яка розтушовка */}
-                <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-                <img 
+                "--x": `${x}px`, 
+                "--y": `${y}px`,
+                animationDelay: `${index * 0.4}s`,
+                transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`
+              } as any}>
+              
+              <div className="relative w-9 h-9 flex items-center justify-center">
+                {/* РОЗТУШОВКА (Неонове світло під кожною NFT) */}
+                <div className="absolute inset-0 bg-primary/40 blur-[12px] rounded-full" />
+                
+                {/* САМА НФТ (Кругла, скруглена) */}
+                <div className="relative w-7 h-7 rounded-full overflow-hidden border border-white/20 bg-black/60 backdrop-blur-sm p-1 shadow-2xl">
+                  <img 
                     src={nft.image_url} 
-                    className="w-6 h-6 object-contain relative z-10 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" 
-                />
+                    className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]" 
+                  />
+                </div>
               </div>
             </div>
           );
