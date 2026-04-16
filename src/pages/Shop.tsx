@@ -94,21 +94,17 @@ export const THEMES: Theme[] = [
 
 export const applyTheme = (theme: Theme) => {
   const root = document.documentElement;
-  // Apply all CSS color vars
   Object.entries(theme.vars).forEach(([k, v]) => {
     if (!k.startsWith("--passport")) {
       root.style.setProperty(k, v);
     }
   });
-  // Also sync --neon-lime with --primary so neon-text-lime changes color
   root.style.setProperty("--neon-lime", theme.vars["--primary"] || "84 81% 44%");
   root.style.setProperty("--neon-green", theme.vars["--secondary"] || "142 71% 45%");
 
-  // Apply animated background
   document.body.style.backgroundImage = theme.bgGradient;
   document.body.style.transition = "background-image 0.5s ease";
 
-  // Passport theme data
   root.setAttribute("data-passport-bg", theme.vars["--passport-bg"] || "");
   root.setAttribute("data-passport-border", theme.vars["--passport-border"] || "");
   root.setAttribute("data-theme-id", theme.id);
@@ -116,12 +112,32 @@ export const applyTheme = (theme: Theme) => {
   localStorage.setItem("crp_theme", theme.id);
 };
 
+// ── loadSavedTheme: спочатку застосовує тему з localStorage (швидко, без флашу),
+//    а потім асинхронно підтягує актуальну тему з Supabase і оновлює якщо відрізняється
 export const loadSavedTheme = () => {
-  const saved = localStorage.getItem("crp_theme") as ThemeId | null;
-  if (saved) {
-    const theme = THEMES.find(t => t.id === saved);
+  // Крок 1: одразу застосовуємо з localStorage (без затримки, щоб не було флашу)
+  const localTheme = localStorage.getItem("crp_theme") as ThemeId | null;
+  if (localTheme) {
+    const theme = THEMES.find(t => t.id === localTheme);
     if (theme) applyTheme(theme);
   }
+
+  // Крок 2: асинхронно підтягуємо справжню тему з Supabase (прив'язана до акаунту)
+  const nick = localStorage.getItem("crp_nick");
+  if (!nick) return;
+
+  supabase
+    .from("users")
+    .select("active_theme")
+    .ilike("username", nick)
+    .maybeSingle()
+    .then(({ data }) => {
+      if (data?.active_theme && data.active_theme !== localTheme) {
+        const dbTheme = THEMES.find(t => t.id === data.active_theme);
+        if (dbTheme) applyTheme(dbTheme);
+      }
+    })
+    .catch(() => {/* тихо ігноруємо помилку мережі, localStorage вже застосований */});
 };
 
 // ─── SHOP PAGE — тільки нагороди ──────────────────────────────────────────────
@@ -137,7 +153,7 @@ const Shop = () => {
     supabase.from("users").select("balance").ilike("username", nick).maybeSingle().then(({ data }) => {
       if (data?.balance !== undefined) {
         const bal = data.balance as number;
-        syncBalance(nick, bal); // синхронізуємо localStorage
+        syncBalance(nick, bal);
         setBalanceState(bal);
       }
     });
@@ -159,12 +175,11 @@ const Shop = () => {
     if (!canClaim || loading) return;
     setLoading(true);
     const bonus = streak >= 6 ? 200 : streak >= 3 ? 150 : 100;
-    // Читаємо баланс з Supabase і додаємо бонус
     const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
     const currentBal = (user?.balance as number) || getBalance(nick);
     const newBal = currentBal + bonus;
     await supabase.from("users").update({ balance: newBal }).ilike("username", nick);
-    syncBalance(nick, newBal); // синхронізуємо localStorage
+    syncBalance(nick, newBal);
     setBalanceState(newBal);
     const now = Date.now();
     const newStreak = streak + 1;
@@ -245,17 +260,14 @@ const Shop = () => {
           backdropFilter: "blur(20px)",
         }}>
 
-        {/* Glow orb behind icon when claimable */}
         {canClaim && (
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full pointer-events-none"
             style={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 70%)" }} />
         )}
 
         <div className="relative p-6">
-          {/* Icon area */}
           <div className="flex justify-center mb-5">
             <div className="relative">
-              {/* Outer ring pulse */}
               {canClaim && (
                 <>
                   <div className="absolute inset-0 rounded-3xl animate-ping opacity-20"
@@ -278,7 +290,6 @@ const Shop = () => {
                     filter: canClaim ? "drop-shadow(0 0 12px hsl(var(--primary)))" : "none",
                   }} />
               </div>
-              {/* Ready badge */}
               {canClaim && (
                 <div className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-[9px] font-black text-black animate-bounce"
                   style={{ background: "hsl(var(--primary))", boxShadow: "0 0 10px hsl(var(--primary) / 0.8)" }}>
@@ -288,13 +299,11 @@ const Shop = () => {
             </div>
           </div>
 
-          {/* Title */}
           <div className="text-center mb-4">
             <h3 className="text-lg font-black text-foreground mb-1">Щоденна нагорода</h3>
             <p className="text-xs text-muted-foreground">Заходь кожного дня і отримуй CR</p>
           </div>
 
-          {/* Amount */}
           <div className="flex items-center justify-center gap-3 mb-5">
             <div className="flex items-center gap-2 px-5 py-2.5 rounded-2xl"
               style={{
@@ -313,7 +322,6 @@ const Shop = () => {
             </div>
           </div>
 
-          {/* Action */}
           {canClaim ? (
             <GradientButton variant="green" className="w-full text-base py-3.5" onClick={claimReward} disabled={loading}>
               {loading
