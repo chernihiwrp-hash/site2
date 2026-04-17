@@ -487,26 +487,30 @@ export const store = {
       .single();
     return (data as Record<string, unknown> | null)?.faction_name as string | null || null;
   },
-  // Уволитися з фракції (видалити схвалену заявку)
+// Звільнитися з фракції (зміна статусу замість видалення)
   resignFromFaction: async (nick: string, factionName: string): Promise<boolean> => {
-    // Спочатку знаходимо запис
-    const { data, error: fetchError } = await supabase
-      .from("faction_applications")
-      .select("id")
-      .eq("username", nick)
-      .ilike("faction_name", factionName)
-      .eq("status", "approved")
-      .limit(1)
-      .maybeSingle();
-    if (fetchError || !data) return false;
+    // 1. Авто-фікс назви: якщо приходить "адвокатура", міняємо на "адвокати" для бази
+    const dbFactionName = factionName.toLowerCase() === "адвокатура" ? "адвокати" : factionName;
+    
+    console.log(`🔄 Спроба змінити статус для ${nick} у фракції ${dbFactionName}`);
+
+    // 2. Просто оновлюємо статус на 'rejected' (або 'review', якщо хочеш)
+    // Це прибере 401 помилку, якщо налаштовані Policy на UPDATE
     const { error } = await supabase
       .from("faction_applications")
-      .delete()
-      .eq("id", (data as Record<string, unknown>).id);
-    return !error;
-  },
-  setFactionApps: (_: FactionApplication[]) => {},
+      .update({ status: "rejected" })
+      .eq("username", nick)
+      .ilike("faction_name", dbFactionName)
+      .eq("status", "approved");
 
+    if (error) {
+      console.error("❌ Помилка Supabase при оновленні:", error.message);
+      return false;
+    }
+
+    console.log("✅ Статус успішно змінено на rejected. Гравець звільнений.");
+    return true;
+  },
   // ── ADMIN APPLICATIONS ────────────────────────────────────────────────────
   getAdminApps: async (): Promise<AdminApplication[]> => {
     const { data } = await supabase.from("admin_applications").select("*").order("created_at", { ascending: false });
