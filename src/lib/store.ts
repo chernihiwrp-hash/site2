@@ -52,21 +52,36 @@ export type FactionDB = {
   gradient?: string; section: "main" | "separate"; created_at: string;
 };
 
-// ─── BALANCE HELPERS ──────────────────────────────────────────────────────────
-export const getBalance = (nick: string): number => {
-  try { return parseInt(localStorage.getItem(`crp_bal_${nick.toLowerCase()}`) || "0"); }
-  catch { return 0; }
+// СТАЛО — всі операції з балансом через Supabase
+export const getBalance = (_nick: string): number => 0; // залишаємо для сумісності, але не використовуємо
+
+export const getBalanceFromDB = async (nick: string): Promise<number> => {
+  try {
+    const { data } = await supabase
+      .from("users")
+      .select("balance")
+      .ilike("username", nick)
+      .maybeSingle();
+    return (data?.balance as number) || 0;
+  } catch { return 0; }
 };
-export const setBalance = (nick: string, amount: number) => {
-  localStorage.setItem(`crp_bal_${nick.toLowerCase()}`, String(Math.max(0, amount)));
+
+export const setBalance = async (nick: string, amount: number): Promise<void> => {
+  await supabase
+    .from("users")
+    .update({ balance: Math.max(0, amount) })
+    .ilike("username", nick);
 };
-export const addBalance = (nick: string, amount: number) => {
-  setBalance(nick, getBalance(nick) + amount);
+
+export const addBalance = async (nick: string, amount: number): Promise<void> => {
+  const cur = await getBalanceFromDB(nick);
+  await setBalance(nick, cur + amount);
 };
-export const subtractBalance = (nick: string, amount: number): boolean => {
-  const cur = getBalance(nick);
+
+export const subtractBalance = async (nick: string, amount: number): Promise<boolean> => {
+  const cur = await getBalanceFromDB(nick);
   if (cur < amount) return false;
-  setBalance(nick, cur - amount);
+  await setBalance(nick, cur - amount);
   return true;
 };
 
@@ -465,7 +480,7 @@ export const store = {
     const { data } = await supabase
       .from("faction_applications")
       .select("faction_name")
-      .eq("username", nick)
+      .ilike("username", nick)
       .eq("status", "approved")
       .order("created_at", { ascending: false })
       .limit(1)
@@ -789,9 +804,9 @@ export const store = {
         .eq("username", nick)
         .eq("status", "approved"),
 
-      supabase.from("faction_applications").select("faction_name, status").eq("username", nick).order("created_at", { ascending: false }),
-      supabase.from("license_applications").select("id, license_type, status").eq("username", nick).eq("status", "approved"),
-      supabase.from("car_plates").select("id, plate_number, car_model, status").eq("username", nick).eq("status", "approved"),
+      supabase.from("faction_applications").select("faction_name, status").ilike("username", nick).order("created_at", { ascending: false }),
+      supabase.from("license_applications").select("id, license_type, status").ilike("username", nick).ilike("status", "approved"),
+      supabase.from("car_plates").select("id, plate_number, car_model, status").ilike("username", nick).ilike("status", "approved"),
     ]);
 
     // Оскільки JOIN може видавати 404, якщо не налаштовані зв'язки, 
