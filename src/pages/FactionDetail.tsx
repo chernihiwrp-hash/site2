@@ -312,7 +312,114 @@ const FactionDetail = () => {
           </div>
         </div>
 
-        {/* Members */}
+        {/* ── КНОПКИ (зверху) ── */}
+
+        {/* Resign button — тільки для учасника */}
+        {isMember && (
+          <div className="mb-4">
+            {!resignConfirm ? (
+              <button
+                onClick={() => setResignConfirm(true)}
+                className="w-full liquid-glass rounded-2xl px-4 py-3 text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                style={{ color: "hsl(0 70% 60%)", border: "1px solid hsl(0 70% 60% / 0.25)", background: "hsl(0 70% 60% / 0.06)" }}
+              >
+                <LogOut className="w-4 h-4" />
+                Уволитися з фракції
+              </button>
+            ) : (
+              <div className="liquid-glass rounded-2xl p-4 animate-fade-in"
+                style={{ border: "1px solid hsl(0 70% 60% / 0.3)", background: "hsl(0 70% 60% / 0.06)" }}>
+                <p className="text-sm font-semibold text-foreground mb-1 text-center">Ви впевнені?</p>
+                <p className="text-xs text-muted-foreground text-center mb-3">
+                  Ви покинете <span style={{ color: faction.color }}>{faction.name}</span>. Для повернення потрібно буде подати нову заявку.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleResign}
+                    disabled={resignLoading}
+                    className="flex-1 rounded-2xl px-4 py-2.5 text-sm font-bold active:scale-95 transition-transform"
+                    style={{ background: "hsl(0 70% 55%)", color: "white" }}
+                  >
+                    {resignLoading ? "Обробка..." : "Так, уволитися"}
+                  </button>
+                  <button
+                    onClick={() => setResignConfirm(false)}
+                    className="flex-1 liquid-glass rounded-2xl px-4 py-2.5 text-sm text-muted-foreground active:scale-95 transition-transform"
+                  >
+                    Скасувати
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Sent confirmation */}
+        {appStatus === "sent" && (
+          <div className="liquid-glass-card rounded-2xl p-5 mb-4 animate-fade-in border border-primary/20 text-center">
+            <CheckCircle className="w-10 h-10 text-primary mx-auto mb-3" />
+            <h3 className="text-sm font-bold text-foreground mb-1">Анкету відправлено!</h3>
+            <p className="text-[11px] text-muted-foreground mb-2">
+              Ваша заявка у <span style={{ color: faction.color }}>{faction.name}</span> передана адміністрації
+            </p>
+            <div className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl mx-auto w-fit"
+              style={{ background: "hsl(84 81% 44% / 0.1)", border: "1px solid hsl(84 81% 44% / 0.2)" }}>
+              <Clock className="w-3 h-3 text-primary" />
+              <span className="text-[10px] text-primary">Очікуйте повідомлення в профілі</span>
+            </div>
+          </div>
+        )}
+
+        {/* Форма подачі / кнопка "Подати анкету" — тільки для НЕ учасників */}
+        {!isMember && (
+          <div className="mb-4">
+            {showForm && appStatus !== "sent" ? (
+              <div className="liquid-glass-strong rounded-2xl p-4 space-y-3 animate-fade-in">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Send className="w-4 h-4" style={{ color: faction.color }} /> Анкета у {faction.name}
+                </h3>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Нік (RP ім'я)</label>
+                  <div className="liquid-glass rounded-xl px-4 py-3 text-sm text-foreground/60">{nick || "—"}</div>
+                </div>
+                {[
+                  { label: "Roblox Username", value: roblox, set: setRoblox, ph: "Roblox username" },
+                  { label: "Вік",             value: age,    set: setAge,    ph: "Ваш вік" },
+                  { label: "Telegram",        value: telegram, set: setTelegram, ph: "@username" },
+                ].map(f => (
+                  <div key={f.label}>
+                    <label className="text-xs text-muted-foreground mb-1 block">{f.label}</label>
+                    <input value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.ph} className={inputClass} />
+                  </div>
+                ))}
+                {questions.map((q, i) => (
+                  <div key={i}>
+                    <label className="text-xs text-muted-foreground mb-1 block">
+                      <span className="text-primary font-bold">{i + 1}. </span>{q}
+                    </label>
+                    <textarea value={answers[i] || ""} onChange={e => setAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                      placeholder="Ваша відповідь..." className={`${inputClass} resize-none h-20`} />
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <GradientButton variant={btnVariant} className="flex-1" onClick={handleSubmit} disabled={appStatus === "sending"}>
+                    <Send className="w-3.5 h-3.5 inline mr-1.5" />
+                    {appStatus === "sending" ? "Відправляю..." : "Відправити анкету"}
+                  </GradientButton>
+                  <button onClick={() => setShowForm(false)} className="liquid-glass rounded-2xl px-4 py-3 text-sm text-muted-foreground active:scale-95">
+                    Скасувати
+                  </button>
+                </div>
+              </div>
+            ) : appStatus === "idle" && (
+              <GradientButton variant={btnVariant} className="w-full" onClick={() => setShowForm(true)}>
+                Подати анкету
+              </GradientButton>
+            )}
+          </div>
+        )}
+
+        {/* ── СПИСОК УЧАСНИКІВ (знизу) ── */}
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-3">
             <Users className="w-4 h-4 text-muted-foreground" />
@@ -369,106 +476,6 @@ const FactionDetail = () => {
           )}
         </div>
 
-        {/* Resign button — shown only to current members */}
-        {isMember && (
-          <div className="mb-4">
-            {!resignConfirm ? (
-              <button
-                onClick={() => setResignConfirm(true)}
-                className="w-full liquid-glass rounded-2xl px-4 py-3 text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                style={{ color: "hsl(0 70% 60%)", border: "1px solid hsl(0 70% 60% / 0.25)", background: "hsl(0 70% 60% / 0.06)" }}
-              >
-                <LogOut className="w-4 h-4" />
-                Уволитися з фракції
-              </button>
-            ) : (
-              <div className="liquid-glass rounded-2xl p-4 animate-fade-in"
-                style={{ border: "1px solid hsl(0 70% 60% / 0.3)", background: "hsl(0 70% 60% / 0.06)" }}>
-                <p className="text-sm font-semibold text-foreground mb-1 text-center">Ви впевнені?</p>
-                <p className="text-xs text-muted-foreground text-center mb-3">
-                  Ви покинете <span style={{ color: faction.color }}>{faction.name}</span>. Для повернення потрібно буде подати нову заявку.
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleResign}
-                    disabled={resignLoading}
-                    className="flex-1 rounded-2xl px-4 py-2.5 text-sm font-bold active:scale-95 transition-transform"
-                    style={{ background: "hsl(0 70% 55%)", color: "white" }}
-                  >
-                    {resignLoading ? "Обробка..." : "Так, уволитися"}
-                  </button>
-                  <button
-                    onClick={() => setResignConfirm(false)}
-                    className="flex-1 liquid-glass rounded-2xl px-4 py-2.5 text-sm text-muted-foreground active:scale-95 transition-transform"
-                  >
-                    Скасувати
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Sent confirmation */}
-        {appStatus === "sent" && (
-          <div className="liquid-glass-card rounded-2xl p-5 mb-4 animate-fade-in border border-primary/20 text-center">
-            <CheckCircle className="w-10 h-10 text-primary mx-auto mb-3" />
-            <h3 className="text-sm font-bold text-foreground mb-1">Анкету відправлено!</h3>
-            <p className="text-[11px] text-muted-foreground mb-2">
-              Ваша заявка у <span style={{ color: faction.color }}>{faction.name}</span> передана адміністрації
-            </p>
-            <div className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl mx-auto w-fit"
-              style={{ background: "hsl(84 81% 44% / 0.1)", border: "1px solid hsl(84 81% 44% / 0.2)" }}>
-              <Clock className="w-3 h-3 text-primary" />
-              <span className="text-[10px] text-primary">Очікуйте повідомлення в профілі</span>
-            </div>
-          </div>
-        )}
-
-        {/* Form */}
-        {showForm && appStatus !== "sent" && !isMember ? (
-          <div className="liquid-glass-strong rounded-2xl p-4 space-y-3 animate-fade-in">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Send className="w-4 h-4" style={{ color: faction.color }} /> Анкета у {faction.name}
-            </h3>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Нік (RP ім'я)</label>
-              <div className="liquid-glass rounded-xl px-4 py-3 text-sm text-foreground/60">{nick || "—"}</div>
-            </div>
-            {[
-              { label: "Roblox Username", value: roblox, set: setRoblox, ph: "Roblox username" },
-              { label: "Вік",             value: age,    set: setAge,    ph: "Ваш вік" },
-              { label: "Telegram",        value: telegram, set: setTelegram, ph: "@username" },
-            ].map(f => (
-              <div key={f.label}>
-                <label className="text-xs text-muted-foreground mb-1 block">{f.label}</label>
-                <input value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.ph} className={inputClass} />
-              </div>
-            ))}
-            {questions.map((q, i) => (
-              <div key={i}>
-                <label className="text-xs text-muted-foreground mb-1 block">
-                  <span className="text-primary font-bold">{i + 1}. </span>{q}
-                </label>
-                <textarea value={answers[i] || ""} onChange={e => setAnswers(prev => ({ ...prev, [i]: e.target.value }))}
-                  placeholder="Ваша відповідь..." className={`${inputClass} resize-none h-20`} />
-              </div>
-            ))}
-            <div className="flex gap-2">
-              <GradientButton variant={btnVariant} className="flex-1" onClick={handleSubmit} disabled={appStatus === "sending"}>
-                <Send className="w-3.5 h-3.5 inline mr-1.5" />
-                {appStatus === "sending" ? "Відправляю..." : "Відправити анкету"}
-              </GradientButton>
-              <button onClick={() => setShowForm(false)} className="liquid-glass rounded-2xl px-4 py-3 text-sm text-muted-foreground active:scale-95">
-                Скасувати
-              </button>
-            </div>
-          </div>
-        ) : appStatus === "idle" && !isMember && (
-          <GradientButton variant={btnVariant} className="w-full" onClick={() => setShowForm(true)}>
-            Подати анкету
-          </GradientButton>
-        )}
       </div>
     </div>
   );
