@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Gift, Clock, Zap, Trophy, Star, Flame } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
-import { getBalance, addBalance, setBalance as syncBalance, supabase } from "../lib/store";
+import { setBalance as syncBalance, supabase } from "../lib/store";
 
 // ─── THEME SYSTEM (exported for Casino.tsx) ───────────────────────────────────
 export type ThemeId = "lime" | "neon_blue" | "cyber_red" | "gold_vip" | "purple_haze" | "arctic" | "matrix" | "sunset";
@@ -95,34 +95,26 @@ export const THEMES: Theme[] = [
 export const applyTheme = (theme: Theme) => {
   const root = document.documentElement;
   Object.entries(theme.vars).forEach(([k, v]) => {
-    if (!k.startsWith("--passport")) {
-      root.style.setProperty(k, v);
-    }
+    if (!k.startsWith("--passport")) root.style.setProperty(k, v);
   });
   root.style.setProperty("--neon-lime", theme.vars["--primary"] || "84 81% 44%");
   root.style.setProperty("--neon-green", theme.vars["--secondary"] || "142 71% 45%");
-
   document.body.style.backgroundImage = theme.bgGradient;
   document.body.style.transition = "background-image 0.5s ease";
-
   root.setAttribute("data-passport-bg", theme.vars["--passport-bg"] || "");
   root.setAttribute("data-passport-border", theme.vars["--passport-border"] || "");
   root.setAttribute("data-theme-id", theme.id);
-
   localStorage.setItem("crp_theme", theme.id);
 };
 
-// ── loadSavedTheme: спочатку застосовує тему з localStorage (швидко, без флашу),
-//    а потім асинхронно підтягує актуальну тему з Supabase і оновлює якщо відрізняється
+// Крок 1: одразу з localStorage (без флашу), Крок 2: синхронізує з Supabase
 export const loadSavedTheme = () => {
-  // Крок 1: одразу застосовуємо з localStorage (без затримки, щоб не було флашу)
   const localTheme = localStorage.getItem("crp_theme") as ThemeId | null;
   if (localTheme) {
     const theme = THEMES.find(t => t.id === localTheme);
     if (theme) applyTheme(theme);
   }
 
-  // Крок 2: асинхронно підтягуємо справжню тему з Supabase (прив'язана до акаунту)
   const nick = localStorage.getItem("crp_nick");
   if (!nick) return;
 
@@ -137,29 +129,26 @@ export const loadSavedTheme = () => {
         if (dbTheme) applyTheme(dbTheme);
       }
     })
-    .catch(() => {/* тихо ігноруємо помилку мережі, localStorage вже застосований */});
+    .catch(() => {});
 };
 
 // ─── SHOP PAGE — тільки нагороди ──────────────────────────────────────────────
 const Shop = () => {
   const nick = localStorage.getItem("crp_nick") || "";
-  const [balance, setBalanceState] = useState(() => getBalance(nick));
+  const [balance, setBalanceState] = useState(0);
   const [lastReward, setLastReward] = useState(() => parseInt(localStorage.getItem("crp_last_reward") || "0"));
   const [streak, setStreak] = useState(() => parseInt(localStorage.getItem("crp_streak") || "0"));
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Завантажуємо баланс з Supabase
+    // Завантажуємо баланс з Supabase — єдине джерело правди
     supabase.from("users").select("balance").ilike("username", nick).maybeSingle().then(({ data }) => {
       if (data?.balance !== undefined) {
-        const bal = data.balance as number;
+        const bal = (data.balance as number) || 0;
         syncBalance(nick, bal);
         setBalanceState(bal);
       }
     });
-    const update = () => setBalanceState(getBalance(nick));
-    window.addEventListener("focus", update);
-    return () => window.removeEventListener("focus", update);
   }, [nick]);
 
   const canClaim = Date.now() - lastReward > 24 * 60 * 60 * 1000;
@@ -174,21 +163,38 @@ const Shop = () => {
   const claimReward = async () => {
     if (!canClaim || loading) return;
     setLoading(true);
-    const bonus = streak >= 6 ? 200 : streak >= 3 ? 150 : 100;
-    const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
-    const currentBal = (user?.balance as number) || getBalance(nick);
-    const newBal = currentBal + bonus;
-    await supabase.from("users").update({ balance: newBal }).ilike("username", nick);
-    syncBalance(nick, newBal);
-    setBalanceState(newBal);
-    const now = Date.now();
-    const newStreak = streak + 1;
-    setLastReward(now);
-    setStreak(newStreak);
-    localStorage.setItem("crp_last_reward", String(now));
-    localStorage.setItem("crp_streak", String(newStreak));
+    try {
+      const bonus = streak >= 6 ? 200 : streak >= 3 ? 150 : 100;
+
+      // Читаємо свіжий баланс з БД
+      const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
+      const currentBal = (user?.balance as number) ?? 0;
+      const newBal = currentBal + bonus;
+
+      // Оновлюємо баланс в БД
+      const { error } = await supabase.from("users").update({ balance: newBal }).ilike("username", nick);
+      if (error) {
+        toast.error("Помилка нарахування балансу");
+        setLoading(false);
+        return;
+      }
+
+      // Синхронізуємо localStorage і стан
+      syncBalance(nick, newBal);
+      setBalanceState(newBal);
+
+      const now = Date.now();
+      const newStreak = streak + 1;
+      setLastReward(now);
+      setStreak(newStreak);
+      localStorage.setItem("crp_last_reward", String(now));
+      localStorage.setItem("crp_streak", String(newStreak));
+
+      toast.success(`+${bonus} CR нараховано! Серія: ${newStreak} днів`);
+    } catch (e) {
+      toast.error("Щось пішло не так");
+    }
     setLoading(false);
-    toast.success(`+${bonus} CR нараховано! Серія: ${newStreak} днів`);
   };
 
   const streakDays = [
@@ -203,7 +209,6 @@ const Shop = () => {
 
   return (
     <div className="min-h-screen pb-20 px-4 pt-4">
-      {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="font-display text-xl font-bold tracking-wider neon-text-lime">НАГОРОДИ</h1>
@@ -216,7 +221,6 @@ const Shop = () => {
         </div>
       </div>
 
-      {/* Streak calendar */}
       <div className="liquid-glass-card rounded-2xl p-4 mb-4 animate-fade-in">
         <div className="flex items-center gap-2 mb-3">
           <Flame className="w-4 h-4 text-orange-400" />
@@ -249,7 +253,6 @@ const Shop = () => {
         </div>
       </div>
 
-      {/* Main reward card */}
       <div className="relative overflow-hidden rounded-3xl animate-fade-in"
         style={{
           background: canClaim
@@ -340,10 +343,7 @@ const Shop = () => {
               </div>
               <div className="h-2.5 rounded-full overflow-hidden" style={{ background: "hsl(0 0% 100% / 0.06)" }}>
                 <div className="h-full rounded-full transition-all duration-1000 relative overflow-hidden"
-                  style={{
-                    width: `${progress}%`,
-                    background: "linear-gradient(90deg, hsl(var(--primary) / 0.6), hsl(var(--primary)))",
-                  }}>
+                  style={{ width: `${progress}%`, background: "linear-gradient(90deg, hsl(var(--primary) / 0.6), hsl(var(--primary)))" }}>
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
                 </div>
               </div>
@@ -353,7 +353,6 @@ const Shop = () => {
         </div>
       </div>
 
-      {/* Bonus info */}
       <div className="mt-4 space-y-2 animate-fade-in">
         {[
           { label: "1-2 дні поспіль", bonus: "+100 CR", color: "text-primary", bg: "bg-primary/8 border-primary/15" },
