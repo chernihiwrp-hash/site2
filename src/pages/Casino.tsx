@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Palette, Check, Zap, Gift, X, Coins, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { store, type NftGift, supabase, getBalance, setBalance as syncBalance } from "../lib/store";
+import { store, type NftGift, supabase } from "../lib/store";
 import { THEMES, applyTheme, type ThemeId } from "./Shop";
 
 const GLOBAL_STYLES = `
@@ -48,7 +48,6 @@ const GLOBAL_STYLES = `
   }
 `;
 
-/* ─── Lock SVG ───────────────────────────────────────────────────── */
 const LockIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
     strokeLinecap="round" strokeLinejoin="round"
@@ -58,7 +57,6 @@ const LockIcon = () => (
   </svg>
 );
 
-/* ─── Animated media ─────────────────────────────────────────────── */
 const GiftMedia = ({ url, className }: { url: string; className?: string }) => {
   const isAnim = url.toLowerCase().includes(".tgs") || url.toLowerCase().includes(".json");
   if (isAnim)
@@ -72,7 +70,6 @@ const GiftMedia = ({ url, className }: { url: string; className?: string }) => {
   return <img src={url} className={`${className} object-contain rounded-2xl`} alt="nft" />;
 };
 
-/* ─── Purchase success ───────────────────────────────────────────── */
 const PurchaseSuccess = ({ gift, onClose }: { gift: NftGift; onClose: () => void }) => {
   useEffect(() => {
     const t = setTimeout(onClose, 3800);
@@ -130,7 +127,6 @@ const PurchaseSuccess = ({ gift, onClose }: { gift: NftGift; onClose: () => void
   );
 };
 
-/* ─── NFT Card ───────────────────────────────────────────────────── */
 const NftCard = ({ gift, index, onClick }: { gift: NftGift; index: number; onClick: () => void }) => {
   const [hovered, setHovered] = useState(false);
   const isSold = !!gift.sold;
@@ -146,110 +142,52 @@ const NftCard = ({ gift, index, onClick }: { gift: NftGift; index: number; onCli
         cursor: isSold ? "not-allowed" : "pointer",
       }}
     >
-      <div
-        className="relative rounded-[28px] p-[1px]"
+      <div className="relative rounded-[28px] p-[1px]"
         style={{
           background: isSold
             ? "linear-gradient(135deg, hsl(0 0% 100% / 0.025), hsl(0 0% 100% / 0.01))"
             : hovered
             ? "linear-gradient(135deg, hsl(var(--primary)/0.55), hsl(var(--primary)/0.08) 55%, hsl(var(--primary)/0.35))"
             : "linear-gradient(135deg, hsl(0 0% 100% / 0.06), hsl(0 0% 100% / 0.02))",
-          boxShadow: hovered && !isSold
-            ? "0 0 40px hsl(var(--primary)/0.22), 0 18px 36px rgba(0,0,0,.45)"
-            : "0 4px 16px rgba(0,0,0,.3)",
+          boxShadow: hovered && !isSold ? "0 0 40px hsl(var(--primary)/0.22), 0 18px 36px rgba(0,0,0,.45)" : "0 4px 16px rgba(0,0,0,.3)",
           transform: hovered && !isSold ? "translateY(-5px) scale(1.025)" : "translateY(0) scale(1)",
           transition: "all 0.38s cubic-bezier(0.34,1,0.64,1)",
-        }}
-      >
-        <div
-          className="relative rounded-[27px] overflow-hidden flex flex-col items-center p-4 gap-3"
-          style={{ background: isSold ? "#060606" : "linear-gradient(170deg, #0d0d0d, #070707)" }}
-        >
+        }}>
+        <div className="relative rounded-[27px] overflow-hidden flex flex-col items-center p-4 gap-3"
+          style={{ background: isSold ? "#060606" : "linear-gradient(170deg, #0d0d0d, #070707)" }}>
           {!isSold && (
             <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-28 h-16 rounded-full"
-              style={{
-                background: "hsl(var(--primary)/0.3)", filter: "blur(18px)",
-                opacity: hovered ? 1 : 0,
-                animation: hovered ? "glow-breathe 2s ease-in-out infinite" : "none",
-                transition: "opacity 0.4s",
-              }} />
+              style={{ background: "hsl(var(--primary)/0.3)", filter: "blur(18px)", opacity: hovered ? 1 : 0, animation: hovered ? "glow-breathe 2s ease-in-out infinite" : "none", transition: "opacity 0.4s" }} />
           )}
-
-          <div
-            className="relative w-full aspect-square rounded-[20px] flex items-center justify-center overflow-hidden"
-            style={{
-              background: isSold
-                ? "hsl(0 0% 4%)"
-                : "radial-gradient(circle at 50% 45%, hsl(var(--primary)/0.07) 0%, transparent 70%)",
-              border: isSold
-                ? "1px solid hsl(0 0% 100% / 0.03)"
-                : "1px solid hsl(0 0% 100% / 0.05)",
-            }}
-          >
-            <div
-              className="w-4/5 h-4/5 relative z-10"
-              style={{
-                opacity: isSold ? 0.15 : 1,
-                filter: isSold ? "grayscale(100%) brightness(0.35)" : "none",
-              }}
-            >
+          <div className="relative w-full aspect-square rounded-[20px] flex items-center justify-center overflow-hidden"
+            style={{ background: isSold ? "hsl(0 0% 4%)" : "radial-gradient(circle at 50% 45%, hsl(var(--primary)/0.07) 0%, transparent 70%)", border: isSold ? "1px solid hsl(0 0% 100% / 0.03)" : "1px solid hsl(0 0% 100% / 0.05)" }}>
+            <div className="w-4/5 h-4/5 relative z-10" style={{ opacity: isSold ? 0.15 : 1, filter: isSold ? "grayscale(100%) brightness(0.35)" : "none" }}>
               <GiftMedia url={gift.image_url} className="w-full h-full drop-shadow-2xl" />
             </div>
-
             {!isSold && (
-              <div className="absolute inset-0 rounded-[20px]"
-                style={{
-                  background: "radial-gradient(circle at 50% 50%, hsl(var(--primary)/0.14) 0%, transparent 65%)",
-                  opacity: hovered ? 1 : 0,
-                  transition: "opacity 0.5s",
-                }} />
+              <div className="absolute inset-0 rounded-[20px]" style={{ background: "radial-gradient(circle at 50% 50%, hsl(var(--primary)/0.14) 0%, transparent 65%)", opacity: hovered ? 1 : 0, transition: "opacity 0.5s" }} />
             )}
-
             {isSold && (
               <div className="absolute inset-0 z-20 flex flex-col items-center justify-center">
-                <div
-                  className="flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl"
-                  style={{
-                    background: "rgba(0,0,0,0.65)",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                  }}
-                >
+                <div className="flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl" style={{ background: "rgba(0,0,0,0.65)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <LockIcon />
-                  <span
-                    className="text-[8px] font-black uppercase tracking-[0.25em]"
-                    style={{ color: "rgba(255,255,255,0.3)", letterSpacing: "0.2em" }}
-                  >
-                    SOLD
-                  </span>
+                  <span className="text-[8px] font-black uppercase tracking-[0.25em]" style={{ color: "rgba(255,255,255,0.3)" }}>SOLD</span>
                 </div>
               </div>
             )}
           </div>
-
           <div className="w-full flex items-end justify-between px-1">
             <div>
-              <p className="text-[8px] font-black uppercase tracking-[0.22em] mb-0.5"
-                style={{ color: isSold ? "rgba(255,255,255,0.12)" : "hsl(var(--primary)/0.55)" }}>
-                NFT
-              </p>
-              <p className="text-[11px] font-black uppercase tracking-tight truncate max-w-[80px]"
-                style={{ color: isSold ? "rgba(255,255,255,0.2)" : "white" }}>
-                {gift.name}
-              </p>
+              <p className="text-[8px] font-black uppercase tracking-[0.22em] mb-0.5" style={{ color: isSold ? "rgba(255,255,255,0.12)" : "hsl(var(--primary)/0.55)" }}>NFT</p>
+              <p className="text-[11px] font-black uppercase tracking-tight truncate max-w-[80px]" style={{ color: isSold ? "rgba(255,255,255,0.2)" : "white" }}>{gift.name}</p>
             </div>
-
             {isSold ? (
-              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl"
-                style={{ background: "hsl(0 0% 100% / 0.02)", border: "1px solid hsl(0 0% 100% / 0.05)" }}>
+              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl" style={{ background: "hsl(0 0% 100% / 0.02)", border: "1px solid hsl(0 0% 100% / 0.05)" }}>
                 <Coins className="w-3 h-3" style={{ color: "rgba(255,255,255,0.15)" }} />
-                <span className="text-[10px] font-black"
-                  style={{ color: "rgba(255,255,255,0.18)", textDecoration: "line-through", textDecorationColor: "rgba(255,255,255,0.12)" }}>
-                  {gift.price}
-                </span>
+                <span className="text-[10px] font-black" style={{ color: "rgba(255,255,255,0.18)", textDecoration: "line-through" }}>{gift.price}</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl"
-                style={{ background: "hsl(var(--primary)/0.1)", border: "1px solid hsl(var(--primary)/0.2)" }}>
+              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl" style={{ background: "hsl(var(--primary)/0.1)", border: "1px solid hsl(var(--primary)/0.2)" }}>
                 <Coins className="w-3 h-3" style={{ color: "hsl(var(--primary))" }} />
                 <span className="text-[10px] font-black text-white">{gift.price}</span>
               </div>
@@ -270,131 +208,145 @@ const Casino = () => {
   const [selectedGift, setSelectedGift] = useState<NftGift | null>(null);
   const [purchasedGift, setPurchasedGift] = useState<NftGift | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const [buyingTheme, setBuyingTheme] = useState(false);
+  const [buyingNft, setBuyingNft] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<ThemeId>("lime");
   const [ownedThemes, setOwnedThemes] = useState<ThemeId[]>(["lime"]);
 
-  // ── Завантажуємо дані з Supabase при відкритті ──────────────────────────────
-  useEffect(() => {
+  // ── Завантаження всіх даних з Supabase ────────────────────────────────────
+  const loadUserData = useCallback(async () => {
     if (!nick) return;
+    try {
+      const { data } = await supabase
+        .from("users")
+        .select("balance, active_theme, owned_themes")
+        .ilike("username", nick)
+        .maybeSingle();
 
-    const loadUserData = async () => {
-      setLoading(true);
-      try {
-        // Отримуємо баланс, активну тему і куплені теми з БД
-        const { data: userData } = await supabase
-          .from("users")
-          .select("balance, active_theme, owned_themes")
-          .ilike("username", nick)
-          .maybeSingle();
+      if (data) {
+        setBalance((data.balance as number) || 0);
 
-        if (userData) {
-          // Синхронізуємо баланс
-          const bal = (userData.balance as number) || 0;
-          syncBalance(nick, bal);
-          setBalance(bal);
+        const dbOwned: ThemeId[] = Array.isArray(data.owned_themes) && data.owned_themes.length > 0
+          ? data.owned_themes : ["lime"];
+        if (!dbOwned.includes("lime")) dbOwned.unshift("lime");
+        setOwnedThemes(dbOwned);
 
-          // Завантажуємо куплені теми з БД (головне джерело правди)
-          const dbOwned: ThemeId[] = userData.owned_themes || ["lime"];
-          if (!dbOwned.includes("lime")) dbOwned.unshift("lime");
-          setOwnedThemes(dbOwned);
-          // Синхронізуємо з localStorage для офлайн-доступу
-          localStorage.setItem(`crp_owned_themes_${nick.toLowerCase()}`, JSON.stringify(dbOwned));
-
-          // Завантажуємо активну тему з БД
-          const dbTheme = (userData.active_theme as ThemeId) || "lime";
-          setCurrentTheme(dbTheme);
-          const themeObj = THEMES.find(t => t.id === dbTheme);
-          if (themeObj) applyTheme(themeObj);
-        } else {
-          // Fallback до localStorage якщо юзер не знайдений
-          setBalance(getBalance(nick));
-          const localOwned = (() => {
-            try { return JSON.parse(localStorage.getItem(`crp_owned_themes_${nick.toLowerCase()}`) || '["lime"]'); }
-            catch { return ["lime"]; }
-          })();
-          setOwnedThemes(localOwned);
-          const localTheme = (localStorage.getItem("crp_theme") as ThemeId) || "lime";
-          setCurrentTheme(localTheme);
-        }
-      } catch (e) {
-        console.error("Помилка завантаження даних Casino:", e);
-        // Fallback до localStorage
-        setBalance(getBalance(nick));
+        const dbTheme = (data.active_theme as ThemeId) || "lime";
+        setCurrentTheme(dbTheme);
+        const themeObj = THEMES.find(t => t.id === dbTheme);
+        if (themeObj) applyTheme(themeObj);
       }
+    } catch (e) {
+      console.error("Помилка завантаження:", e);
+    }
 
-      // Завантажуємо NFT
-      const nftData = await store.getNftGifts();
-      setGifts(nftData);
-      setLoading(false);
-    };
-
-    loadUserData();
-
-    const update = () => loadUserData();
-    window.addEventListener("focus", update);
-    return () => window.removeEventListener("focus", update);
+    const nftData = await store.getNftGifts();
+    setGifts(nftData);
+    setLoading(false);
   }, [nick]);
 
-  // ── Купівля / активація теми ────────────────────────────────────────────────
+  useEffect(() => {
+    loadUserData();
+    window.addEventListener("focus", loadUserData);
+    return () => window.removeEventListener("focus", loadUserData);
+  }, [loadUserData]);
+
+  // ── Купівля / активація теми ───────────────────────────────────────────────
   const buyOrActivate = async (theme: typeof THEMES[0]) => {
+    if (buyingTheme) return;
+
+    // Якщо вже куплена — просто активуємо
     if (ownedThemes.includes(theme.id)) {
-      // Просто активуємо вже куплену тему
       applyTheme(theme);
       setCurrentTheme(theme.id);
-
-      // Зберігаємо активну тему в Supabase
-      await supabase
-        .from("users")
-        .update({ active_theme: theme.id })
-        .ilike("username", nick);
-
       localStorage.setItem("crp_theme", theme.id);
+      await supabase.from("users").update({ active_theme: theme.id }).ilike("username", nick);
       toast.success(`Тему "${theme.name}" активовано!`);
       return;
     }
 
-    if (balance < theme.price) {
-      toast.error("Недостатньо CR!");
-      return;
-    }
+    if (balance < theme.price) { toast.error("Недостатньо CR!"); return; }
 
-    // Списуємо баланс через Supabase (store.takeTokens синхронізує і БД і localStorage)
-    const success = await store.takeTokens(nick, theme.price);
-    if (!success) {
-      toast.error("Помилка списання балансу!");
-      return;
-    }
+    setBuyingTheme(true);
+    try {
+      // Беремо свіжий баланс з БД щоб не було подвійного списання
+      const { data: fresh } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
+      const freshBal = (fresh?.balance as number) ?? 0;
 
-    // Зберігаємо нову тему в Supabase: і в owned_themes і в active_theme
-    const newOwned = [...ownedThemes, theme.id as ThemeId];
-    await supabase
-      .from("users")
-      .update({
+      if (freshBal < theme.price) {
+        toast.error("Недостатньо CR!");
+        setBuyingTheme(false);
+        return;
+      }
+
+      const newBalance = freshBal - theme.price;
+      const newOwned = [...ownedThemes, theme.id as ThemeId];
+
+      const { error } = await supabase.from("users").update({
+        balance: newBalance,
         owned_themes: newOwned,
         active_theme: theme.id,
-      })
-      .ilike("username", nick);
+      }).ilike("username", nick);
 
-    // Синхронізуємо стан
-    setOwnedThemes(newOwned);
-    setBalance(prev => prev - theme.price);
-    localStorage.setItem(`crp_owned_themes_${nick.toLowerCase()}`, JSON.stringify(newOwned));
-    localStorage.setItem("crp_theme", theme.id);
+      if (error) { toast.error("Помилка: " + error.message); setBuyingTheme(false); return; }
 
-    applyTheme(theme);
-    setCurrentTheme(theme.id as ThemeId);
-    toast.success(`Тему "${theme.name}" куплено і активовано!`);
+      setBalance(newBalance);
+      setOwnedThemes(newOwned);
+      setCurrentTheme(theme.id as ThemeId);
+      localStorage.setItem("crp_theme", theme.id);
+      applyTheme(theme);
+      toast.success(`Тему "${theme.name}" куплено!`);
+    } catch (e) {
+      toast.error("Щось пішло не так");
+    }
+    setBuyingTheme(false);
   };
 
-  const handleBuyNft = () => {
-    if (!selectedGift) return;
+  // ── Купівля NFT ────────────────────────────────────────────────────────────
+  const handleBuyNft = async () => {
+    if (!selectedGift || buyingNft) return;
     if (selectedGift.sold) { toast.error("Цей предмет вже продано"); setSelectedGift(null); return; }
-    store.buyNftGift(nick, selectedGift);
-    setBalance(getBalance(nick));
-    const bought = selectedGift;
-    setSelectedGift(null);
-    setTimeout(() => setPurchasedGift(bought), 150);
+
+    setBuyingNft(true);
+    try {
+      // Свіжий баланс з БД
+      const { data: fresh } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
+      const freshBal = (fresh?.balance as number) ?? 0;
+
+      if (freshBal < selectedGift.price) {
+        toast.error("Недостатньо CR!");
+        setSelectedGift(null);
+        setBuyingNft(false);
+        return;
+      }
+
+      const newBalance = freshBal - selectedGift.price;
+
+      // Списуємо баланс
+      const { error: balError } = await supabase.from("users").update({ balance: newBalance }).ilike("username", nick);
+      if (balError) { toast.error("Помилка списання балансу"); setBuyingNft(false); return; }
+
+      // Записуємо власника NFT
+      const { error: nftError } = await supabase.from("nft_owners").insert({ owner_nick: nick, nft_id: selectedGift.id });
+      if (nftError) {
+        // Повертаємо баланс якщо NFT не записався
+        await supabase.from("users").update({ balance: freshBal }).ilike("username", nick);
+        toast.error("Помилка покупки NFT");
+        setBuyingNft(false);
+        return;
+      }
+
+      setBalance(newBalance);
+      const bought = selectedGift;
+      setSelectedGift(null);
+      // Оновлюємо список NFT
+      const nftData = await store.getNftGifts();
+      setGifts(nftData);
+      setTimeout(() => setPurchasedGift(bought), 150);
+    } catch (e) {
+      toast.error("Щось пішло не так");
+    }
+    setBuyingNft(false);
   };
 
   return (
@@ -423,7 +375,7 @@ const Casino = () => {
             style={{ background: "radial-gradient(circle at 30% 50%, hsl(var(--primary)/0.09) 0%, transparent 60%)" }} />
           <Zap className="w-3.5 h-3.5 relative z-10" style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 6px hsl(var(--primary)))" }} />
           <span className="text-sm font-black text-white relative z-10">
-            {balance} <span style={{ color: "hsl(var(--primary)/0.65)", fontSize: 9 }}>CR</span>
+            {loading ? "..." : balance} <span style={{ color: "hsl(var(--primary)/0.65)", fontSize: 9 }}>CR</span>
           </span>
         </div>
       </div>
@@ -450,55 +402,62 @@ const Casino = () => {
       {activeTab === "themes" && (
         <div className="grid gap-3">
           {loading ? (
-            <div className="text-center text-muted-foreground text-sm py-8">Завантаження...</div>
-          ) : (
-            THEMES.map((theme, i) => {
-              const isOwned = ownedThemes.includes(theme.id);
-              const isActive = currentTheme === theme.id;
-              return (
-                <div key={theme.id} className="relative overflow-hidden rounded-[24px] p-[1px]"
-                  style={{ background: isActive ? "linear-gradient(135deg, hsl(var(--primary)/0.5), hsl(var(--primary)/0.1) 50%, hsl(var(--primary)/0.3))" : "hsl(0 0% 100% / 0.04)", boxShadow: isActive ? "0 0 28px hsl(var(--primary)/0.14)" : "none", animation: `card-enter 0.42s ${i * 0.055}s cubic-bezier(0.34,1.15,0.64,1) both` }}>
-                  <div className="relative rounded-[23px] p-4 flex items-center gap-4" style={{ background: "#0a0a0a" }}>
-                    <div className="w-14 h-14 rounded-xl shrink-0 overflow-hidden relative border border-white/10" style={{ background: theme.preview }}>
-                      {isActive && (<div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px]"><Check className="w-5 h-5 text-white stroke-[3px]" style={{ filter: "drop-shadow(0 0 5px white)" }} /></div>)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-black text-white uppercase italic tracking-tight">{theme.name}</h3>
-                      <p className="text-[10px] text-zinc-600 leading-tight mt-0.5 truncate">{theme.description}</p>
-                    </div>
-                    <button onClick={() => buyOrActivate(theme)} className="shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95"
-                      style={isActive ? { background: "hsl(var(--primary)/0.1)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary)/0.25)" } : isOwned ? { background: "hsl(0 0% 100%/0.08)", color: "white", border: "1px solid hsl(0 0% 100%/0.1)" } : { background: "hsl(var(--primary))", color: "black", boxShadow: "0 4px 16px hsl(var(--primary)/0.35)" }}>
-                      {isActive ? "Активна" : isOwned ? "Вибрати" : `${theme.price} CR`}
-                    </button>
+            <div className="text-center text-zinc-600 text-sm py-12">Завантаження...</div>
+          ) : THEMES.map((theme, i) => {
+            const isOwned = ownedThemes.includes(theme.id);
+            const isActive = currentTheme === theme.id;
+            return (
+              <div key={theme.id} className="relative overflow-hidden rounded-[24px] p-[1px]"
+                style={{ background: isActive ? "linear-gradient(135deg, hsl(var(--primary)/0.5), hsl(var(--primary)/0.1) 50%, hsl(var(--primary)/0.3))" : "hsl(0 0% 100% / 0.04)", boxShadow: isActive ? "0 0 28px hsl(var(--primary)/0.14)" : "none", animation: `card-enter 0.42s ${i * 0.055}s cubic-bezier(0.34,1.15,0.64,1) both` }}>
+                <div className="relative rounded-[23px] p-4 flex items-center gap-4" style={{ background: "#0a0a0a" }}>
+                  <div className="w-14 h-14 rounded-xl shrink-0 overflow-hidden relative border border-white/10" style={{ background: theme.preview }}>
+                    {isActive && (<div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px]"><Check className="w-5 h-5 text-white stroke-[3px]" style={{ filter: "drop-shadow(0 0 5px white)" }} /></div>)}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-black text-white uppercase italic tracking-tight">{theme.name}</h3>
+                    <p className="text-[10px] text-zinc-600 leading-tight mt-0.5 truncate">{theme.description}</p>
+                  </div>
+                  <button
+                    onClick={() => buyOrActivate(theme)}
+                    disabled={buyingTheme}
+                    className="shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95 disabled:opacity-50"
+                    style={isActive
+                      ? { background: "hsl(var(--primary)/0.1)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary)/0.25)" }
+                      : isOwned
+                      ? { background: "hsl(0 0% 100%/0.08)", color: "white", border: "1px solid hsl(0 0% 100%/0.1)" }
+                      : { background: "hsl(var(--primary))", color: "black", boxShadow: "0 4px 16px hsl(var(--primary)/0.35)" }}>
+                    {isActive ? "Активна" : isOwned ? "Вибрати" : `${theme.price} CR`}
+                  </button>
                 </div>
-              );
-            })
-          )}
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* NFT Grid */}
       {activeTab === "gifts" && (
         <div className="grid grid-cols-2 gap-4">
-          {gifts.map((gift, i) => (
+          {loading ? (
+            <div className="col-span-2 text-center text-zinc-600 text-sm py-12">Завантаження...</div>
+          ) : gifts.map((gift, i) => (
             <NftCard key={gift.id} gift={gift} index={i}
               onClick={() => { if (!gift.sold) setSelectedGift(gift); }} />
           ))}
         </div>
       )}
 
-      {/* Modal */}
+      {/* NFT Modal */}
       {selectedGift && !selectedGift.sold && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6"
           style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(20px)", animation: "fade-backdrop 0.28s ease" }}
-          onClick={() => setSelectedGift(null)}>
+          onClick={() => !buyingNft && setSelectedGift(null)}>
           <div className="w-full max-w-sm relative overflow-hidden"
             style={{ background: "linear-gradient(160deg, #0e0e0e, #070707)", border: "1px solid hsl(var(--primary)/0.2)", borderRadius: 36, boxShadow: "0 0 0 1px hsl(var(--primary)/0.05), 0 40px 80px rgba(0,0,0,.75), 0 0 90px hsl(var(--primary)/0.1)", animation: "modal-in 0.42s cubic-bezier(0.34,1.35,0.64,1)" }}
             onClick={(e) => e.stopPropagation()}>
             <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-60 h-32 rounded-full pointer-events-none"
               style={{ background: "hsl(var(--primary)/0.22)", filter: "blur(40px)" }} />
-            <button onClick={() => setSelectedGift(null)}
+            <button onClick={() => !buyingNft && setSelectedGift(null)}
               className="absolute top-5 right-5 w-9 h-9 flex items-center justify-center rounded-full z-20 transition-all active:scale-90"
               style={{ background: "hsl(0 0% 100%/0.05)", border: "1px solid hsl(0 0% 100%/0.08)" }}>
               <X className="w-4 h-4 text-zinc-500" />
@@ -524,10 +483,10 @@ const Casino = () => {
                   <span className="text-base font-black text-white">{selectedGift.price} <span style={{ color: "hsl(var(--primary)/0.65)", fontSize: 10 }}>CR</span></span>
                 </div>
               </div>
-              <button onClick={handleBuyNft}
-                className="w-full py-4 rounded-[20px] font-black uppercase text-[11px] tracking-widest text-black relative overflow-hidden transition-all active:scale-[0.97] duration-200"
+              <button onClick={handleBuyNft} disabled={buyingNft}
+                className="w-full py-4 rounded-[20px] font-black uppercase text-[11px] tracking-widest text-black relative overflow-hidden transition-all active:scale-[0.97] duration-200 disabled:opacity-60"
                 style={{ background: "hsl(var(--primary))", boxShadow: "0 8px 28px hsl(var(--primary)/0.38), inset 0 1px 0 rgba(255,255,255,0.2)" }}>
-                <span className="relative z-10">Підтвердити покупку</span>
+                <span className="relative z-10">{buyingNft ? "Купую..." : "Підтвердити покупку"}</span>
                 <div className="absolute inset-0" style={{ background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%)", animation: "shine-sweep 3s ease-in-out infinite" }} />
               </button>
               <p className="text-[9px] text-zinc-700 font-bold uppercase tracking-tight -mt-2">Предмет буде миттєво додано до інвентарю</p>
