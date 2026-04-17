@@ -472,6 +472,16 @@ export const store = {
       .single();
     return (data as Record<string, unknown> | null)?.faction_name as string | null || null;
   },
+  // Уволитися з фракції (скасувати схвалену заявку)
+  resignFromFaction: async (nick: string, factionName: string): Promise<boolean> => {
+    const { error } = await supabase
+      .from("faction_applications")
+      .update({ status: "resigned" })
+      .eq("username", nick)
+      .ilike("faction_name", factionName)
+      .eq("status", "approved");
+    return !error;
+  },
   setFactionApps: (_: FactionApplication[]) => {},
 
   // ── ADMIN APPLICATIONS ────────────────────────────────────────────────────
