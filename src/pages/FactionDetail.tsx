@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import PageHeader from "../components/PageHeader";
 import GradientButton from "../components/GradientButton";
-import { Users, User, Send, CheckCircle, Clock, Shield, Crown } from "lucide-react";
+import { Users, User, Send, CheckCircle, Clock, Shield, Crown, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { store, supabase } from "../lib/store";
 
@@ -63,6 +63,9 @@ const FactionDetail = () => {
   const [age, setAge] = useState("");
   const [telegram, setTelegram] = useState("");
   const [appStatus, setAppStatus] = useState<AppStatus>("idle");
+  const [isMember, setIsMember] = useState(false);
+  const [resignConfirm, setResignConfirm] = useState(false);
+  const [resignLoading, setResignLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -215,6 +218,10 @@ const FactionDetail = () => {
       mems.sort((a, b) => (b.isLeader ? 1 : 0) - (a.isLeader ? 1 : 0));
 
       setMembers(mems);
+      // Check if current user is a member
+      if (nick) {
+        setIsMember(mems.some(m => m.name.toLowerCase() === nick.toLowerCase()));
+      }
       setMembersLoading(false);
     };
 
@@ -230,6 +237,21 @@ const FactionDetail = () => {
       </div>
     </div>
   );
+
+  const handleResign = async () => {
+    if (!nick || !faction) return;
+    setResignLoading(true);
+    const ok = await store.resignFromFaction(nick, faction.name);
+    setResignLoading(false);
+    if (ok) {
+      toast.success("Ви покинули фракцію");
+      setIsMember(false);
+      setResignConfirm(false);
+      setMembers(prev => prev.filter(m => m.name.toLowerCase() !== nick.toLowerCase()));
+    } else {
+      toast.error("Помилка. Спробуйте ще раз");
+    }
+  };
 
   const handleSubmit = async () => {
     if (!nick || !roblox || !age || !telegram) return toast.error("Заповніть усі поля");
@@ -347,6 +369,46 @@ const FactionDetail = () => {
           )}
         </div>
 
+        {/* Resign button — shown only to current members */}
+        {isMember && (
+          <div className="mb-4">
+            {!resignConfirm ? (
+              <button
+                onClick={() => setResignConfirm(true)}
+                className="w-full liquid-glass rounded-2xl px-4 py-3 text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                style={{ color: "hsl(0 70% 60%)", border: "1px solid hsl(0 70% 60% / 0.25)", background: "hsl(0 70% 60% / 0.06)" }}
+              >
+                <LogOut className="w-4 h-4" />
+                Уволитися з фракції
+              </button>
+            ) : (
+              <div className="liquid-glass rounded-2xl p-4 animate-fade-in"
+                style={{ border: "1px solid hsl(0 70% 60% / 0.3)", background: "hsl(0 70% 60% / 0.06)" }}>
+                <p className="text-sm font-semibold text-foreground mb-1 text-center">Ви впевнені?</p>
+                <p className="text-xs text-muted-foreground text-center mb-3">
+                  Ви покинете <span style={{ color: faction.color }}>{faction.name}</span>. Для повернення потрібно буде подати нову заявку.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleResign}
+                    disabled={resignLoading}
+                    className="flex-1 rounded-2xl px-4 py-2.5 text-sm font-bold active:scale-95 transition-transform"
+                    style={{ background: "hsl(0 70% 55%)", color: "white" }}
+                  >
+                    {resignLoading ? "Обробка..." : "Так, уволитися"}
+                  </button>
+                  <button
+                    onClick={() => setResignConfirm(false)}
+                    className="flex-1 liquid-glass rounded-2xl px-4 py-2.5 text-sm text-muted-foreground active:scale-95 transition-transform"
+                  >
+                    Скасувати
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Sent confirmation */}
         {appStatus === "sent" && (
           <div className="liquid-glass-card rounded-2xl p-5 mb-4 animate-fade-in border border-primary/20 text-center">
@@ -364,7 +426,7 @@ const FactionDetail = () => {
         )}
 
         {/* Form */}
-        {showForm && appStatus !== "sent" ? (
+        {showForm && appStatus !== "sent" && !isMember ? (
           <div className="liquid-glass-strong rounded-2xl p-4 space-y-3 animate-fade-in">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <Send className="w-4 h-4" style={{ color: faction.color }} /> Анкета у {faction.name}
@@ -402,7 +464,7 @@ const FactionDetail = () => {
               </button>
             </div>
           </div>
-        ) : appStatus === "idle" && (
+        ) : appStatus === "idle" && !isMember && (
           <GradientButton variant={btnVariant} className="w-full" onClick={() => setShowForm(true)}>
             Подати анкету
           </GradientButton>
