@@ -246,44 +246,28 @@ const handleResign = async () => {
     
     setResignLoading(true);
     
-    // Робимо копії даних, щоб не було приколів з пробілами
+    // Очищаємо нік від випадкових пробілів
     const userNick = nick.trim();
     const factionName = faction.name;
     
     console.log("📤 Спроба звільнення:", { userNick, factionName });
 
-    // Викликаємо функцію видалення з твого стору
+    // Викликаємо функцію видалення
     const ok = await store.resignFromFaction(userNick, factionName);
     
     setResignLoading(false);
     
     if (ok) {
-      toast.success("Ви покинули фракцію");
+      toast.success("Ви успішно покинули фракцію");
       setIsMember(false);
       setResignConfirm(false);
-      // Миттєво прибираємо себе зі списку учасників на екрані
+      // Оновлюємо список учасників на екрані, видаляючи себе
       setMembers(prev => prev.filter(m => m.name.toLowerCase() !== userNick.toLowerCase()));
     } else {
-      console.error("❌ Supabase відхилив видалення");
+      console.error("❌ Supabase відхилив видалення. Можливо, назва фракції в базі інша або немає прав (RLS).");
       toast.error("Помилка бази. Перевір консоль (F12)");
     }
   };
-  
-  const handleResign = async () => {
-    if (!nick || !faction) return;
-    setResignLoading(true);
-    const ok = await store.resignFromFaction(nick, faction.name);
-    setResignLoading(false);
-    if (ok) {
-      toast.success("Ви покинули фракцію");
-      setIsMember(false);
-      setResignConfirm(false);
-      setMembers(prev => prev.filter(m => m.name.toLowerCase() !== nick.toLowerCase()));
-    } else {
-      toast.error("Помилка. Спробуйте ще раз");
-    }
-  };
-
   const handleSubmit = async () => {
     if (!nick || !roblox || !age || !telegram) return toast.error("Заповніть усі поля");
     const unanswered = questions.findIndex((_, i) => !answers[i]?.trim());
