@@ -238,6 +238,37 @@ const FactionDetail = () => {
     </div>
   );
 
+const handleResign = async () => {
+    if (!nick || !faction) {
+      toast.error("Помилка: Нік або фракція не знайдені");
+      return;
+    }
+    
+    setResignLoading(true);
+    
+    // Робимо копії даних, щоб не було приколів з пробілами
+    const userNick = nick.trim();
+    const factionName = faction.name;
+    
+    console.log("📤 Спроба звільнення:", { userNick, factionName });
+
+    // Викликаємо функцію видалення з твого стору
+    const ok = await store.resignFromFaction(userNick, factionName);
+    
+    setResignLoading(false);
+    
+    if (ok) {
+      toast.success("Ви покинули фракцію");
+      setIsMember(false);
+      setResignConfirm(false);
+      // Миттєво прибираємо себе зі списку учасників на екрані
+      setMembers(prev => prev.filter(m => m.name.toLowerCase() !== userNick.toLowerCase()));
+    } else {
+      console.error("❌ Supabase відхилив видалення");
+      toast.error("Помилка бази. Перевір консоль (F12)");
+    }
+  };
+  
   const handleResign = async () => {
     if (!nick || !faction) return;
     setResignLoading(true);
