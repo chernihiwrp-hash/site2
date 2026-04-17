@@ -472,14 +472,22 @@ export const store = {
       .single();
     return (data as Record<string, unknown> | null)?.faction_name as string | null || null;
   },
-  // Уволитися з фракції (скасувати схвалену заявку)
+  // Уволитися з фракції (видалити схвалену заявку)
   resignFromFaction: async (nick: string, factionName: string): Promise<boolean> => {
-    const { error } = await supabase
+    // Спочатку знаходимо запис
+    const { data, error: fetchError } = await supabase
       .from("faction_applications")
-      .update({ status: "resigned" })
+      .select("id")
       .eq("username", nick)
       .ilike("faction_name", factionName)
-      .eq("status", "approved");
+      .eq("status", "approved")
+      .limit(1)
+      .maybeSingle();
+    if (fetchError || !data) return false;
+    const { error } = await supabase
+      .from("faction_applications")
+      .delete()
+      .eq("id", (data as Record<string, unknown>).id);
     return !error;
   },
   setFactionApps: (_: FactionApplication[]) => {},
