@@ -114,22 +114,52 @@ const AdminPanel = () => {
   const [perms, setPerms] = useState<Record<TabId, boolean>>(
     superAdmin ? DEFAULT_PERMS : getAdminPerms(nick)
   );
+  const [permsLoaded, setPermsLoaded] = useState<boolean>(superAdmin);
 
   useEffect(() => {
     if (superAdmin) return;
-    // Load perms from Supabase
-    supabase.from("admin_perms").select("perms").eq("username", normalizeNick(nick)).maybeSingle()
-      .then(({ data }) => {
-        if (data?.perms) {
-          const p = { ...DEFAULT_PERMS, ...(data.perms as Record<TabId, boolean>) };
-          localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(p));
-          setPerms(p);
-        } else {
-          // No perms record = no access
-          const noPerms = Object.fromEntries(Object.keys(DEFAULT_PERMS).map(k => [k, false])) as Record<TabId, boolean>;
-          setPerms(noPerms);
-        }
-      });
+    let cancelled = false;
+    (async () => {
+      // 1. Якщо є запис у admin_perms — використовуємо його (може містити заборони)
+      const { data: permsRow } = await supabase
+        .from("admin_perms")
+        .select("perms")
+        .eq("username", normalizeNick(nick))
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (permsRow?.perms) {
+        const p = { ...DEFAULT_PERMS, ...(permsRow.perms as Record<TabId, boolean>) };
+        localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(p));
+        setPerms(p);
+        setPermsLoaded(true);
+        return;
+      }
+
+      // 2. Якщо запису немає — перевіряємо чи є схвалена заявка на адміна
+      const { data: appRow } = await supabase
+        .from("admin_applications")
+        .select("status")
+        .ilike("username", nick)
+        .eq("status", "approved")
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (appRow) {
+        // Схвалений адмін без явних обмежень → повні права
+        const p = { ...DEFAULT_PERMS };
+        localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(p));
+        setPerms(p);
+      } else {
+        // Не адмін — доступу немає
+        const noPerms = Object.fromEntries(Object.keys(DEFAULT_PERMS).map(k => [k, false])) as Record<TabId, boolean>;
+        setPerms(noPerms);
+      }
+      setPermsLoaded(true);
+    })();
+    return () => { cancelled = true; };
   }, [nick, superAdmin]);
 
   // ДОДАТИ ЦЕЙ БЛОК:
@@ -143,6 +173,15 @@ const AdminPanel = () => {
   }, [tab]);
 
   const allowedTabs = TAB_LIST.filter(t => superAdmin || perms[t.id]);
+
+  // Поки права завантажуються — показуємо лоадер, а не "ДОСТУП ЗАБОРОНЕНО"
+  if (!superAdmin && !permsLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   // Access denied for non-superadmin with no perms
   if (!superAdmin && !Object.values(perms).some(Boolean)) {
@@ -640,6 +679,12 @@ const HousesTab = () => {
 const HouseRequestsTab = () => {
   const [requests, setRequests] = useState<HousePurchaseRequest[]>([]);
   useEffect(() => { store.getHousePurchaseRequests().then(setRequests); }, []);
+  useEffect(() => {
+    const upd = store.onAppStatusChange("house_purchase_requests", (id, status) => {
+      setRequests(prev => prev.map(x => x.id === id ? { ...x, status: status as any } : x));
+    });
+    return () => { upd.unsubscribe(); };
+  }, []);
   const decide = async (r: HousePurchaseRequest, status: "approved" | "rejected") => {
     await store.updateHousePurchaseStatus(r.id, status, r.house_id, r.username);
     setRequests(prev => prev.map(x => x.id === r.id ? { ...x, status } : x));
@@ -677,8 +722,12 @@ const HouseRequestsTab = () => {
 const LicensesTab = () => {
   const [apps, setApps] = useState<LicenseApplication[]>([]);
   
-  useEffect(() => { 
-    store.getLicenseApplications().then(setApps); 
+  useEffect(() => {
+    store.getLicenseApplications().then(setApps);
+    const upd = store.onAppStatusChange("license_applications", (id, status) => {
+      setApps(prev => prev.map(a => a.id === id ? { ...a, status: status as any } : a));
+    });
+    return () => { upd.unsubscribe(); };
   }, []);
 
   const decide = async (id: number, status: "approved" | "rejected") => {
@@ -830,8 +879,12 @@ const PlatesTab = () => {
     setLoading(false);
   };
 
-  useEffect(() => { 
-    fetchPlates(); 
+  useEffect(() => {
+    fetchPlates();
+    const upd = store.onAppStatusChange("car_plates", (id, status) => {
+      setPlates(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+    });
+    return () => { upd.unsubscribe(); };
   }, []);
 
   const decide = async (id: number, status: "approved" | "rejected") => {
@@ -1088,6 +1141,7 @@ const FactionAppsTab = () => {
   const [apps, setApps] = useState<FactionApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [activeFaction, setActiveFaction] = useState<string>("__all__");
 
   const load = async () => {
     setLoading(true);
@@ -1102,7 +1156,12 @@ const FactionAppsTab = () => {
       setApps(prev => [app, ...prev]);
       toast.info(`Нова заявка від ${app.nick} у ${app.factionName}`);
     });
-    return () => { ch.unsubscribe(); };
+    // Realtime UPDATE — щоб статус мінявся миттєво без перезаходу
+    const upd = store.onAppStatusChange("faction_applications", (id, status) => {
+      const mapped = (status === "pending" ? "review" : status) as FactionApplication["status"];
+      setApps(prev => prev.map(a => a.id === id ? { ...a, status: mapped } : a));
+    });
+    return () => { ch.unsubscribe(); upd.unsubscribe(); };
   }, []);
 
   const decide = async (id: number, status: "approved" | "rejected") => {
@@ -1115,6 +1174,18 @@ const FactionAppsTab = () => {
 
   const sc = { review: "bg-yellow-400/15 text-yellow-400", approved: "bg-primary/15 text-primary", rejected: "bg-destructive/15 text-destructive" };
   const sl = { review: "На розгляді", approved: "Прийнято", rejected: "Відхилено" };
+
+  // Згруповуємо заявки по фракціях для вкладок
+  const factionGroups = apps.reduce<Record<string, number>>((acc, a) => {
+    const key = a.factionName || "Без фракції";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const factionTabs = Object.keys(factionGroups).sort();
+
+  const filteredApps = activeFaction === "__all__"
+    ? apps
+    : apps.filter(a => (a.factionName || "Без фракції") === activeFaction);
 
   return (
     <div className="space-y-3 animate-fade-in">
@@ -1130,25 +1201,62 @@ const FactionAppsTab = () => {
         </div>
       </div>
 
-      {loading && <div className="text-center py-8"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}
-      {!loading && apps.length === 0 && (
-        <div className="text-center py-10 liquid-glass-card rounded-2xl">
-          <Shield className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" />
-          <p className="text-xs text-muted-foreground">Немає заявок</p>
-          <p className="text-[10px] text-muted-foreground/50 mt-1">Перевір що таблиця faction_applications існує в Supabase</p>
+      {/* ── ВКЛАДКИ ПО ФРАКЦІЯХ ── */}
+      {factionTabs.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          <button
+            onClick={() => setActiveFaction("__all__")}
+            className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 ${
+              activeFaction === "__all__"
+                ? "bg-primary/20 text-primary border border-primary/40"
+                : "liquid-glass text-muted-foreground border border-transparent"
+            }`}
+          >
+            Всі ({apps.length})
+          </button>
+          {factionTabs.map(name => (
+            <button
+              key={name}
+              onClick={() => setActiveFaction(name)}
+              className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 ${
+                activeFaction === name
+                  ? "bg-primary/20 text-primary border border-primary/40"
+                  : "liquid-glass text-muted-foreground border border-transparent"
+              }`}
+            >
+              {name} ({factionGroups[name]})
+            </button>
+          ))}
         </div>
       )}
 
-      {apps.map(a => (
+      {loading && <div className="text-center py-8"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}
+      {!loading && filteredApps.length === 0 && (
+        <div className="text-center py-10 liquid-glass-card rounded-2xl">
+          <Shield className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" />
+          <p className="text-xs text-muted-foreground">Немає заявок</p>
+          {activeFaction !== "__all__" && (
+            <p className="text-[10px] text-muted-foreground/50 mt-1">У фракції «{activeFaction}» поки немає заявок</p>
+          )}
+        </div>
+      )}
+
+      {filteredApps.map(a => (
         <NeonCard key={a.id} glowColor="green">
-          <div className="space-y-2">
+          <div
+            className="space-y-2 transition-all duration-500"
+            style={{
+              opacity: a.status === "rejected" ? 0.55 : 1,
+              transform: "translateZ(0)",
+            }}
+          >
             {/* Header row */}
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <Users className="w-3 h-3 text-primary" />
                   <h4 className="text-xs font-bold">{a.nick}</h4>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-md ${sc[a.status]}`}>{sl[a.status]}</span>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-md transition-all duration-500 ${sc[a.status]}`}>{sl[a.status]}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Shield className="w-3 h-3 text-muted-foreground" />
@@ -1219,7 +1327,11 @@ const AdminAppsTab = () => {
       setApps(prev => [app, ...prev]);
       toast.info(`Нова заявка на адміна від ${app.nick}`);
     });
-    return () => { ch.unsubscribe(); };
+    const upd = store.onAppStatusChange("admin_applications", (id, status) => {
+      const mapped = (status === "pending" ? "review" : status) as AdminApplication["status"];
+      setApps(prev => prev.map(a => a.id === id ? { ...a, status: mapped } : a));
+    });
+    return () => { ch.unsubscribe(); upd.unsubscribe(); };
   }, []);
 
   const decide = async (id: number, status: "approved" | "rejected") => {
