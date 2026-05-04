@@ -734,7 +734,7 @@ const Profile = () => {
           </div>
         </div>
       )}
-
+      
       {isApprovedAdmin && (
         <div className="mt-4 animate-fade-in">
           <button onClick={() => navigate("/admin-panel")}
