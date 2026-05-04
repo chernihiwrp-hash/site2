@@ -156,12 +156,12 @@ export const store = {
    */
   buyNftGift: async (nick: string, gift: NftGift): Promise<boolean> => {
     try {
-      const balance = getBalance(nick);
+      const balance = await getBalanceFromDB(nick);
       if (balance < gift.price) return false;
 
-      // 1. Списуємо баланс локально (localStorage)
-      const success = subtractBalance(nick, gift.price);
-      
+      // 1. Списуємо баланс у Supabase
+      const success = await subtractBalance(nick, gift.price);
+
       if (success) {
         // 2. Додаємо запис про власника в окрему таблицю nft_owners
         const { error: insertError } = await supabase
@@ -173,17 +173,11 @@ export const store = {
 
         if (insertError) {
           console.error("Помилка БД при купівлі:", insertError.message);
-          // Повертаємо баланс назад у localStorage, якщо запис у БД зірвався
-          addBalance(nick, gift.price);
+          // Повертаємо баланс назад, якщо запис у БД зірвався
+          await addBalance(nick, gift.price);
           return false;
         }
 
-        // 3. Оновлюємо баланс у таблиці users в Supabase для синхронізації
-        await supabase
-          .from("users")
-          .update({ balance: balance - gift.price })
-          .ilike("username", nick);
-          
         return true;
       }
       return false;
@@ -865,6 +859,20 @@ export const store = {
         const r = p.new as Record<string, unknown>;
         const fd = (r.form_data as Record<string, unknown>) || {};
         cb({ id: r.id as number, nick: (fd.nick as string) || (r.username as string) || "", roblox: (fd.roblox as string) || "", age: (fd.age as string) || "", country: (fd.country as string) || "", telegram: (fd.telegram as string) || "", timePerDay: (fd.timePerDay as string) || "", playTime: (fd.playTime as string) || "", hasMic: (fd.hasMic as boolean) || false, adminExp: (fd.adminExp as string) || "", rpTime: (fd.rpTime as string) || "", rpKnowledge: (fd.rpKnowledge as number) || 0, q1: (fd.q1 as string) || "", q2: (fd.q2 as string) || "", q3: (fd.q3 as string) || "", q4: (fd.q4 as string) || "", rulesRead: (fd.rulesRead as boolean) || false, daysOff: (fd.daysOff as string) || "", status: "review", date: new Date(r.created_at as string).toLocaleDateString("uk-UA") });
+      }).subscribe();
+  },
+
+  // Realtime UPDATE для будь-якої таблиці заявок (анімація прийняття без перезаходу)
+  onAppStatusChange: (
+    table: "faction_applications" | "admin_applications" | "license_applications" | "car_plates" | "house_purchase_requests",
+    cb: (id: number, status: string) => void
+  ) => {
+    return supabase.channel(`${table}_status_live`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table }, (p) => {
+        const r = p.new as Record<string, unknown>;
+        if (r?.id != null && r?.status != null) {
+          cb(r.id as number, r.status as string);
+        }
       }).subscribe();
   },
 };
