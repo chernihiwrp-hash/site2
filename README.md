@@ -1,73 +1,128 @@
-# Welcome to your Lovable project
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Project</title>
 
-## Project info
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+    }
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+    header {
+        background: linear-gradient(90deg, #16a34a, #22c55e);
+        padding: 40px;
+        text-align: center;
+        color: white;
+        font-size: 32px;
+        font-weight: bold;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
 
-## How can I edit this code?
+    .container {
+        padding: 40px;
+        max-width: 1100px;
+        margin: auto;
+    }
 
-There are several ways of editing your application.
+    .card {
+        background: #1e293b;
+        border-radius: 20px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        transition: 0.3s;
+    }
 
-**Use Lovable**
+    .card:hover {
+        transform: translateY(-5px);
+    }
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+    h2 {
+        color: #22c55e;
+        margin-bottom: 10px;
+    }
 
-Changes made via Lovable will be committed automatically to this repo.
+    ul {
+        padding-left: 20px;
+    }
 
-**Use your preferred IDE**
+    li {
+        margin: 8px 0;
+    }
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+    footer {
+        text-align: center;
+        padding: 20px;
+        background: #020617;
+        color: #94a3b8;
+    }
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+    .badge {
+        display: inline-block;
+        background: #22c55e;
+        color: black;
+        padding: 6px 12px;
+        border-radius: 10px;
+        margin: 5px;
+        font-size: 14px;
+    }
+</style>
 
-Follow these steps:
+</head>
+<body>
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+<header>
+    🚀 MY PROJECT
+</header>
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+<div class="container">
 
-# Step 3: Install the necessary dependencies.
-npm i
+    <div class="card">
+        <h2>📌 О проекте</h2>
+        <p>
+            Это современный веб-проект с чистым дизайном и удобной структурой.
+            Здесь нет лишних ссылок или мусора — только нужная информация.
+        </p>
+    </div>
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+    <div class="card">
+        <h2>⚙️ Технологии</h2>
+        <div>
+            <span class="badge">Vite</span>
+            <span class="badge">TypeScript</span>
+            <span class="badge">React</span>
+            <span class="badge">Tailwind CSS</span>
+        </div>
+    </div>
 
-**Edit a file directly in GitHub**
+    <div class="card">
+        <h2>📦 Возможности</h2>
+        <ul>
+            <li>Быстрая загрузка</li>
+            <li>Современный UI</li>
+            <li>Адаптивный дизайн</li>
+            <li>Простая структура</li>
+        </ul>
+    </div>
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+    <div class="card">
+        <h2>🛠️ Как использовать</h2>
+        <p>
+            Скачай проект, открой в редакторе и запускай локально.
+            Можно легко редактировать и расширять под свои задачи.
+        </p>
+    </div>
 
-**Use GitHub Codespaces**
+</div>
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+<footer>
+    © 2026 My Project
+</footer>
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+</body>
+</html>
