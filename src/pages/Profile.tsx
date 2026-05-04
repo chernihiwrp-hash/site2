@@ -55,6 +55,12 @@ const statusLabels: Record<string, string> = {
   approved: "Прийнято", pending: "На розгляді", rejected: "Відхилено", review: "На розгляді",
 };
 
+// Хелпер для stagger-анімації блоків
+const blockAnim = (visible: boolean, delayMs: number) => ({
+  animation: visible ? `fadeSlideIn 0.45s ${delayMs}ms ease both` : "none",
+  opacity: visible ? undefined : 0,
+} as React.CSSProperties);
+
 const Profile = () => {
 
   const calculateHouseTime = (createdAt: string, days: number) => {
@@ -88,6 +94,7 @@ const Profile = () => {
   const [selectedNftIds, setSelectedNftIds] = useState<string[]>([]);
   const [showOrbitSettings, setShowOrbitSettings] = useState(false);
   const [nftVisible, setNftVisible] = useState(false);
+  const [contentVisible, setContentVisible] = useState(false);
   const [orbitSpeed, setOrbitSpeed] = useState<number>(() => {
     const s = localStorage.getItem("orbit_speed"); return s ? Number(s) : 14;
   });
@@ -130,8 +137,11 @@ const Profile = () => {
       if (tg?.WebApp) setIsTg(true);
     }
     loadData();
-    const t = setTimeout(() => setNftVisible(true), 400);
-    return () => clearTimeout(t);
+    // Контент з'являється одразу (невелика затримка щоб DOM встиг)
+    const t2 = setTimeout(() => setContentVisible(true), 80);
+    // NFT орбіта з'являється пізніше
+    const t = setTimeout(() => setNftVisible(true), 450);
+    return () => { clearTimeout(t); clearTimeout(t2); };
   }, [loadData]);
 
   const unread = notifications.filter(n => !n.read).length;
@@ -180,8 +190,8 @@ const Profile = () => {
   })();
 
   const orbitNfts = availableNfts.filter(n => selectedNftIds.includes(n.id));
-  const AV = 72;   // розмір аватарки
-  const NW = 36;   // розмір NFT
+  const AV = 72;
+  const NW = 36;
   const R = orbitRadius;
 
   return (
@@ -190,10 +200,22 @@ const Profile = () => {
         @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes orbit-ring-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes orbit-item-counter { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
       `}</style>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div
+        className="flex items-center justify-between mb-5"
+        style={blockAnim(contentVisible, 0)}
+      >
         <h1 className="font-display text-xl font-bold tracking-wider neon-text-lime">ПРОФІЛЬ</h1>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate("/top")} title="Топ балансів"
@@ -233,7 +255,10 @@ const Profile = () => {
 
       {/* Not Telegram */}
       {!isTg && (
-        <div className="mb-4 rounded-2xl p-4 liquid-glass animate-fade-in id-card-animated" style={{ border: `1px solid ${passportBorder}`, transition: "border 0.6s ease, box-shadow 0.6s ease" }}>
+        <div
+          className="mb-4 rounded-2xl p-4 liquid-glass id-card-animated"
+          style={{ border: `1px solid ${passportBorder}`, transition: "border 0.6s ease, box-shadow 0.6s ease", ...blockAnim(contentVisible, 60) }}
+        >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center shrink-0"><LogIn className="w-4 h-4 text-primary" /></div>
             <div>
@@ -245,7 +270,7 @@ const Profile = () => {
       )}
 
       {/* ═══ PASSPORT CARD ═══ */}
-      <div className="mb-4 animate-fade-in">
+      <div className="mb-4" style={blockAnim(contentVisible, 80)}>
         <div className="rounded-2xl overflow-visible relative select-none"
           style={{ border: "1px solid hsl(0 0% 100% / 0.12)", boxShadow: "0 8px 32px hsl(0 0% 0% / 0.5)" }}>
 
@@ -273,32 +298,15 @@ const Profile = () => {
           {/* ── Main row ── */}
           <div className="relative py-3 flex items-start gap-3 px-4">
 
-            {/*
-              ОРБІТА: один кільцевий контейнер що крутиться навколо центру аватарки.
-              - Аватарка: AV×AV px, shrink-0
-              - Навколо аватарки: absolute div розміром (AV + R*2 + NW) з центром в центрі аватарки
-              - Всередині цього div — орбітальне кільце крутиться, а кожен NFT counter-крутиться
-            */}
             <div
               className="shrink-0 cursor-pointer"
-              style={{
-                // зовнішній розмір блоку = аватарка, але overflow: visible
-                width: AV,
-                height: AV,
-                position: "relative",
-                zIndex: 30,
-              }}
+              style={{ width: AV, height: AV, position: "relative", zIndex: 30 }}
               onClick={() => setShowOrbitSettings(true)}
             >
               {/* Аватарка */}
               <div
                 className="group absolute rounded-xl overflow-hidden"
-                style={{
-                  width: AV, height: AV,
-                  left: 0, top: 0,
-                  border: "1.5px solid hsl(0 0% 100% / 0.15)",
-                  zIndex: 10,
-                }}
+                style={{ width: AV, height: AV, left: 0, top: 0, border: "1.5px solid hsl(0 0% 100% / 0.15)", zIndex: 10 }}
               >
                 {tgUser?.photo_url ? (
                   <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
@@ -307,7 +315,6 @@ const Profile = () => {
                     <User className="w-8 h-8 text-primary/30" />
                   </div>
                 )}
-                {/* Hover overlay — шестерня */}
                 <div className="absolute inset-0 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
                   style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.5), hsl(var(--primary) / 0.2))", backdropFilter: "blur(2px)" }}>
                   <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.5"
@@ -318,15 +325,10 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/*
-                ОРБІТАЛЬНЕ КІЛЬЦЕ — абсолютно позиціоноване, центр збігається з центром аватарки.
-                Кільце крутиться. Кожен NFT всередині counter-крутиться щоб лишатись рівним.
-                transformOrigin кільця = центр аватарки.
-              */}
+              {/* ОРБІТАЛЬНЕ КІЛЬЦЕ */}
               <div
                 style={{
                   position: "absolute",
-                  // центруємо відносно аватарки
                   left: AV / 2,
                   top: AV / 2,
                   width: 0,
@@ -340,36 +342,30 @@ const Profile = () => {
                 {orbitNfts.map((nft, index) => {
                   const angleDeg = (index * 360 / orbitNfts.length) - 90;
                   const angleRad = angleDeg * (Math.PI / 180);
-                  // Позиція NFT на колі радіусом R від центру аватарки
                   const px = Math.cos(angleRad) * R;
                   const py = Math.sin(angleRad) * R;
                   const flyDelay = 0.35 + index * 0.15;
                   return (
                     <div key={nft.id} style={{
                       position: "absolute",
-                      // зміщуємо так щоб центр NFT був на орбіті
                       left: px - NW / 2,
                       top: py - NW / 2,
                       width: NW,
                       height: NW,
-                      // counter-rotate щоб NFT не крутились разом з кільцем
                       animation: `orbit-item-counter ${orbitSpeed}s linear infinite`,
                       transformOrigin: `${NW / 2}px ${NW / 2}px`,
                     }}>
-                      {/* Вильот при першому відкритті */}
                       <div style={{
                         width: NW, height: NW,
                         opacity: nftVisible ? 1 : 0,
                         transform: nftVisible ? "scale(1)" : "scale(0)",
-                        transition: `opacity 0.4s ease ${flyDelay}s, transform 0.5s cubic-bezier(0.34,1.56,0.64,1) ${flyDelay}s`,
+                        transition: `opacity 0.45s ease ${flyDelay}s, transform 0.5s cubic-bezier(0.34,1.56,0.64,1) ${flyDelay}s`,
                       }}>
-                        {/* Glow */}
                         <div style={{
                           position: "absolute", inset: 0, borderRadius: "50%",
                           background: "radial-gradient(circle, hsl(var(--primary) / 0.9) 0%, hsl(var(--primary) / 0.3) 40%, transparent 70%)",
                           filter: "blur(8px)", transform: "scale(2.6)",
                         }} />
-                        {/* NFT з розтушовкою */}
                         <img src={nft.image_url} alt="" style={{
                           width: NW, height: NW, borderRadius: "50%", objectFit: "cover",
                           display: "block", position: "relative", zIndex: 1,
@@ -435,7 +431,7 @@ const Profile = () => {
       </div>
 
       {/* Діяльність */}
-      <div className="mb-2">
+      <div className="mb-2" style={blockAnim(contentVisible, 160)}>
         <button onClick={() => setShowActivity(!showActivity)}
           className="w-full liquid-glass-card rounded-2xl px-4 py-3.5 flex items-center justify-between transition-all active:scale-[0.98]">
           <div className="flex items-center gap-3">
@@ -480,7 +476,7 @@ const Profile = () => {
       </div>
 
       {/* Дома */}
-      <div className="mb-2">
+      <div className="mb-2" style={blockAnim(contentVisible, 230)}>
         <div className="liquid-glass-card rounded-2xl overflow-hidden">
           <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}>
             <div className="flex items-center gap-3">
@@ -560,7 +556,7 @@ const Profile = () => {
       </div>
 
       {/* ═══ ЯРУС 1: ЛІЦЕНЗІЇ ═══ */}
-      <div className="space-y-4 mb-6 px-1">
+      <div className="space-y-4 mb-6 px-1" style={blockAnim(contentVisible, 300)}>
         {profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any) => (
           <div key={item.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
                style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
@@ -587,7 +583,7 @@ const Profile = () => {
       </div>
 
       {/* ═══ ЯРУС 2: ТРАНСПОРТ ═══ */}
-      <div className="space-y-4 mb-10 px-1">
+      <div className="space-y-4 mb-10 px-1" style={blockAnim(contentVisible, 360)}>
         {((profileData as any).cars || []).map((car: any) => (
           <div key={car.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
                style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
@@ -734,9 +730,9 @@ const Profile = () => {
           </div>
         </div>
       )}
-      
+
       {isApprovedAdmin && (
-        <div className="mt-4 animate-fade-in">
+        <div className="mt-4" style={blockAnim(contentVisible, 420)}>
           <button onClick={() => navigate("/admin-panel")}
             className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl transition-all active:scale-[0.98] hover:scale-[1.01]"
             style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--secondary) / 0.06))", border: "1px solid hsl(var(--primary) / 0.25)", boxShadow: "0 0 20px hsl(var(--primary) / 0.1)" }}>
