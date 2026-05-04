@@ -23,6 +23,7 @@ import CarRegistration from "./pages/CarRegistration";
 import AdminApplication from "./pages/AdminApplication";
 import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
+import BalanceTop from "./pages/BalanceTop";
 import { supabase } from "./lib/store";
 import { User, CheckCircle, X, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react";
 import GradientButton from "./components/GradientButton";
@@ -676,8 +677,9 @@ const App = () => {
               <Route path="/casino" element={<Casino />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/admin-panel" element={<AdminPanel />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="*" element={<NotFound />} />
+             <Route path="/profile" element={<Profile />} />
+             <Route path="/top" element={<BalanceTop />} />
+             <Route path="*" element={<NotFound />} />
             </Routes>
             <BottomNav />
           </div>
