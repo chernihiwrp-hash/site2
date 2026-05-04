@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import {
   User, Briefcase, Home, Car, FileCheck, Wallet, Lock,
   Bell, ChevronDown, ChevronRight, Shield, CheckCircle,
-  LogIn, RefreshCw, Coins, Clock, Settings, X
+  LogIn, RefreshCw, Coins, Clock, Settings, X, Trophy
 } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { store, supabase, getBalance } from "../lib/store";
+import { store, supabase, getBalanceFromDB } from "../lib/store";
 import type { Notification } from "../lib/store";
 
 const getTelegramUser = () => {
@@ -113,7 +113,8 @@ const Profile = () => {
         setSelectedNftIds([]);
       }
       setProfileData({ ...data, cars: carsData || [] });
-      setBalanceState(getBalance(nick));
+      const realBalance = await getBalanceFromDB(nick);
+      setBalanceState(realBalance);
     } catch (e) {
       console.error("Помилка:", e);
     } finally {
@@ -195,6 +196,11 @@ const Profile = () => {
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-display text-xl font-bold tracking-wider neon-text-lime">ПРОФІЛЬ</h1>
         <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/top")} title="Топ балансів"
+            className="w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all"
+            style={{ border: "1px solid hsl(45 100% 55% / 0.25)", background: "hsl(45 100% 55% / 0.06)" }}>
+            <Trophy className="w-4 h-4" style={{ color: "hsl(45 100% 60%)", filter: "drop-shadow(0 0 4px hsl(45 100% 55% / 0.6))" }} />
+          </button>
           <button onClick={loadData} disabled={refreshing} className="w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all">
             <RefreshCw className={`w-4 h-4 text-muted-foreground ${refreshing ? "animate-spin" : ""}`} />
           </button>
