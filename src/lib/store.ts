@@ -328,6 +328,19 @@ export const store = {
     }
   },
 
+  addHouse: async (name: string, desc: string, price: number, imageUrl?: string, category?: string) => {
+    const { error } = await supabase.from("houses").insert({
+      name,
+      description: desc,
+      price,
+      image_url: imageUrl || null,
+      category: category || "Люкс",
+      owner_username: null,
+      is_for_sale: true,
+    });
+    if (error) throw new Error(error.message);
+  },
+  
   deleteHouse: async (id: number) => { await supabase.from("houses").delete().eq("id", id); },
 
   updateHouse: async (id: number, updates: { name?: string; price?: number; desc?: string; imageUrl?: string }) => {
