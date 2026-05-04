@@ -1137,6 +1137,44 @@ const DebugTab = () => {
   );
 };
 
+// Кольори фракцій для вкладок
+const FACTION_COLORS: Record<string, string> = {
+  "поліція": "#3b82f6",
+  "police": "#3b82f6",
+  "мерія": "#a855f7",
+  "меріяя": "#a855f7",
+  "mayor": "#a855f7",
+  "лікарня": "#ef4444",
+  "медики": "#ef4444",
+  "ems": "#ef4444",
+  "армія": "#22c55e",
+  "військові": "#22c55e",
+  "army": "#22c55e",
+  "сбу": "#eab308",
+  "sbu": "#eab308",
+  "пожежники": "#f97316",
+  "fire": "#f97316",
+  "автошкола": "#06b6d4",
+  "ds": "#06b6d4",
+  "таксі": "#facc15",
+  "taxi": "#facc15",
+  "мафія": "#71717a",
+  "mafia": "#71717a",
+  "без фракції": "#94a3b8",
+};
+const getFactionColor = (name: string): string => {
+  const k = (name || "").toLowerCase().trim();
+  if (FACTION_COLORS[k]) return FACTION_COLORS[k];
+  for (const key of Object.keys(FACTION_COLORS)) {
+    if (k.includes(key) || key.includes(k)) return FACTION_COLORS[key];
+  }
+  // Стабільний колір з хешу назви
+  let h = 0;
+  for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+  const hue = h % 360;
+  return `hsl(${hue}, 70%, 60%)`;
+};
+
 const FactionAppsTab = () => {
   const [apps, setApps] = useState<FactionApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1203,10 +1241,18 @@ const FactionAppsTab = () => {
 
       {/* ── ВКЛАДКИ ПО ФРАКЦІЯХ ── */}
       {factionTabs.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+        <div
+          className="flex gap-1.5 overflow-x-auto overflow-y-hidden pb-2 -mx-1 px-1 scrollbar-hide touch-pan-x snap-x"
+          style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+          onWheel={(e) => {
+            if (e.deltaY !== 0 && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+              e.currentTarget.scrollLeft += e.deltaY;
+            }
+          }}
+        >
           <button
             onClick={() => setActiveFaction("__all__")}
-            className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 ${
+            className={`shrink-0 snap-start px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 ${
               activeFaction === "__all__"
                 ? "bg-primary/20 text-primary border border-primary/40"
                 : "liquid-glass text-muted-foreground border border-transparent"
@@ -1214,19 +1260,26 @@ const FactionAppsTab = () => {
           >
             Всі ({apps.length})
           </button>
-          {factionTabs.map(name => (
-            <button
-              key={name}
-              onClick={() => setActiveFaction(name)}
-              className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 ${
-                activeFaction === name
-                  ? "bg-primary/20 text-primary border border-primary/40"
-                  : "liquid-glass text-muted-foreground border border-transparent"
-              }`}
-            >
-              {name} ({factionGroups[name]})
-            </button>
-          ))}
+          {factionTabs.map(name => {
+            const c = getFactionColor(name);
+            const active = activeFaction === name;
+            return (
+              <button
+                key={name}
+                onClick={() => setActiveFaction(name)}
+                style={
+                  active
+                    ? { backgroundColor: `${c}26`, color: c, borderColor: `${c}66`, boxShadow: `0 0 12px ${c}40` }
+                    : { borderColor: `${c}33`, color: c }
+                }
+                className={`shrink-0 snap-start px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 border ${
+                  active ? "" : "liquid-glass"
+                }`}
+              >
+                {name} ({factionGroups[name]})
+              </button>
+            );
+          })}
         </div>
       )}
 
