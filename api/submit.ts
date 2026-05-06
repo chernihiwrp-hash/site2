@@ -1,16 +1,10 @@
-// 📁 Создай этот файл по пути: pages/api/submit.ts
-// Этот файл работает на СЕРВЕРЕ — ключ не виден в браузере!
-
 import { createClient } from '@supabase/supabase-js';
-import type { NextApiRequest, NextApiResponse } from 'next';
 
-// Берём ключи из переменных окружения Vercel (не из браузера!)
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Какие таблицы разрешены для INSERT (защита от взлома)
 const ALLOWED_TABLES = [
   'license_applications',
   'car_plates',
@@ -19,35 +13,44 @@ const ALLOWED_TABLES = [
   'house_purchase_requests',
   'city_voice',
   'sos_signals',
-] as const;
+  'wanted',
+  'factions',
+  'mayor_election',
+  'nft_gifts',
+  'nft_owners',
+  'news',
+  'houses',
+  'documents',
+];
 
-type AllowedTable = typeof ALLOWED_TABLES[number];
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Только POST запросы
+export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
 
-  const { table, data } = req.body;
-
-  // Проверяем что таблица разрешена
-  if (!ALLOWED_TABLES.includes(table as AllowedTable)) {
-    return res.status(400).json({ error: 'Table not allowed' });
+  let body: { table: string; data: object };
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });
   }
 
-  // Проверяем что data это объект
+  const { table, data } = body;
+
+  if (!ALLOWED_TABLES.includes(table)) {
+    return new Response(JSON.stringify({ error: 'Table not allowed' }), { status: 400 });
+  }
+
   if (!data || typeof data !== 'object') {
-    return res.status(400).json({ error: 'Invalid data' });
+    return new Response(JSON.stringify({ error: 'Invalid data' }), { status: 400 });
   }
 
-  // Делаем INSERT через service_role ключ (серверный, безопасный)
   const { error } = await supabaseAdmin.from(table).insert(data);
 
   if (error) {
     console.error(`Insert error in ${table}:`, error.message);
-    return res.status(500).json({ error: error.message });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 
-  return res.status(200).json({ ok: true });
+  return new Response(JSON.stringify({ ok: true }), { status: 200 });
 }
