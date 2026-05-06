@@ -1,10 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 const ALLOWED_TABLES = [
   'license_applications',
   'car_plates',
@@ -27,6 +22,17 @@ export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
+
+  // Создаём клиент ВНУТРИ функции — переменные точно загружены к этому моменту
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing env vars:', { supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey });
+    return new Response(JSON.stringify({ error: 'Server config error' }), { status: 500 });
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
   let body: { table: string; data: object };
   try {
