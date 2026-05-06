@@ -1,4 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 const ALLOWED_TABLES = [
@@ -8,7 +7,7 @@ const ALLOWED_TABLES = [
   'nft_gifts', 'nft_owners', 'news', 'houses', 'documents',
 ];
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -25,10 +24,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!ALLOWED_TABLES.includes(table)) {
     return res.status(400).json({ error: 'Table not allowed' });
-  }
-
-  if (!data || typeof data !== 'object') {
-    return res.status(400).json({ error: 'Invalid data' });
   }
 
   const { error } = await supabaseAdmin.from(table).insert(data);
