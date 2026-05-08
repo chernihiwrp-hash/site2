@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { store, supabase, getBalance, addBalance, subtractBalance } from "../lib/store";
+import { dbInsert, dbUpdate, dbDelete, dbUpsert, eq } from "../lib/db";
 import type {
   NewsItem, HouseItem, WantedPerson, FactionApplication, AdminApplication,
   CityVoiceItem, MayorCandidate, DocumentItem, SosMessage, LicenseApplication,
@@ -95,7 +96,8 @@ const getAdminPerms = (nick: string): Record<TabId, boolean> => {
 };
 const saveAdminPerms = async (nick: string, perms: Record<TabId, boolean>) => {
   localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(perms));
-  await supabase.from("admin_perms").upsert(
+  await dbUpsert(
+    "admin_perms",
     { username: normalizeNick(nick), perms, updated_at: new Date().toISOString() },
     { onConflict: "username" }
   );
@@ -892,11 +894,12 @@ const PlatesTab = () => {
       console.log("Спроба оновити ID:", id, "Статус:", status);
       
      
-      const { data, error } = await supabase
-        .from("car_plates")
-        .update({ status: status }) 
-        .eq("id", id)             
-        .select();                 
+      const { data, error } = await dbUpdate(
+        "car_plates",
+        { status: status },
+        { id: eq(id) },
+        { returning: true },
+      );
       if (error) {
         console.error("Помилка Supabase:", error);
         throw error;
@@ -1052,23 +1055,21 @@ const DebugTab = () => {
 
   const testInsertFaction = async () => {
     addLog("Тестую faction_applications INSERT...");
-    const { data, error } = await supabase.from("faction_applications").insert({
+    const { data, error } = await dbInsert("faction_applications", {
       faction_id: null,
       faction_name: "Тест",
       username: "debug_user",
       status: "pending",
       form_data: { nick: "debug_user", roblox: "test", age: "18", telegram: "@test", experience: "", message: "test" },
-    }).select();
+    }, { returning: true });
     if (error) {
       addLog("ПОМИЛКА: " + error.message);
-      addLog("   Code: " + error.code);
-      addLog("   Details: " + (error.details || "none"));
-      addLog("   Hint: " + (error.hint || "none"));
     } else {
-      addLog("faction_applications — OK! id=" + (data?.[0]?.id || "?"));
+      const row = (data as any)?.[0];
+      addLog("faction_applications — OK! id=" + (row?.id || "?"));
       // Clean up test record
-      if (data?.[0]?.id) {
-        await supabase.from("faction_applications").delete().eq("id", data[0].id);
+      if (row?.id) {
+        await dbDelete("faction_applications", { id: eq(row.id) });
         addLog("Тестовий запис видалено");
       }
     }
@@ -1076,20 +1077,18 @@ const DebugTab = () => {
 
   const testInsertAdmin = async () => {
     addLog("Тестую admin_applications INSERT...");
-    const { data, error } = await supabase.from("admin_applications").insert({
+    const { data, error } = await dbInsert("admin_applications", {
       username: "debug_user",
       status: "pending",
       form_data: { nick: "debug_user", roblox: "test", age: "18" },
-    }).select();
+    }, { returning: true });
     if (error) {
       addLog("ПОМИЛКА: " + error.message);
-      addLog("   Code: " + error.code);
-      addLog("   Details: " + (error.details || "none"));
-      addLog("   Hint: " + (error.hint || "none"));
     } else {
-      addLog("admin_applications — OK! id=" + (data?.[0]?.id || "?"));
-      if (data?.[0]?.id) {
-        await supabase.from("admin_applications").delete().eq("id", data[0].id);
+      const row = (data as any)?.[0];
+      addLog("admin_applications — OK! id=" + (row?.id || "?"));
+      if (row?.id) {
+        await dbDelete("admin_applications", { id: eq(row.id) });
         addLog("Тестовий запис видалено");
       }
     }
@@ -1908,12 +1907,12 @@ const NftGiftsTab = ({ nftGifts, setNftGifts }: { nftGifts: any[], setNftGifts: 
               return toast.error("Заповни всі поля!");
             }
 
-            const { data, error } = await supabase.from('nft_gifts').insert([{ 
-              name: nameEl.value, 
-              price: Number(priceEl.value), 
-              image_url: imgEl.value 
-            }]).select();
-            
+            const { data, error } = await dbInsert<any[]>("nft_gifts", [{
+              name: nameEl.value,
+              price: Number(priceEl.value),
+              image_url: imgEl.value
+            }], { returning: true });
+
             if(!error && data) {
               setNftGifts([data[0], ...nftGifts]);
               toast.success("Додано!");
@@ -1942,7 +1941,7 @@ const NftGiftsTab = ({ nftGifts, setNftGifts }: { nftGifts: any[], setNftGifts: 
               </div>
               <button onClick={async () => {
                   if(!confirm("Видалити?")) return;
-                  const { error } = await supabase.from('nft_gifts').delete().eq('id', gift.id);
+                  const { error } = await dbDelete("nft_gifts", { id: eq(gift.id) });
                   if(!error) {
                     setNftGifts(nftGifts.filter((g: any) => g.id !== gift.id));
                     toast.success("Видалено");
@@ -2145,13 +2144,14 @@ const LeaderAssignmentBlock = ({ factionId, factionName, onAssigned }: { faction
   const assignLeader = async (memberName: string) => {
     setLoading(true);
     // Always use faction_leaders table (works for both static and DB factions)
-    await supabase.from("faction_leaders").upsert(
+    await dbUpsert(
+      "faction_leaders",
       { faction_name: factionName.toLowerCase(), leader_username: memberName, updated_at: new Date().toISOString() },
       { onConflict: "faction_name" }
     );
     // Also update factions table if it's a DB faction
     if (factionId > 0) {
-      await supabase.from("factions").update({ leader_username: memberName }).eq("id", factionId);
+      await dbUpdate("factions", { leader_username: memberName }, { id: eq(factionId) });
     }
     setCurrentLeader(memberName);
     setLoading(false);
@@ -2352,7 +2352,7 @@ useEffect(() => {
     
     if (editingId > 0) {
       // DB faction — update all fields in Supabase
-      const { error } = await supabase.from("factions").update({
+      const { error } = await dbUpdate("factions", {
         name: editName.trim(),
         color: editColor,
         section: editSection,
@@ -2361,14 +2361,14 @@ useEffect(() => {
         dangerous: editDangerous,
         gradient: editGradient || null,
         questions: editQuestions,
-      }).eq("id", editingId);
+      }, { id: eq(editingId) });
       if (error) return toast.error("Помилка збереження: " + error.message);
     }
     
     // Static faction — save to Supabase faction_overrides
     if (editingId < 0) {
       const slug = (faction?.name || editName).toLowerCase().replace(/\s+/g, "_");
-      await supabase.from("faction_overrides").upsert({
+      await dbUpsert("faction_overrides", {
         faction_slug: slug,
         name: editName.trim(),
         color: editColor,
@@ -2659,10 +2659,11 @@ useEffect(() => {
     setIsProcessing(true);
     
     try {
-      const { error } = await supabase
-        .from("faction_applications")
-        .update({ status: 'rejected' })
-        .eq("id", playerToKick.id);
+      const { error } = await dbUpdate(
+        "faction_applications",
+        { status: 'rejected' },
+        { id: eq(playerToKick.id) },
+      );
 
       if (error) throw error;
 
@@ -2964,7 +2965,7 @@ const BansTab = () => {
     const expiresAt = permanent ? null : new Date(Date.now() + (selectedDur?.ms || 0)).toISOString();
     const adminNick = localStorage.getItem("crp_nick") || "admin";
 
-    await supabase.from("bans").insert({
+    await dbInsert("bans", {
       identifier: foundUser?.telegram_id || banNick.trim(),
       type: foundUser?.telegram_id ? "telegram_id" : "username",
       reason: banReason,
@@ -2986,7 +2987,7 @@ const BansTab = () => {
   };
 
   const removeBan = async (id: number, nick: string) => {
-    await supabase.from("bans").delete().eq("id", id);
+    await dbDelete("bans", { id: eq(id) });
     await store.addNotification(nick, "Ваш бан був знятий адміністрацією");
     toast.success("Бан знятий!");
     loadBans();
