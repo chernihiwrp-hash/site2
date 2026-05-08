@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Palette, Check, Zap, Gift, X, Coins, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { store, type NftGift, supabase } from "../lib/store";
+import { dbUpdate, dbInsert, ilike } from "../lib/db";
 import { THEMES, applyTheme, type ThemeId } from "./Shop";
 
 const GLOBAL_STYLES = `
@@ -260,7 +261,7 @@ const Casino = () => {
       applyTheme(theme);
       setCurrentTheme(theme.id);
       localStorage.setItem("crp_theme", theme.id);
-      await supabase.from("users").update({ active_theme: theme.id }).ilike("username", nick);
+      await dbUpdate("users", { active_theme: theme.id }, { username: ilike(nick) });
       toast.success(`Тему "${theme.name}" активовано!`);
       return;
     }
@@ -282,11 +283,11 @@ const Casino = () => {
       const newBalance = freshBal - theme.price;
       const newOwned = [...ownedThemes, theme.id as ThemeId];
 
-      const { error } = await supabase.from("users").update({
+      const { error } = await dbUpdate("users", {
         balance: newBalance,
         owned_themes: newOwned,
         active_theme: theme.id,
-      }).ilike("username", nick);
+      }, { username: ilike(nick) });
 
       if (error) { toast.error("Помилка: " + error.message); setBuyingTheme(false); return; }
 
@@ -323,14 +324,14 @@ const Casino = () => {
       const newBalance = freshBal - selectedGift.price;
 
       // Списуємо баланс
-      const { error: balError } = await supabase.from("users").update({ balance: newBalance }).ilike("username", nick);
+      const { error: balError } = await dbUpdate("users", { balance: newBalance }, { username: ilike(nick) });
       if (balError) { toast.error("Помилка списання балансу"); setBuyingNft(false); return; }
 
       // Записуємо власника NFT
-      const { error: nftError } = await supabase.from("nft_owners").insert({ owner_nick: nick, nft_id: selectedGift.id });
+      const { error: nftError } = await dbInsert("nft_owners", { owner_nick: nick, nft_id: selectedGift.id });
       if (nftError) {
         // Повертаємо баланс якщо NFT не записався
-        await supabase.from("users").update({ balance: freshBal }).ilike("username", nick);
+        await dbUpdate("users", { balance: freshBal }, { username: ilike(nick) });
         toast.error("Помилка покупки NFT");
         setBuyingNft(false);
         return;
