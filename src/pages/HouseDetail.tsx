@@ -8,6 +8,7 @@ import {
   Calendar, Building2, Copy, Check, AlertCircle
 } from "lucide-react";
 import { store, supabase } from "../lib/store";
+import { dbInsert } from "../lib/db";
 import type { HouseItem } from "../lib/store";
 import { toast } from "sonner";
 
@@ -68,7 +69,7 @@ const HouseDetail = () => {
     if (!nick.trim()) return toast.error("Нік не знайдено");
     setLoading(true);
     try {
-      const { error } = await supabase.from("house_purchase_requests").insert({
+      const { error } = await dbInsert("house_purchase_requests", {
         house_id: house.id,
         username: nick,
         status: "pending",
