@@ -1,20 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
+import { dbInsert, dbUpdate, dbDelete, dbUpsert, eq, ilike } from './db';
 
 const SUPABASE_URL = "https://kafivvwxqulxmkpyqinz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthZml2dnd4cXVseG1rcHlxaW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTgyNDIsImV4cCI6MjA4OTg3NDI0Mn0.HD_Gxn5UIVxov0-7U4aVhtYXhGvYTsVqLlycE5ctBpg";
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export { dbInsert, dbUpdate, dbDelete, dbUpsert, eq, ilike };
 
-
+// Все мутации идут через сервер (api/db.ts) — обходит RLS через SERVICE_ROLE_KEY.
 const secureInsert = async (table: string, data: object): Promise<void> => {
-  const res = await fetch('/api/submit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ table, data }),
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Insert failed');
-  }
+  const { error } = await dbInsert(table, data);
+  if (error) throw new Error(error.message);
 };
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -80,10 +75,7 @@ export const getBalanceFromDB = async (nick: string): Promise<number> => {
 };
 
 export const setBalance = async (nick: string, amount: number): Promise<void> => {
-  await supabase
-    .from("users")
-    .update({ balance: Math.max(0, amount) })
-    .ilike("username", nick);
+  await dbUpdate("users", { balance: Math.max(0, amount) }, { username: ilike(nick) });
 };
 
 export const addBalance = async (nick: string, amount: number): Promise<void> => {
@@ -135,7 +127,7 @@ export const store = {
   },
 
   toggleNftSold: async (id: string, sold: boolean): Promise<boolean> => {
-    const { error } = await supabase.from("nft_gifts").update({ sold }).eq("id", id);
+    const { error } = await dbUpdate("nft_gifts", { sold }, { id: eq(id) });
     if (error) { console.error("toggleNftSold error:", error.message); return false; }
     return true;
   },
@@ -180,7 +172,7 @@ export const store = {
   },
 
   deleteNftGift: async (id: string) => {
-    const { error } = await supabase.from("nft_gifts").delete().eq("id", id);
+    const { error } = await dbDelete("nft_gifts", { id: eq(id) });
     if (error) throw new Error(error.message);
     return true;
   },
@@ -215,7 +207,7 @@ export const store = {
       type, author_id: "admin", button_data: buttonData || null,
     });
   },
-  deleteNews: async (id: number) => { await supabase.from("news").delete().eq("id", id); },
+  deleteNews: async (id: number) => { await dbDelete("news", { id: eq(id) }); },
   setNews: (_: NewsItem[]) => {},
 
   // ── HOUSES ────────────────────────────────────────────────────────────────
@@ -256,17 +248,17 @@ export const store = {
     });
   },
 
-  deleteHouse: async (id: number) => { await supabase.from("houses").delete().eq("id", id); },
+  deleteHouse: async (id: number) => { await dbDelete("houses", { id: eq(id) }); },
 
   updateHouse: async (id: number, updates: { name?: string; price?: number; desc?: string; imageUrl?: string }) => {
-    await supabase.from("houses").update({
+    await dbUpdate("houses", {
       name: updates.name, price: updates.price,
       description: updates.desc, image_url: updates.imageUrl,
-    }).eq("id", id);
+    }, { id: eq(id) });
   },
 
   toggleHouseOwner: async (id: number, owner: string | null) => {
-    await supabase.from("houses").update({ owner_username: owner, is_for_sale: !owner }).eq("id", id);
+    await dbUpdate("houses", { owner_username: owner, is_for_sale: !owner }, { id: eq(id) });
   },
 
   setHouses: (_: HouseItem[]) => {},
@@ -294,12 +286,12 @@ export const store = {
   },
 
   updateHousePurchaseStatus: async (id: number, status: "approved" | "rejected", houseId?: number, username?: string) => {
-    await supabase.from("house_purchase_requests").update({ status }).eq("id", id);
+    await dbUpdate("house_purchase_requests", { status }, { id: eq(id) });
     if (status === "approved" && houseId && username) {
-      await supabase.from("houses").update({ owner_username: username, is_for_sale: false }).eq("id", houseId);
+      await dbUpdate("houses", { owner_username: username, is_for_sale: false }, { id: eq(houseId) });
     }
     if (status === "rejected" && houseId) {
-      await supabase.from("houses").update({ owner_username: null, is_for_sale: true }).eq("id", houseId);
+      await dbUpdate("houses", { owner_username: null, is_for_sale: true }, { id: eq(houseId) });
     }
   },
 
@@ -332,14 +324,16 @@ export const store = {
   },
 
   updateFactionAppStatus: async (id: number, status: "approved" | "rejected") => {
-    await supabase.from("faction_applications").update({ status }).eq("id", id);
+    await dbUpdate("faction_applications", { status }, { id: eq(id) });
   },
 
   kickFromFaction: async (nick: string, factionName: string): Promise<boolean> => {
     const dbFactionName = factionName.replace(/^фракція\s*/i, "").trim();
-    const { error } = await supabase
-      .from("faction_applications").update({ status: "rejected" })
-      .eq("username", nick).ilike("faction_name", dbFactionName).eq("status", "approved");
+    const { error } = await dbUpdate(
+      "faction_applications",
+      { status: "rejected" },
+      { username: eq(nick), faction_name: ilike(dbFactionName), status: eq("approved") },
+    );
     if (error) { console.error("❌ Помилка Supabase при оновленні:", error.message); return false; }
     return true;
   },
@@ -378,7 +372,7 @@ export const store = {
   },
 
   updateAdminAppStatus: async (id: number, status: "approved" | "rejected") => {
-    await supabase.from("admin_applications").update({ status }).eq("id", id);
+    await dbUpdate("admin_applications", { status }, { id: eq(id) });
   },
   setAdminApps: (_: AdminApplication[]) => {},
 
@@ -395,19 +389,19 @@ export const store = {
 
   incrementCityVoiceLikes: async (id: number) => {
     const { data } = await supabase.from("city_voice").select("likes").eq("id", id).single();
-    await supabase.from("city_voice").update({ likes: (data?.likes || 0) + 1 }).eq("id", id);
+    await dbUpdate("city_voice", { likes: (data?.likes || 0) + 1 }, { id: eq(id) });
   },
   decrementCityVoiceLikes: async (id: number) => {
     const { data } = await supabase.from("city_voice").select("likes").eq("id", id).single();
-    await supabase.from("city_voice").update({ likes: Math.max(0, (data?.likes || 0) - 1) }).eq("id", id);
+    await dbUpdate("city_voice", { likes: Math.max(0, (data?.likes || 0) - 1) }, { id: eq(id) });
   },
   incrementCityVoiceDislikes: async (id: number) => {
     const { data } = await supabase.from("city_voice").select("dislikes").eq("id", id).single();
-    await supabase.from("city_voice").update({ dislikes: (data?.dislikes || 0) + 1 }).eq("id", id);
+    await dbUpdate("city_voice", { dislikes: (data?.dislikes || 0) + 1 }, { id: eq(id) });
   },
   decrementCityVoiceDislikes: async (id: number) => {
     const { data } = await supabase.from("city_voice").select("dislikes").eq("id", id).single();
-    await supabase.from("city_voice").update({ dislikes: Math.max(0, (data?.dislikes || 0) - 1) }).eq("id", id);
+    await dbUpdate("city_voice", { dislikes: Math.max(0, (data?.dislikes || 0) - 1) }, { id: eq(id) });
   },
 
   submitCityVoice: async (author: string, text: string, type: "idea" | "petition") => {
@@ -416,9 +410,9 @@ export const store = {
   },
 
   updateCityVoiceStatus: async (id: number, status: "approved" | "rejected") => {
-    await supabase.from("city_voice").update({ status }).eq("id", id);
+    await dbUpdate("city_voice", { status }, { id: eq(id) });
   },
-  deleteCityVoice: async (id: number) => { await supabase.from("city_voice").delete().eq("id", id); },
+  deleteCityVoice: async (id: number) => { await dbDelete("city_voice", { id: eq(id) }); },
 
   // ── MAYOR ELECTION ────────────────────────────────────────────────────────
   getCandidates: async (): Promise<MayorCandidate[]> => {
@@ -434,10 +428,10 @@ export const store = {
     // ✅ БЕЗОПАСНО: INSERT через сервер
     await secureInsert("mayor_election", { candidate_username: name, description: program, bio, created_by: "admin", votes: 0 });
   },
-  deleteCandidate: async (id: number) => { await supabase.from("mayor_election").delete().eq("id", id); },
+  deleteCandidate: async (id: number) => { await dbDelete("mayor_election", { id: eq(id) }); },
   voteCandidate: async (id: number) => {
     const { data } = await supabase.from("mayor_election").select("votes").eq("id", id).single();
-    await supabase.from("mayor_election").update({ votes: ((data?.votes as number) || 0) + 1 }).eq("id", id);
+    await dbUpdate("mayor_election", { votes: ((data?.votes as number) || 0) + 1 }, { id: eq(id) });
   },
   setCandidates: (_: MayorCandidate[]) => {},
 
@@ -456,9 +450,9 @@ export const store = {
     await secureInsert("documents", { title, content });
   },
   updateDoc: async (id: number, title: string, content: string) => {
-    await supabase.from("documents").update({ title, content }).eq("id", id);
+    await dbUpdate("documents", { title, content }, { id: eq(id) });
   },
-  deleteDoc: async (id: number) => { await supabase.from("documents").delete().eq("id", id); },
+  deleteDoc: async (id: number) => { await dbDelete("documents", { id: eq(id) }); },
   setDocs: (_: DocumentItem[]) => {},
 
   getCars: async (nick?: string): Promise<CarRecord[]> => {
@@ -482,11 +476,11 @@ export const store = {
   },
 
   updateLicenseStatus: async (id: number, status: "approved" | "rejected") => {
-    await supabase.from("license_applications").update({ status }).eq("id", id);
+    await dbUpdate("license_applications", { status }, { id: eq(id) });
   },
 
   updateCarPlateStatus: async (id: number, status: "approved" | "rejected") => {
-    await supabase.from("car_plates").update({ status }).eq("id", id);
+    await dbUpdate("car_plates", { status }, { id: eq(id) });
   },
 
   setCars: (_: CarRecord[]) => {},
@@ -504,7 +498,7 @@ export const store = {
     // ✅ БЕЗОПАСНО: INSERT через сервер
     await secureInsert("sos_signals", { username, message: description, type, status: "active" });
   },
-  resolveSos: async (id: number) => { await supabase.from("sos_signals").update({ status: "resolved" }).eq("id", id); },
+  resolveSos: async (id: number) => { await dbUpdate("sos_signals", { status: "resolved" }, { id: eq(id) }); },
   setSos: (_: SosMessage[]) => {},
 
   // ── TOKENS / BALANCE ──────────────────────────────────────────────────────
@@ -512,7 +506,7 @@ export const store = {
     const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
     const currentBalance = (user?.balance as number) || 0;
     const newBalance = currentBalance + amount;
-    const { error } = await supabase.from("users").update({ balance: newBalance }).ilike("username", nick);
+    const { error } = await dbUpdate("users", { balance: newBalance }, { username: ilike(nick) });
     if (error) { console.error("giveTokens error:", error); return false; }
     setBalance(nick, newBalance);
     await store.addNotification(nick, `Вам нараховано ${amount} CR від адміністрації!`);
@@ -524,7 +518,7 @@ export const store = {
     const currentBalance = (user?.balance as number) || 0;
     if (currentBalance < amount) return false;
     const newBalance = currentBalance - amount;
-    const { error } = await supabase.from("users").update({ balance: newBalance }).ilike("username", nick);
+    const { error } = await dbUpdate("users", { balance: newBalance }, { username: ilike(nick) });
     if (error) { console.error("takeTokens error:", error); return false; }
     setBalance(nick, newBalance);
     await store.addNotification(nick, `З вашого балансу списано ${amount} CR.`);
@@ -542,7 +536,7 @@ export const store = {
     const currentThemes = await store.getOwnedThemes(nick);
     if (!currentThemes.includes(themeId)) {
       const newThemes = [...currentThemes, themeId];
-      const { error } = await supabase.from("users").update({ owned_themes: newThemes }).ilike("username", nick);
+      const { error } = await dbUpdate("users", { owned_themes: newThemes }, { username: ilike(nick) });
       if (!error) {
         localStorage.setItem(`crp_owned_themes_${nick.toLowerCase()}`, JSON.stringify(newThemes));
       }
