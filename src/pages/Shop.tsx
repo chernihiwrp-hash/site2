@@ -3,6 +3,7 @@ import { Gift, Clock, Zap, Trophy, Star, Flame } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
 import { setBalance as syncBalance, supabase } from "../lib/store";
+import { dbUpdate, ilike } from "../lib/db";
 
 // ─── THEME SYSTEM (exported for Casino.tsx) ───────────────────────────────────
 export type ThemeId = "lime" | "neon_blue" | "cyber_red" | "gold_vip" | "purple_haze" | "arctic" | "matrix" | "sunset";
@@ -172,7 +173,7 @@ const Shop = () => {
       const newBal = currentBal + bonus;
 
       // Оновлюємо баланс в БД
-      const { error } = await supabase.from("users").update({ balance: newBal }).ilike("username", nick);
+      const { error } = await dbUpdate("users", { balance: newBal }, { username: ilike(nick) });
       if (error) {
         toast.error("Помилка нарахування балансу");
         setLoading(false);
