@@ -25,6 +25,7 @@ import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import BalanceTop from "./pages/BalanceTop";
 import { supabase } from "./lib/store";
+import { dbUpsert } from "./lib/db";
 import { User, CheckCircle, X, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react";
 import GradientButton from "./components/GradientButton";
 
@@ -229,8 +230,8 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
       return;
     }
 
-    // Зберігаємо в Supabase з паролем
-    const { error: dbError } = await supabase.from("users").upsert({
+    // Зберігаємо в Supabase з паролем (через сервер, обхід RLS)
+    const { error: dbError } = await dbUpsert("users", {
       username: nick.trim(),
       telegram_id: tgUser ? String(tgUser.id) : null,
       avatar_url: tgUser?.photo_url || null,
