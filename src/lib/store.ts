@@ -60,6 +60,8 @@ export type HousePurchaseRequest = {
 export type FactionDB = {
   id: number; name: string; color: string; logo_url?: string;
   gradient?: string; section: "main" | "separate"; created_at: string;
+  bg_image?: string; banner_image?: string; questions?: string[];
+  description?: string; dangerous?: boolean; leader_username?: string | null;
 };
 
 // СТАЛО — всі операції з балансом через Supabase
@@ -552,8 +554,14 @@ export const store = {
   },
   deleteCandidate: async (id: number) => { await dbDelete("mayor_election", { id: eq(id) }); },
   voteCandidate: async (id: number) => {
+    const nick = localStorage.getItem("crp_nick") || "anonymous";
+    const { data: voted } = await supabase.from("mayor_election_votes").select("*").eq("id", id).eq("username", nick).maybeSingle();
+    if (voted) return false;
+    
     const { data } = await supabase.from("mayor_election").select("votes").eq("id", id).single();
     await dbUpdate("mayor_election", { votes: ((data?.votes as number) || 0) + 1 }, { id: eq(id) });
+    await secureInsert("mayor_election_votes", { id, username: nick });
+    return true;
   },
   setCandidates: (_: MayorCandidate[]) => {},
 
