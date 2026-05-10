@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
-
+// Универсальный безопасный прокси для всех мутаций.
+// Использует SERVICE_ROLE_KEY (bypass RLS) только на сервере.
+// На клиенте — только чтение через анонимный ключ.
 
 const ALLOWED_TABLES = new Set<string>([
   "users",
@@ -58,10 +60,11 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: "Invalid JSON" });
   }
 
-  const { table, op, values, match, onConflict, returning } = body || ({} as Body);
+  const { op, values, match, onConflict, returning } = body || ({} as Body);
+  const table = String(body?.table || "").trim();
 
   if (!table || !ALLOWED_TABLES.has(table)) {
-    return res.status(400).json({ error: "Table not allowed" });
+    return res.status(400).json({ error: `Table not allowed: ${table || "empty"}` });
   }
   if (!op || !ALLOWED_OPS.has(op)) {
     return res.status(400).json({ error: "Op not allowed" });
