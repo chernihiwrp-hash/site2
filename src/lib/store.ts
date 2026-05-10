@@ -40,7 +40,7 @@ export type CityVoiceItem = {
   likes: number; dislikes: number; status: "active" | "approved" | "rejected";
 };
 export type MayorCandidate = { id: number; name: string; program: string; bio: string; votes: number };
-export type DocumentItem = { id: number; title: string; content: string };
+export type DocumentItem = { id: number; title: string; content: string; button_data?: string };
 export type CarRecord = { plate: string; model: string; owner: string };
 export type SosMessage = {
   id: number; reason: string; description: string; date: string; type?: string;
@@ -272,7 +272,16 @@ export const store = {
     });
   },
 
-  deleteHouse: async (id: number) => { await dbDelete("houses", { id: eq(id) }); },
+  deleteHouse: async (id: number) => {
+    // Каскадно прибираємо всі заявки на купівлю по цьому будинку,
+    // інакше Supabase blocks DELETE через FK constraint.
+    try { await dbDelete("house_purchase_requests", { house_id: eq(id) }); } catch {}
+    const { error } = await dbDelete("houses", { id: eq(id) });
+    if (error) {
+      console.error("[deleteHouse]", error.message);
+      throw new Error(error.message);
+    }
+  },
 
   updateHouse: async (id: number, updates: { name?: string; price?: number; desc?: string; imageUrl?: string }) => {
     await dbUpdate("houses", {
@@ -534,11 +543,70 @@ export const store = {
     await secureInsert("mayor_election", { candidate_username: name, description: program, bio, created_by: "admin", votes: 0 });
   },
   deleteCandidate: async (id: number) => { await dbDelete("mayor_election", { id: eq(id) }); },
-  voteCandidate: async (id: number) => {
+  // Голос за мэра. Хранится в БД (mayor_votes) — память между перезаходами.
+  voteCandidate: async (id: number, username?: string) => {
+    const nick = (username || localStorage.getItem("crp_nick") || "").trim();
+    if (nick) {
+      // upsert голос (PRIMARY KEY username) — повторный голос меняет кандидата
+      const { data: prev } = await supabase
+        .from("mayor_votes").select("candidate_id").eq("username", nick).maybeSingle();
+      if (prev?.candidate_id && prev.candidate_id !== id) {
+        // вычесть голос у прежнего кандидата
+        const { data: oldC } = await supabase.from("mayor_election").select("votes").eq("id", prev.candidate_id).maybeSingle();
+        await dbUpdate("mayor_election", { votes: Math.max(0, ((oldC?.votes as number) || 0) - 1) }, { id: eq(prev.candidate_id as number) });
+      }
+      await dbUpsert("mayor_votes", { username: nick, candidate_id: id, voted_at: new Date().toISOString() }, { onConflict: "username" });
+      if (prev?.candidate_id === id) return; // уже голосовал за этого
+    }
     const { data } = await supabase.from("mayor_election").select("votes").eq("id", id).single();
     await dbUpdate("mayor_election", { votes: ((data?.votes as number) || 0) + 1 }, { id: eq(id) });
   },
+
+  // Получить ID кандидата, за которого голосовал юзер (восстановление состояния).
+  getMyMayorVote: async (username: string): Promise<number | null> => {
+    if (!username) return null;
+    const { data } = await supabase.from("mayor_votes").select("candidate_id").eq("username", username).maybeSingle();
+    return (data?.candidate_id as number) ?? null;
+  },
+
+  // Назначить роль "Мэр" в faction_leaders, если кандидат набрал >75%.
+  promoteMayorIfWinner: async (candidateName: string, percent: number) => {
+    if (percent < 75 || !candidateName) return;
+    try {
+      await dbUpsert("faction_leaders",
+        { faction_name: "мер міста", leader_username: candidateName, updated_at: new Date().toISOString() },
+        { onConflict: "faction_name" });
+    } catch (e) { console.error("promoteMayorIfWinner:", e); }
+  },
+
   setCandidates: (_: MayorCandidate[]) => {},
+
+  // ── STREAK NFT REWARDS ────────────────────────────────────────────────────
+  // Майлстоуны: 100/500/1000+ — выдаём случайную NFT из nft_gifts.
+  grantStreakNftIfMilestone: async (nick: string, streak: number): Promise<{ nft: any; milestone: number } | null> => {
+    if (!nick) return null;
+    const milestones = [100, 250, 500, 1000];
+    const reached = milestones.filter(m => streak >= m);
+    if (reached.length === 0) return null;
+    const target = reached[reached.length - 1];
+    // Уже выдавали?
+    const { data: existing } = await supabase
+      .from("streak_rewards")
+      .select("milestone")
+      .eq("username", nick)
+      .eq("milestone", target)
+      .maybeSingle();
+    if (existing) return null;
+    // Случайная NFT из доступных
+    const { data: gifts } = await supabase.from("nft_gifts").select("*").limit(50);
+    if (!gifts || gifts.length === 0) return null;
+    const pick = gifts[Math.floor(Math.random() * gifts.length)];
+    try {
+      await secureInsert("nft_owners", { nft_id: pick.id, owner_nick: nick });
+      await secureInsert("streak_rewards", { username: nick, milestone: target, nft_id: pick.id });
+      return { nft: pick, milestone: target };
+    } catch (e) { console.error("grantStreakNftIfMilestone:", e); return null; }
+  },
 
   // ── DOCUMENTS ─────────────────────────────────────────────────────────────
   getDocs: async (): Promise<DocumentItem[]> => {
@@ -673,12 +741,17 @@ export const store = {
     if (houseRes.data && houseRes.data.length > 0) {
       const houseIds = houseRes.data.map(h => h.house_id);
       const { data: housesData } = await supabase.from("houses").select("id, name, price, image_url").in("id", houseIds);
+      const now = Date.now();
       housesWithDetails = houseRes.data.map((req: any) => {
         const details = housesData?.find(d => d.id === req.house_id);
         return {
           id: req.id, name: details?.name || "Будинок", price: details?.price || 0,
           rental_days: req.rental_days || 7, created_at: req.created_at, image: details?.image_url
         };
+      }).filter((h: any) => {
+        // Скрываем истёкшие, чтобы не висели "забагованными" в профиле
+        const start = new Date(h.created_at).getTime();
+        return start + (h.rental_days * 86400000) > now;
       });
     }
     return {
