@@ -211,7 +211,31 @@ export const store = {
   setNews: (_: NewsItem[]) => {},
 
   // ── HOUSES ────────────────────────────────────────────────────────────────
+  // Автоматически освобождает дома, у которых истёк срок аренды.
+  // Помечает запись в house_purchase_requests как expired и возвращает дом в продажу.
+  releaseExpiredHouses: async (): Promise<void> => {
+    try {
+      const { data } = await supabase
+        .from("house_purchase_requests")
+        .select("id, house_id, created_at, rental_days, status")
+        .eq("status", "approved");
+      if (!data || data.length === 0) return;
+      const now = Date.now();
+      const expired = data.filter((r: any) => {
+        const days = (r.rental_days as number) || 7;
+        const start = new Date(r.created_at as string).getTime();
+        return start + days * 86400000 < now;
+      });
+      for (const r of expired) {
+        await dbUpdate("house_purchase_requests", { status: "expired" }, { id: eq(r.id as number) });
+        await dbUpdate("houses", { owner_username: null, is_for_sale: true }, { id: eq(r.house_id as number) });
+      }
+    } catch (e) { console.error("releaseExpiredHouses:", e); }
+  },
+
   getHouses: async (username?: string): Promise<HouseItem[]> => {
+    // Подчищаем просроченные аренды перед чтением, чтобы дом не висел "занятым".
+    await (store as any).releaseExpiredHouses?.();
     const { data: housesData } = await supabase.from("houses").select("*").order("created_at", { ascending: false });
     if (!housesData) return [];
     const allHouses = housesData.map((r: Record<string, unknown>) => ({
@@ -353,10 +377,48 @@ export const store = {
     const { error } = await dbUpdate(
       "faction_applications",
       { status: "rejected" },
-      { username: eq(nick), faction_name: ilike(dbFactionName), status: eq("approved") },
+      { username: ilike(nick), faction_name: ilike(dbFactionName), status: eq("approved") },
     );
     if (error) { console.error("❌ Помилка Supabase при оновленні:", error.message); return false; }
     return true;
+  },
+
+  // Игрок сам уходит из фракции — то же, что kickFromFaction, но семантически отдельный метод.
+  resignFromFaction: async (nick: string, factionName: string): Promise<boolean> => {
+    const dbFactionName = factionName.replace(/^фракція\s*/i, "").trim();
+    const { error } = await dbUpdate(
+      "faction_applications",
+      { status: "rejected" },
+      { username: ilike(nick), faction_name: ilike(dbFactionName), status: eq("approved") },
+    );
+    if (error) { console.error("❌ resignFromFaction:", error.message); return false; }
+    return true;
+  },
+
+  // ── WANTED ────────────────────────────────────────────────────────────────
+  getWanted: async (): Promise<WantedPerson[]> => {
+    const { data, error } = await supabase
+      .from("wanted")
+      .select("*")
+      .order("stars", { ascending: false });
+    if (error) { console.error("getWanted:", error.message); return []; }
+    return (data || []).map((r: Record<string, unknown>) => ({
+      id: r.id as number,
+      name: (r.name as string) || (r.username as string) || "",
+      reason: (r.reason as string) || "",
+      stars: Math.max(0, Math.min(5, (r.stars as number) || 0)),
+    }));
+  },
+
+  addWanted: async (name: string, reason: string, stars: number): Promise<boolean> => {
+    try {
+      await secureInsert("wanted", { name, reason, stars: Math.max(0, Math.min(5, stars)) });
+      return true;
+    } catch (e) { console.error("addWanted:", e); return false; }
+  },
+
+  removeWanted: async (id: number): Promise<void> => {
+    await dbDelete("wanted", { id: eq(id) });
   },
 
   // ── ADMIN APPLICATIONS ────────────────────────────────────────────────────
@@ -599,6 +661,8 @@ export const store = {
 
   // ── PROFILE DATA ──────────────────────────────────────────────────────────
   getPlayerProfile: async (nick: string) => {
+    // Перед чтением профиля чистим просроченные дома, чтобы их не показывало в "моих".
+    await (store as any).releaseExpiredHouses?.();
     const [houseRes, factionRes, licRes, platesRes] = await Promise.all([
       supabase.from("house_purchase_requests").select("id, rental_days, created_at, house_id").eq("username", nick).eq("status", "approved"),
       supabase.from("faction_applications").select("faction_name, status").ilike("username", nick).order("created_at", { ascending: false }),
