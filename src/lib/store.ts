@@ -315,12 +315,38 @@ export const store = {
     });
   },
 
-  submitFactionApp: async (factionId: string, factionName: string, app: Omit<FactionApplication, "id" | "status" | "date" | "factionId" | "factionName">) => {
-    // ✅ БЕЗОПАСНО: INSERT через сервер
-    await secureInsert("faction_applications", {
-      faction_id: factionId, faction_name: factionName,
-      username: app.nick, status: "pending", form_data: app,
-    });
+  // Принимаем либо (factionId, factionName, app), либо единый payload-объект
+  submitFactionApp: async (
+    a: any,
+    b?: string,
+    c?: Omit<FactionApplication, "id" | "status" | "date" | "factionId" | "factionName">,
+  ): Promise<boolean> => {
+    try {
+      let factionId: string;
+      let factionName: string;
+      let app: any;
+      if (typeof a === "object" && a !== null) {
+        factionId = a.factionId || "";
+        factionName = a.factionName || "";
+        app = a;
+      } else {
+        factionId = String(a || "");
+        factionName = String(b || "");
+        app = c || {};
+      }
+      const nick = app?.nick || localStorage.getItem("crp_nick") || "";
+      await secureInsert("faction_applications", {
+        faction_id: factionId,
+        faction_name: factionName,
+        username: nick,
+        status: "pending",
+        form_data: { ...app, nick },
+      });
+      return true;
+    } catch (e) {
+      console.error("submitFactionApp ERROR:", e);
+      return false;
+    }
   },
 
   updateFactionAppStatus: async (id: number, status: "approved" | "rejected") => {
@@ -500,6 +526,29 @@ export const store = {
   },
   resolveSos: async (id: number) => { await dbUpdate("sos_signals", { status: "resolved" }, { id: eq(id) }); },
   setSos: (_: SosMessage[]) => {},
+
+  // ── WANTED (Розшук) ───────────────────────────────────────────────────────
+  getWanted: async (): Promise<WantedPerson[]> => {
+    const { data } = await supabase.from("wanted").select("*").order("stars", { ascending: false });
+    if (!data) return [];
+    return data.map((r: Record<string, unknown>) => ({
+      id: r.id as number,
+      name: (r.name as string) || (r.username as string) || "",
+      reason: (r.reason as string) || "",
+      stars: Number(r.stars) || 1,
+    }));
+  },
+  addWanted: async (name: string, reason: string, stars: number): Promise<boolean> => {
+    const { error } = await dbInsert("wanted", { name, reason, stars: Math.max(1, Math.min(5, stars)) });
+    if (error) { console.error("addWanted error:", error); return false; }
+    return true;
+  },
+  removeWanted: async (id: number): Promise<boolean> => {
+    const { error } = await dbDelete("wanted", { id: eq(id) });
+    if (error) { console.error("removeWanted error:", error); return false; }
+    return true;
+  },
+  setWanted: (_: WantedPerson[]) => {},
 
   // ── TOKENS / BALANCE ──────────────────────────────────────────────────────
   giveTokens: async (nick: string, amount: number): Promise<boolean> => {
