@@ -92,6 +92,32 @@ const Licenses = () => {
     }
   };
 
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-[#050505] pb-24 px-4 pt-4 text-white">
+        <PageHeader title="ЛІЦЕНЗІЇ" subtitle="Заявка" backTo="/" />
+        <div className="flex flex-col items-center justify-center py-12 animate-in fade-in zoom-in duration-500">
+          <div className="w-24 h-24 rounded-3xl bg-secondary/10 border border-secondary/30 flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(34,197,94,0.15)]">
+            <CheckCircle className="w-12 h-12 text-secondary" style={{ filter: "drop-shadow(0 0 10px rgba(34,197,94,0.5))" }} />
+          </div>
+          <h2 className="text-xl font-black italic tracking-widest text-center mb-2">ЗАЯВКУ ПРИЙНЯТО</h2>
+          <p className="text-[10px] text-white/40 text-center mb-8 uppercase tracking-widest leading-relaxed">
+            Ваша анкета на оформлення ліцензії успішно надіслана в МВС. <br/> Очікуйте підтвердження в реєстрі.
+          </p>
+          
+          <div className="w-full space-y-2">
+            <GradientButton onClick={() => setSubmitted(false)} variant="green" className="w-full py-4 text-[10px] font-black tracking-[0.2em]">
+              ПОВЕРНУТИСЬ ДО РЕЄСТРУ
+            </GradientButton>
+            <button onClick={() => navigate("/")} className="w-full py-3 text-[9px] font-bold text-white/30 hover:text-white/60 transition-colors tracking-widest">
+              НА ГОЛОВНУ
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#050505] pb-24 px-4 pt-4 text-white">
       <PageHeader title="ЛІЦЕНЗІЇ" subtitle="Реєстр МВС" backTo="/" />
