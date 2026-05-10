@@ -25,6 +25,7 @@ type FactionItem = {
   iconName: string;
   color: string;
   gradient: string;
+  background_image?: string | null;
   dangerous: boolean;
   memberCount: number;
 };
@@ -39,7 +40,7 @@ const Factions = () => {
       // 1. DB фракції з Supabase (з усіма кастомними полями)
       const { data: dbFactions } = await supabase
         .from("factions")
-        .select("id, name, color, gradient, description, icon_name, dangerous, questions, section")
+        .select("id, name, color, gradient, description, icon_name, dangerous, questions, section, background_image, banner_image")
         .order("created_at", { ascending: true });
 
       // 2. Рахуємо учасників
@@ -73,6 +74,7 @@ const Factions = () => {
             iconName: (f.icon_name as string) || "Shield",
             color,
             gradient: (f.gradient as string) || `linear-gradient(135deg,${color}22,${color}08)`,
+            background_image: (f.background_image as string) || null,
             dangerous: (f.dangerous as boolean) || false,
             memberCount: countById[String(f.id)] || countByName[name.toLowerCase()] || 0,
           });
@@ -117,12 +119,21 @@ const Factions = () => {
 
   const renderFaction = (f: FactionItem, i: number) => {
     const Icon = ICON_MAP[f.iconName] || Shield;
+    const hasBgImage = !!(f.background_image && (f.background_image.startsWith("http") || f.background_image.startsWith("data:")));
+    const cardStyle: React.CSSProperties = hasBgImage
+      ? {
+          backgroundImage: `linear-gradient(135deg, ${f.color}22, rgba(0,0,0,0.65)), url(${f.background_image})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          borderColor: f.color + "30",
+        }
+      : { background: f.gradient, borderColor: f.color + "30" };
     return (
       <button key={f.id} onClick={() => navigate(`/factions/${f.id}`)}
         className="w-full animate-slide-up text-left"
         style={{ animationDelay: `${i * 50}ms` }}>
         <div className="rounded-2xl px-4 py-3.5 flex items-center gap-3 border transition-all duration-200 hover:scale-[1.01] active:scale-[0.98]"
-          style={{ background: f.gradient, borderColor: f.color + "30" }}
+          style={cardStyle}
           onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 16px ${f.color}28`; }}
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
           <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
