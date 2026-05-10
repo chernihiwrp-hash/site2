@@ -55,7 +55,8 @@ const HouseDetail = () => {
   const photos = house.photos?.filter(p => p.startsWith("http") || p.startsWith("data:")) || (house.image ? [house.image] : []);
   const isAvailable = !house.owner;
   const isLux = house.category === "Люкс";
-  const getPrice = (ratio: number) => house ? house.price * ratio : 0;
+  // Округляем, чтобы избежать артефактов с плавающей точкой (429000.00000000006€).
+  const getPrice = (ratio: number) => house ? Math.round(house.price * ratio) : 0;
   const selectedOption = RENTAL_OPTIONS.find(o => o.days === rentalDays) || RENTAL_OPTIONS[1];
   const selectedPrice = house ? getPrice(selectedOption.ratio) : 0;
 
@@ -206,7 +207,7 @@ const HouseDetail = () => {
                         boxShadow: rentalDays === days ? "0 0 12px hsl(var(--primary) / 0.2)" : "none",
                       }}>
                       <span className={`text-xs font-bold ${rentalDays === days ? "text-primary" : "text-foreground"}`}>{label}</span>
-                      <span className={`text-[10px] font-bold mt-0.5 ${rentalDays === days ? "text-yellow-400" : "text-muted-foreground"}`}>{house ? (house.price * ratio).toLocaleString() : 0}€</span>
+                      <span className={`text-[10px] font-bold mt-0.5 ${rentalDays === days ? "text-yellow-400" : "text-muted-foreground"}`}>{house ? Math.round(house.price * ratio).toLocaleString() : 0}€</span>
                     </button>
                   ))}
                 </div>
