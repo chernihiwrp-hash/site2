@@ -140,7 +140,7 @@ const AdminApplication = () => {
     setSending(true);
     try {
       const nick = localStorage.getItem("crp_nick") || form.realName;
-      await store.submitAdminApp({
+      const ok = await store.submitAdminApp({
         nick,
         roblox: form.roblox,
         age: form.age,
@@ -156,8 +156,10 @@ const AdminApplication = () => {
         rulesRead: form.rulesRead === "Так",
         daysOff: form.offlineDays.join(", "),
       });
+      if (!ok) throw new Error("submitAdminApp failed");
       setSubmitted(true);
-    } catch {
+    } catch (e) {
+      console.error("Admin application submit error:", e);
       toast.error("Помилка відправки. Спробуйте ще раз.");
     }
     setSending(false);
