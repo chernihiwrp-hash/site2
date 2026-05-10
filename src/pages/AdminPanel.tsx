@@ -680,6 +680,7 @@ const HousesTab = () => {
 // ─── HOUSE REQUESTS ───────────────────────────────────────────────────────────
 const HouseRequestsTab = () => {
   const [requests, setRequests] = useState<HousePurchaseRequest[]>([]);
+  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("pending");
   useEffect(() => { store.getHousePurchaseRequests().then(setRequests); }, []);
   useEffect(() => {
     const upd = store.onAppStatusChange("house_purchase_requests", (id, status) => {
@@ -694,17 +695,43 @@ const HouseRequestsTab = () => {
   };
   const sc = { pending: "bg-yellow-400/15 text-yellow-400", approved: "bg-primary/15 text-primary", rejected: "bg-destructive/15 text-destructive" };
   const sl = { pending: "На розгляді", approved: "Схвалено", rejected: "Відхилено" };
+  const filtered = requests.filter(r => filterStatus === "all" || r.status === filterStatus);
+  const RENTAL_OPTIONS = [
+    { days: 3, label: "3 дні", ratio: 0.15 },
+    { days: 7, label: "7 днів", ratio: 0.30 },
+    { days: 15, label: "15 днів", ratio: 0.55 },
+    { days: 24, label: "24 дні", ratio: 1.00 },
+  ];
   return (
     <div className="space-y-3 animate-fade-in">
-      <p className="text-xs text-muted-foreground">Заявок: {requests.length}</p>
-      {requests.length === 0 && <div className="text-center py-10 liquid-glass-card rounded-2xl"><Building2 className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" /><p className="text-xs text-muted-foreground">Немає заявок</p></div>}
-      {requests.map(r => (
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">Заявок: {filtered.length}</p>
+      </div>
+      {/* Filter tabs */}
+      <div className="flex gap-1.5 p-1 liquid-glass rounded-xl">
+        {(["pending","approved","rejected"] as const).map(s => (
+          <button key={s} onClick={() => setFilterStatus(s)}
+            className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${filterStatus === s ? "bg-primary text-black" : "text-muted-foreground"}`}>
+            {sl[s]}
+          </button>
+        ))}
+      </div>
+      {filtered.length === 0 && <div className="text-center py-10 liquid-glass-card rounded-2xl"><Building2 className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" /><p className="text-xs text-muted-foreground">Немає заявок</p></div>}
+      {filtered.map(r => (
         <NeonCard key={r.id} glowColor="yellow">
+          {/* House photo */}
+          {r.house_image && (
+            <img src={r.house_image} alt={r.house_name} className="w-full h-28 object-cover rounded-xl mb-3" onError={e => (e.currentTarget.style.display = "none")} />
+          )}
           <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-1.5 mb-1"><Users className="w-3 h-3 text-muted-foreground" /><h4 className="text-xs font-semibold">{r.username}</h4></div>
-              <div className="flex items-center gap-1.5"><Home className="w-3 h-3 text-muted-foreground" /><p className="text-[10px] text-muted-foreground">{r.house_name}</p></div>
-              <div className="flex items-center gap-1.5 mt-0.5"><Coins className="w-3 h-3 text-yellow-400" /><p className="text-[10px] text-yellow-400">{r.house_price?.toLocaleString()}€</p></div>
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 mb-1"><Home className="w-3 h-3 text-yellow-400" /><h4 className="text-xs font-bold text-yellow-400">{r.house_name || `Будинок #${r.house_id}`}</h4></div>
+              {r.house_desc && <p className="text-[10px] text-muted-foreground mb-1">{r.house_desc}</p>}
+              <div className="flex items-center gap-1.5"><Users className="w-3 h-3 text-muted-foreground" /><p className="text-[10px] text-foreground font-semibold">{r.username}</p></div>
+              <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-1"><Coins className="w-3 h-3 text-yellow-400" /><p className="text-[10px] text-yellow-400">{r.house_price?.toLocaleString()}€</p></div>
+                <div className="flex items-center gap-1"><Clock className="w-3 h-3 text-muted-foreground" /><p className="text-[10px] text-muted-foreground">{(() => { const opt = RENTAL_OPTIONS.find(o => o.days === (r.rental_days || 7)); return opt ? opt.label : `${r.rental_days || 7} днів`; })()}</p></div>
+              </div>
               <span className={`text-[9px] px-2 py-0.5 rounded-md mt-1 inline-block ${sc[r.status]}`}>{sl[r.status]}</span>
             </div>
             {r.status === "pending" && (
@@ -1221,13 +1248,13 @@ const FactionAppsTab = () => {
   const factionTabs = Object.keys(factionGroups).sort();
 
   const filteredApps = activeFaction === "__all__"
-    ? apps
+    ? apps.filter(a => a.status === "review")
     : apps.filter(a => (a.factionName || "Без фракції") === activeFaction);
 
   return (
     <div className="space-y-3 animate-fade-in">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">Заявок: {apps.length}</p>
+        <p className="text-xs text-muted-foreground">На розгляді: {apps.filter(a => a.status === "review").length}</p>
         <div className="flex items-center gap-2">
           <button onClick={load} className="liquid-glass px-2 py-1 rounded-lg active:scale-95">
             <RefreshCw className={`w-3 h-3 text-muted-foreground ${loading ? "animate-spin" : ""}`} />
@@ -1240,45 +1267,35 @@ const FactionAppsTab = () => {
 
       {/* ── ВКЛАДКИ ПО ФРАКЦІЯХ ── */}
       {factionTabs.length > 0 && (
-        <div
-          className="flex gap-1.5 overflow-x-auto overflow-y-hidden pb-2 -mx-1 px-1 scrollbar-hide touch-pan-x snap-x"
-          style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
-          onWheel={(e) => {
-            if (e.deltaY !== 0 && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-              e.currentTarget.scrollLeft += e.deltaY;
-            }
-          }}
-        >
-          <button
-            onClick={() => setActiveFaction("__all__")}
-            className={`shrink-0 snap-start px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 ${
-              activeFaction === "__all__"
-                ? "bg-primary/20 text-primary border border-primary/40"
-                : "liquid-glass text-muted-foreground border border-transparent"
-            }`}
+        <div className="relative">
+          <div
+            className="flex gap-1.5 overflow-x-auto pb-2"
+            style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            Всі ({apps.length})
-          </button>
-          {factionTabs.map(name => {
-            const c = getFactionColor(name);
-            const active = activeFaction === name;
-            return (
-              <button
-                key={name}
-                onClick={() => setActiveFaction(name)}
-                style={
-                  active
-                    ? { backgroundColor: `${c}26`, color: c, borderColor: `${c}66`, boxShadow: `0 0 12px ${c}40` }
-                    : { borderColor: `${c}33`, color: c }
-                }
-                className={`shrink-0 snap-start px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 border ${
-                  active ? "" : "liquid-glass"
-                }`}
-              >
-                {name} ({factionGroups[name]})
-              </button>
-            );
-          })}
+            <style>{`.fac-tabs::-webkit-scrollbar { display: none; }`}</style>
+            <div className="fac-tabs flex gap-1.5 w-full overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+              {factionTabs.map(name => {
+                const c = getFactionColor(name);
+                const active = activeFaction === name;
+                return (
+                  <button
+                    key={name}
+                    onClick={() => setActiveFaction(active ? "__all__" : name)}
+                    style={
+                      active
+                        ? { backgroundColor: `${c}26`, color: c, borderColor: `${c}66`, boxShadow: `0 0 12px ${c}40` }
+                        : { borderColor: `${c}33`, color: c }
+                    }
+                    className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 border ${
+                      active ? "" : "liquid-glass"
+                    }`}
+                  >
+                    {name} ({factionGroups[name]})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -2219,6 +2236,8 @@ const ManageFactionsTab = () => {
   const [editIcon, setEditIcon] = useState("Shield");
   const [editDangerous, setEditDangerous] = useState(false);
   const [editGradient, setEditGradient] = useState("");
+  const [editBgImage, setEditBgImage] = useState("");
+  const [editBannerImage, setEditBannerImage] = useState("");
   const [newQuestion, setNewQuestion] = useState("");
   const [editActiveTab, setEditActiveTab] = useState<"basic" | "design" | "form" | "leader">("basic");
 
@@ -2324,6 +2343,8 @@ useEffect(() => {
         setEditIcon((fd.icon_name as string) || "Shield");
         setEditDangerous((fd.dangerous as boolean) || false);
         setEditGradient((fd.gradient as string) || "");
+        setEditBgImage((fd.bg_image as string) || "");
+        setEditBannerImage((fd.banner_image as string) || "");
         const qs = (fd.questions as string[]) || [];
         setEditQuestions(qs.length ? qs : ["Чому хочеш вступити у фракцію?", "Який у тебе досвід в RP?"]);
         return;
@@ -2338,10 +2359,12 @@ useEffect(() => {
       setEditIcon((ov.icon_name as string) || "Shield");
       setEditDangerous((ov.dangerous as boolean) || false);
       setEditGradient((ov.gradient as string) || "");
+      setEditBgImage((ov.bg_image as string) || "");
+      setEditBannerImage((ov.banner_image as string) || "");
       const qs = (ov.questions as string[]) || [];
       setEditQuestions(qs.length ? qs : ["Чому хочеш вступити у фракцію?", "Який у тебе досвід в RP?"]);
     } else {
-      setEditDesc(""); setEditIcon("Shield"); setEditDangerous(false); setEditGradient("");
+      setEditDesc(""); setEditIcon("Shield"); setEditDangerous(false); setEditGradient(""); setEditBgImage(""); setEditBannerImage("");
       setEditQuestions(["Чому хочеш вступити у фракцію?", "Який у тебе досвід в RP?"]);
     }
   };
@@ -2360,6 +2383,8 @@ useEffect(() => {
         icon_name: editIcon,
         dangerous: editDangerous,
         gradient: editGradient || null,
+        bg_image: editBgImage || null,
+        banner_image: editBannerImage || null,
         questions: editQuestions,
       }, { id: eq(editingId) });
       if (error) return toast.error("Помилка збереження: " + error.message);
@@ -2373,12 +2398,15 @@ useEffect(() => {
         name: editName.trim(),
         color: editColor,
         gradient: editGradient || null,
+        bg_image: editBgImage || null,
+        banner_image: editBannerImage || null,
         description: editDesc,
         icon_name: editIcon,
         dangerous: editDangerous,
         questions: editQuestions,
         updated_at: new Date().toISOString(),
       }, { onConflict: "faction_slug" });
+    }
     }
     
     setFactions(prev => prev.map(f => f.id === editingId ? { ...f, name: editName, color: editColor, section: editSection } : f));
@@ -2556,6 +2584,38 @@ useEffect(() => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* BG Image URL */}
+              <div>
+                <label className="text-[10px] text-muted-foreground mb-2 block uppercase tracking-wider">Фото-фон карточки (замість градієнта)</label>
+                <input value={editBgImage} onChange={e => setEditBgImage(e.target.value)}
+                  placeholder="https://... (URL фото)"
+                  className={`${inputCls} text-xs`} />
+                {editBgImage && (
+                  <div className="mt-2 rounded-xl overflow-hidden h-16 relative">
+                    <img src={editBgImage} alt="" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = "none")} />
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                      <span className="text-[9px] text-white/60">Фон карточки</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Banner Image URL */}
+              <div>
+                <label className="text-[10px] text-muted-foreground mb-2 block uppercase tracking-wider">Банер у деталях фракції</label>
+                <input value={editBannerImage} onChange={e => setEditBannerImage(e.target.value)}
+                  placeholder="https://... (URL банера)"
+                  className={`${inputCls} text-xs`} />
+                {editBannerImage && (
+                  <div className="mt-2 rounded-xl overflow-hidden h-20 relative">
+                    <img src={editBannerImage} alt="" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = "none")} />
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                      <span className="text-[9px] text-white/60">Банер деталей</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Preview */}
