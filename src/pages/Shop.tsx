@@ -89,9 +89,9 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      overflow: "visible", // Чтобы оверлей не обрезался
+      overflow: "visible",
     }}>
-      {/* 1. Свечение (холодный HSL) */}
+      {/* 1. Свечение */}
       <div style={{
         position: "absolute", 
         width: "90%", 
@@ -102,122 +102,88 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
         animation: "flameGlow 3s ease-in-out infinite",
       }} />
 
-      {/* --- Основной контейнер (СДЕЛАН БОЛЬШЕ и ДОБАВЛЕНО ЛЁГКОЕ ДРОЖАНИЕ) --- */}
+      {/* --- Основной контейнер (ГЛЫБА СТОИТ НЕПОДВИЖНО) --- */}
       <div style={{ 
         position: "relative", 
         width: "100%", 
         height: "100%",
-        transform: "scale(1.25)", // Сделали огонек крупнее
-        animation: "shudder 1s linear infinite", // Лёгкое мелкое дрожание
+        transform: "scale(1.25)", // Твой увеличенный размер
         transformOrigin: "50% 90%",
       }}>
         
-        {/* === Глубина глыбы льда (ЗАДНИЙ ФОН) === */}
+        {/* === Задний фон льда === */}
         <img src="https://i.ibb.co/1JmdZ0Q4/Untitled190-20260511164205.png" style={{ ...layerStyle, zIndex: 1 }} alt="1" />
 
-        {/* 2. Основное тело (Замерзшее) */}
-        <img src="https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" style={{ ...layerStyle, zIndex: 2 }} alt="2" />
+        {/* 2. Тело (Добавил ему внутреннее дрожание) */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 2, animation: "innerShudder 0.8s linear infinite" }}>
+          <img src="https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" style={layerStyle} alt="2" />
+        </div>
 
-        {/* 3. Внутренний эффект (плавает медленно) */}
+        {/* 3. Внутренний эффект */}
         <img 
           src="https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" 
           style={{ ...layerStyle, zIndex: 3, animation: "innerFloat 3s infinite ease-in-out" }} 
           alt="3" 
         />
 
-        {/* --- Группа ЛИЦА (СУПЕР-МЕЛКАЯ МИМИКА ХОЛОДА) --- */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 4 }}>
-          {/* 4. Глаза (БЫСТРОЕ И ЗАМЕТНОЕ МОРГАНИЕ) */}
+        {/* --- Группа ЛИЦА --- */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 4, animation: "innerShudder 0.8s linear infinite" }}>
           <div style={{ position: "absolute", inset: 0, animation: "blinkFrozen 6s infinite", transformOrigin: "50% 55%" }}>
             <img src="https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" style={layerStyle} alt="4" />
           </div>
-
-          {/* 5. Брови (НОВОЕ: Лёгкое, едва заметное дрожание) */}
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            animation: "browsShudder 1s linear infinite",
-            transformOrigin: "50% 35%"
-          }}>
+          <div style={{ position: "absolute", inset: 0, animation: "browsShudder 1s linear infinite", transformOrigin: "50% 35%" }}>
             <img src="https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" style={layerStyle} alt="5" />
           </div>
-
-          {/* 6. Рот (НОВОЕ: Лёгкая вибрация "дыхания") */}
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            animation: "mouthVibrate 1s linear infinite",
-            transformOrigin: "50% 65%"
-          }}>
+          <div style={{ position: "absolute", inset: 0, animation: "mouthVibrate 1s linear infinite", transformOrigin: "50% 65%" }}>
             <img src="https://i.ibb.co/KjSFLxFf/Untitled190-20260511164236.png" style={layerStyle} alt="6" />
           </div>
         </div>
 
-        {/* 7. СОПЛЯ (НОВОЕ: Медленно и печально вытягивается вниз) */}
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 5,
-          animation: "snotDripSoft 4s ease-in-out infinite",
-          transformOrigin: "50% 50%"
-        }}>
+        {/* 7. СОПЛЯ (Спокойная анимация) */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 5, animation: "snotDripSoft 4s ease-in-out infinite", transformOrigin: "50% 50%" }}>
           <img src="https://i.ibb.co/zVbT4TTR/Untitled190-20260511164441.png" style={layerStyle} alt="7" />
         </div>
 
-        {/* 8. Руки (поверх тела) */}
-        <img src="https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" style={{ ...layerStyle, zIndex: 6 }} alt="8" />
+        {/* 8. РУЧКИ (НОВОЕ: Анимация дрожания рук) */}
+        <div style={{ 
+          position: "absolute", 
+          inset: 0, 
+          zIndex: 6, 
+          animation: "handsShiver 0.6s linear infinite", 
+          transformOrigin: "50% 60%" 
+        }}>
+          <img src="https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" style={layerStyle} alt="8" />
+        </div>
 
-        {/* === ГЛЫБА ЛЬДА (САМЫЙ ВЕРХНИЙ СЛОЙ) === */}
-        {/* 9. Передняя часть */}
+        {/* === ПЕРЕДНЯЯ ГЛЫБА (НЕПОДВИЖНО) === */}
         <img src="https://i.ibb.co/zW5DhzsJ/Untitled190-20260511164252.png" style={{ ...layerStyle, zIndex: 7 }} alt="9" />
-        {/* 10. Оверлей (блики) */}
         <img src="https://i.ibb.co/2YyJrLF2/Untitled190-20260511164352.png" style={{ ...layerStyle, zIndex: 8, opacity: 0.6 }} alt="10" />
       </div>
 
       <style>{`
-        /* НОВОЕ: Лёгкое мелкое дрожание всего тела от холода */
-        @keyframes shudder {
-          0%, 100% { transform: scale(1.25) translateY(0) rotate(0deg); }
-          15%, 45%, 75% { transform: scale(1.25) translateY(-0.5px) rotate(0.2deg); }
-          30%, 60%, 90% { transform: scale(1.25) translateY(0.5px) rotate(-0.2deg); }
+        /* Дрожание огонька ВНУТРИ льда */
+        @keyframes innerShudder {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(-0.3px, 0.3px); }
+          50% { transform: translate(0.3px, -0.3px); }
+          75% { transform: translate(-0.3px, -0.3px); }
         }
 
-        /* Заметное моргание ("примерзшие веки" хлопают резче) */
-        @keyframes blinkFrozen {
-          0%, 94%, 96%, 100% { transform: scaleY(1); }
-          95% { transform: scaleY(0.01); }
+        /* Анимация дрожащих рук */
+        @keyframes handsShiver {
+          0%, 100% { transform: translateX(0) scale(1); }
+          20% { transform: translateX(-1px) scale(1.01); }
+          40% { transform: translateX(1px) translateY(-0.5px); }
+          60% { transform: translateX(-1px) translateY(0.5px); }
+          80% { transform: translateX(1px) scale(0.99); }
         }
 
-        /* Пульсация свечения */
-        @keyframes flameGlow {
-          0%, 100% { opacity: 0.5; }
-          50% { opacity: 0.8; }
-        }
-
-        /* Внутренний эффект плавает медленно */
-        @keyframes innerFloat {
-          0%, 100% { transform: translateY(0); opacity: 0.7; }
-          50% { transform: translateY(-7px); opacity: 1; }
-        }
-
-        /* НОВОЕ: Лёгкое, едва заметное дрожание бровей */
-        @keyframes browsShudder {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-1.5px); }
-        }
-
-        /* НОВОЕ: Вибрация рта (стук зубов) */
-        @keyframes mouthVibrate {
-          0%, 100% { transform: translateX(0); }
-          15%, 45%, 75% { transform: translateX(-0.5px) translateY(-0.3px); }
-          30%, 60%, 90% { transform: translateX(0.5px) translateY(0.3px); }
-        }
-
-        /* НОВОЕ: Сопля медленно вытягивается вниз и возвращается */
-        @keyframes snotDripSoft {
-          0%, 100% { transform: translateY(0) scaleY(1); }
-          50% { transform: translateY(3px) scaleY(1.05); }
-        }
+        @keyframes blinkFrozen { 0%, 94%, 96%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.01); } }
+        @keyframes flameGlow { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.8; } }
+        @keyframes innerFloat { 0%, 100% { transform: translateY(0); opacity: 0.7; } 50% { transform: translateY(-7px); opacity: 1; } }
+        @keyframes browsShudder { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+        @keyframes mouthVibrate { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(0.5px); } }
+        @keyframes snotDripSoft { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(3px) scaleY(1.05); } }
       `}</style>
     </div>
   );
