@@ -91,13 +91,11 @@ const StreakFlame = ({ streak, size = 180, isFrozen = false }: { streak: number,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      overflow: "visible",
     }}>
-      {/* ЭФФЕКТ СВЕЧЕНИЯ (теплый или холодный) */}
+      {/* 1. Свечение (синее или цветное) */}
       <div style={{
         position: "absolute", 
-        width: "90%", 
-        height: "90%", 
+        width: "90%", height: "90%", 
         borderRadius: "50%",
         background: isFrozen 
           ? `radial-gradient(circle, rgba(0,191,255,0.4) 0%, transparent 70%)`
@@ -108,105 +106,92 @@ const StreakFlame = ({ streak, size = 180, isFrozen = false }: { streak: number,
 
       <div style={{ 
         position: "relative", 
-        width: "100%", 
-        height: "100%",
+        width: "100%", height: "100%",
         animation: isFrozen ? "iceShiver 5s ease-in-out infinite" : "flameWobble 4s ease-in-out infinite",
         transformOrigin: "50% 90%"
       }}>
         
-        {/* --- СЛОИ ЛЬДА (ЗАДНИЙ ФОН) --- */}
+        {/* === СЛОИ ЗАМОРОЗКИ (ЗАДНИЙ ПЛАН) === */}
         {isFrozen && (
-          <img src="https://i.ibb.co/1JmdZ0Q4/Untitled190-20260511164205.png" style={layerStyle} alt="ice-bg" />
+          <img src="https://i.ibb.co/1JmdZ0Q4/Untitled190-20260511164205.png" style={{ ...layerStyle, zIndex: 1 }} alt="ice-bg" />
         )}
 
-        {/* --- ТЕЛО --- */}
+        {/* === ТЕЛО === */}
         <img 
           src={isFrozen ? "https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" : "https://i.ibb.co/3mg4dWt4/Untitled190-20260511153855.png"} 
-          style={{ ...layerStyle, filter: isFrozen ? "none" : `hue-rotate(${hueShift}deg)` }} 
+          style={{ ...layerStyle, zIndex: 2, filter: isFrozen ? "none" : `hue-rotate(${hueShift}deg)` }} 
           alt="body"
         />
 
-        {/* Внутреннее тело / эффект */}
+        {/* Внутренний эффект (плавает всегда) */}
         <img 
           src={isFrozen ? "https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" : "https://i.ibb.co/WvBJRvQc/Untitled190-20260511153903.png"} 
-          style={{ ...layerStyle, filter: isFrozen ? "none" : `hue-rotate(${hueShift}deg)`, animation: "effectFloat 4s infinite ease-in-out" }} 
-          alt="secondary-body"
+          style={{ ...layerStyle, zIndex: 3, filter: isFrozen ? "none" : `hue-rotate(${hueShift}deg)`, animation: "effectFloat 4s infinite ease-in-out" }} 
+          alt="effect"
         />
 
-        {/* --- ЛИЦО --- */}
-        <div style={{ position: "absolute", inset: 0, opacity: isFrozen ? 0.8 : 1 }}>
+        {/* === ЛИЦО === */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 4, opacity: isFrozen ? 0.8 : 1 }}>
+          {/* Брови */}
+          <div style={{ position: "absolute", inset: 0, animation: isFrozen ? "none" : "browsFloatActive 4s ease-in-out infinite", transformOrigin: "50% 35%" }}>
+            <img src={isFrozen ? "https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" : "https://i.ibb.co/wF1TRzYX/image-3.png"} style={layerStyle} alt="brows" />
+          </div>
+          
+          {/* Рот */}
           <div style={{ position: "absolute", inset: 0, animation: isFrozen ? "none" : "mouthBreathActive 4s ease-in-out infinite", transformOrigin: "50% 65%" }}>
             <img src={isFrozen ? "https://i.ibb.co/KjSFLxFf/Untitled190-20260511164236.png" : "https://i.ibb.co/MDJnjp7k/image-2.png"} style={layerStyle} alt="mouth" />
           </div>
 
-          <div style={{ position: "absolute", inset: 0, animation: isFrozen ? "none" : "browsFloatActive 4s ease-in-out infinite", transformOrigin: "50% 35%" }}>
-            <img src={isFrozen ? "https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" : "https://i.ibb.co/wF1TRzYX/image-3.png"} style={layerStyle} alt="brows" />
-          </div>
-
+          {/* Глаза (моргание) */}
           <div style={{ position: "absolute", inset: 0, animation: isFrozen ? "blinkFrozen 10s infinite" : "blinkSlow 7s infinite", transformOrigin: "50% 55%" }}>
             <img src={isFrozen ? "https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" : "https://i.ibb.co/3mqZW48Y/image-1.png"} style={layerStyle} alt="eyes" />
           </div>
         </div>
 
-        {/* СОПЛЯ (только для замороженного) */}
+        {/* СОПЛЯ (над лицом, под руками) */}
         {isFrozen && (
           <img 
             src="https://i.ibb.co/zVbT4TTR/Untitled190-20260511164441.png" 
-            style={{ ...layerStyle, animation: "snotDrip 3s ease-in-out infinite" }} 
+            style={{ ...layerStyle, zIndex: 5, animation: "snotDrip 3s ease-in-out infinite" }} 
             alt="snot" 
           />
         )}
 
-        {/* --- РУКИ (ВСЕГДА СВЕРХУ) --- */}
-        <div style={{ position: "absolute", inset: 0, animation: isFrozen ? "none" : "handsWiggleActive 4s ease-in-out infinite", transformOrigin: "50% 60%" }}>
+        {/* === РУКИ === */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 6, animation: isFrozen ? "none" : "handsWiggleActive 4s ease-in-out infinite", transformOrigin: "50% 60%" }}>
           <img src={isFrozen ? "https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" : "https://i.ibb.co/JRntLWBQ/Untitled190-20260511155448.png"} style={layerStyle} alt="hands" />
         </div>
 
-        {/* --- ГЛЫБА ЛЬДА (ОКРУЖЕНИЕ) --- */}
+        {/* === ГЛЫБА (САМЫЙ ВЕРХНИЙ ПЛАН) === */}
         {isFrozen && (
           <>
-            <img src="https://i.ibb.co/zW5DhzsJ/Untitled190-20260511164252.png" style={layerStyle} alt="ice-block" />
-            <img src="https://i.ibb.co/2YyJrLF2/Untitled190-20260511164352.png" style={{ ...layerStyle, opacity: 0.6 }} alt="ice-overlay" />
+            <img src="https://i.ibb.co/zW5DhzsJ/Untitled190-20260511164252.png" style={{ ...layerStyle, zIndex: 7 }} alt="ice-front" />
+            <img src="https://i.ibb.co/2YyJrLF2/Untitled190-20260511164352.png" style={{ ...layerStyle, zIndex: 8, opacity: 0.5 }} alt="ice-overlay" />
           </>
         )}
       </div>
 
       <style>{`
-        /* Обычное покачивание */
         @keyframes flameWobble {
           0%, 100% { transform: rotate(-2.5deg) translateY(0); }
-          50% { transform: rotate(2.5deg) translateY(-3px); }
+          50% { transform: rotate(2.5deg) translateY(-4px); }
         }
-
-        /* Дрожь от холода */
         @keyframes iceShiver {
           0%, 100% { transform: rotate(-0.5deg) translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: rotate(0.5deg) translateX(1px); }
-          20%, 40%, 60%, 80% { transform: rotate(-0.5deg) translateX(-1px); }
+          25% { transform: rotate(0.5deg) translateX(1px); }
+          75% { transform: rotate(-0.5deg) translateX(-1px); }
         }
-
-        /* Капающая сопля */
         @keyframes snotDrip {
           0%, 100% { transform: translateY(0) scaleY(1); }
-          50% { transform: translateY(2px) scaleY(1.1); }
+          50% { transform: translateY(3px) scaleY(1.1); }
         }
-
-        /* Заторможенное моргание во льду */
-        @keyframes blinkFrozen {
-          0%, 95%, 100% { transform: scaleY(1); }
-          97% { transform: scaleY(0); }
-        }
-
-        @keyframes blinkSlow {
-          0%, 91%, 95%, 100% { transform: scaleY(1); }
-          93% { transform: scaleY(0.02); }
-        }
-
-        @keyframes flameGlow { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.8; } }
+        @keyframes blinkFrozen { 0%, 96%, 100% { transform: scaleY(1); } 98% { transform: scaleY(0); } }
+        @keyframes blinkSlow { 0%, 91%, 95%, 100% { transform: scaleY(1); } 93% { transform: scaleY(0.02); } }
         @keyframes effectFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
-        @keyframes handsWiggleActive { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-4px) rotate(1deg); } }
-        @keyframes browsFloatActive { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        @keyframes mouthBreathActive { 0%, 100% { transform: scale(1); } 50% { transform: scaleX(1.06) scaleY(0.94); } }
+        @keyframes handsWiggleActive { 0%, 100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-5px) rotate(1.5deg); } }
+        @keyframes browsFloatActive { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        @keyframes mouthBreathActive { 0%, 100% { transform: scale(1); } 50% { transform: scaleX(1.08) scaleY(0.92); } }
+        @keyframes flameGlow { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.8; } }
       `}</style>
     </div>
   );
