@@ -25,7 +25,7 @@ type FactionItem = {
   iconName: string;
   color: string;
   gradient: string;
-  bg_image?: string | null;
+  bgImage: string;
   dangerous: boolean;
   memberCount: number;
 };
@@ -40,7 +40,7 @@ const Factions = () => {
       // 1. DB фракції з Supabase (з усіма кастомними полями)
       const { data: dbFactions } = await supabase
         .from("factions")
-        .select("id, name, color, gradient, description, icon_name, dangerous, questions, section, bg_image, banner_image")
+        .select("id, name, color, gradient, bg_image, description, icon_name, dangerous, questions, section")
         .order("created_at", { ascending: true });
 
       // 2. Рахуємо учасників
@@ -74,7 +74,7 @@ const Factions = () => {
             iconName: (f.icon_name as string) || "Shield",
             color,
             gradient: (f.gradient as string) || `linear-gradient(135deg,${color}22,${color}08)`,
-            bg_image: (f.bg_image as string) || null,
+            bgImage: (f.bg_image as string) || "",
             dangerous: (f.dangerous as boolean) || false,
             memberCount: countById[String(f.id)] || countByName[name.toLowerCase()] || 0,
           });
@@ -103,6 +103,7 @@ const Factions = () => {
           iconName: (ov?.icon_name as string) || sf.icon,
           color,
           gradient: (ov?.gradient as string) || sf.gradient,
+          bgImage: (ov?.bg_image as string) || "",
           dangerous: (ov?.dangerous as boolean) ?? sf.dangerous,
           memberCount: countByName[sf.name.toLowerCase()] || countByName[name.toLowerCase()] || 0,
         });
@@ -119,32 +120,28 @@ const Factions = () => {
 
   const renderFaction = (f: FactionItem, i: number) => {
     const Icon = ICON_MAP[f.iconName] || Shield;
-    const hasBgImage = !!(f.bg_image && (f.bg_image.startsWith("http") || f.bg_image.startsWith("data:")));
-    const cardStyle: React.CSSProperties = hasBgImage
-      ? {
-          backgroundImage: `linear-gradient(135deg, ${f.color}22, rgba(0,0,0,0.65)), url(${f.bg_image})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          borderColor: f.color + "30",
-        }
-      : { background: f.gradient, borderColor: f.color + "30" };
+    const bgStyle = f.bgImage
+      ? { backgroundImage: `url(${f.bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }
+      : { background: f.gradient };
     return (
       <button key={f.id} onClick={() => navigate(`/factions/${f.id}`)}
         className="w-full animate-slide-up text-left"
         style={{ animationDelay: `${i * 50}ms` }}>
-        <div className="rounded-2xl px-4 py-3.5 flex items-center gap-3 border transition-all duration-200 hover:scale-[1.01] active:scale-[0.98]"
-          style={cardStyle}
+        <div className="rounded-2xl px-4 py-3.5 flex items-center gap-3 border transition-all duration-200 hover:scale-[1.01] active:scale-[0.98] relative overflow-hidden"
+          style={{ ...bgStyle, borderColor: f.color + "30" }}
           onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 16px ${f.color}28`; }}
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+          {/* Dark overlay when using image bg */}
+          {f.bgImage && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 relative z-10"
             style={{ backgroundColor: f.color + "18", border: `1px solid ${f.color}35`, boxShadow: `0 0 10px ${f.color}18` }}>
             <Icon className="w-5 h-5" style={{ color: f.color }} />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 relative z-10">
             <h3 className="text-sm font-semibold text-foreground">{f.name}</h3>
             <p className="text-[10px] text-muted-foreground mt-0.5">{f.desc}</p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 relative z-10">
             <div className="flex items-center gap-1 px-2 py-1 rounded-lg"
               style={{ backgroundColor: f.color + "15", border: `1px solid ${f.color}25` }}>
               <Users className="w-3 h-3" style={{ color: f.color }} />
