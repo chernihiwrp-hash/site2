@@ -71,91 +71,124 @@ const hsl = (c: { h: number; s: number; l: number }, a = 1) => `hsla(${c.h.toFix
 /* ───────────── БОЛЬШОЙ ОГОНЬ СЕРИИ ───────────── */
 import React, { useMemo } from "react";
 
-const StreakFlame = ({ streak, size = 140 }: { streak: number; size?: number }) => {
-  // Настройка цветов на основе streak (пример)
-  const c = { h: 35, s: 100, l: 60 }; // Яркий золотистый/оранжевый
-  const hsl = ({ h, s, l }: any, a: number) => `hsla(${h}, ${s}%, ${l}%, ${a})`;
-  
-  const base = hsl(c, 1);
-  const light = hsl({ ...c, l: Math.min(90, c.l + 18) }, 1);
-  const dark  = hsl({ ...c, l: Math.max(25, c.l - 12) }, 1);
-  const glow  = hsl(c, 0.4);
+// Размеры всех PNG-исходников: 530×640
+const LAYER_SIZE = { width: 530, height: 640 };
+
+const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) => {
+  // Логика сдвига цвета (hue-rotate)
+  // Можешь настроить ее под свои нужды:
+  // streak > 10 => -25 (красный)
+  // streak > 50 => 240 (фиолетовый)
+  const hueShift = useMemo(() => {
+    if (streak > 50) return 240; 
+    if (streak > 10) return -25;
+    return 0; // Оранжевый (оригинал)
+  }, [streak]);
+
+  const layerStyle: React.CSSProperties = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    pointerEvents: "none", // Чтобы не мешали кликам
+  };
 
   return (
-    <div style={{ position: "relative", width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* Мягкое свечение сзади */}
+    <div style={{ 
+      position: "relative", 
+      width: size, 
+      height: size, 
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      {/* 1. Внешнее свечение (генерируется кодом, чтобы быть пушистым) */}
       <div style={{
-        position: "absolute", inset: -10, borderRadius: "50%",
-        background: `radial-gradient(circle, ${glow} 0%, transparent 70%)`,
-        filter: "blur(14px)", animation: "flameGlow 3s ease-in-out infinite",
+        position: "absolute",
+        width: "75%",
+        height: "80%",
+        borderRadius: "50%",
+        // Свечение тоже меняет цвет вместе с телом
+        background: `radial-gradient(circle, rgba(255,165,0,0.5) 0%, transparent 70%)`,
+        filter: `blur(15px) hue-rotate(${hueShift}deg)`,
+        animation: "flameGlow 3s ease-in-out infinite",
+        transformOrigin: "50% 90%"
       }} />
-      
-      <svg viewBox="0 0 100 120" width={size} height={size}
-           style={{ position: "relative", animation: "flameWobble 3.5s ease-in-out infinite", transformOrigin: "50% 90%" }}>
-        <defs>
-          <linearGradient id="bodyG" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={light} />
-            <stop offset="60%" stopColor={base} />
-            <stop offset="100%" stopColor={hsl(c, 0.6)} /> {/* Полупрозрачный низ */}
-          </linearGradient>
 
-          {/* Градиент для радужки, чтобы глаза не были просто черными */}
-          <radialGradient id="irisG" cx="50%" cy="50%" r="50%">
-            <stop offset="85%" stopColor="#2D1B00" />
-            <stop offset="100%" stopColor="#000" />
-          </radialGradient>
-        </defs>
-
-        {/* Тело (перерисовано, чтобы быть пухлым и с "ушками") */}
-        <path d="M50 8 C 65 8, 85 20, 88 45 Q 92 65 90 80 C 88 100, 65 112, 50 112 C 35 112, 12 100, 10 80 Q 8 65 12 45 C 15 20, 35 8, 50 8 Z"
-              fill="url(#bodyG)" />
+      {/* Контейнер для всей анимации покачивания (тело, лицо, лапки) */}
+      <div style={{ 
+        position: "relative", 
+        width: "100%", 
+        height: "100%",
+        animation: "flameWobble 3.2s ease-in-out infinite",
+        transformOrigin: "50% 90%"
+      }}>
         
-        {/* Нижний оранжевый акцент (мягкая дуга) */}
-        <path d="M15 80 Q 50 118 85 80" fill="none" stroke="#FF8A3D" strokeWidth="10" strokeLinecap="round" opacity="0.35" />
+        {/* 2. Слой ОСНОВНОЙ ОСНОВЫ (меняем цвет) */}
+        <img 
+          src="https://i.ibb.co/60qXzH5k/Untitled190-20260511153855.png" 
+          style={{ ...layerStyle, filter: `hue-rotate(${hueShift}deg) saturate(1.1)` }} 
+          alt="main body"
+        />
 
-        {/* Лапки (добавлены!) */}
-        <ellipse cx="40" cy="108" rx="5" ry="3" fill="#D35400" />
-        <ellipse cx="60" cy="108" rx="5" ry="3" fill="#D35400" />
+        {/* 3. Слой ВНУТРЕННЕГО ЭФФЕКТА (меняем цвет) */}
+        <img 
+          src="https://i.ibb.co/3mqZW48Y/Untitled190-20260511153903.png" 
+          style={{ ...layerStyle, filter: `hue-rotate(${hueShift}deg) saturate(1.2)`, animation: "effectBreath 2s infinite" }} 
+          alt="internal effect"
+        />
 
-        {/* Брови */}
-        <path d="M28 35 Q 35 29 42 32" fill="none" stroke="#A94000" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M58 32 Q 65 29 72 35" fill="none" stroke="#A94000" strokeWidth="2.5" strokeLinecap="round" />
+        {/* --- Лицо --- */}
+        <div style={{ position: "absolute", inset: 0, transformOrigin: "50% 60%" }}>
+          {/* 4. Брови (оригинал) */}
+          <img src="https://i.ibb.co/3mqZW48Y/image-3.png" style={layerStyle} alt="brows" />
+          
+          {/* 5. Рот (оригинал) */}
+          <img src="https://i.ibb.co/3mqZW48Y/image-2.png" style={layerStyle} alt="mouth" />
 
-        {/* Детализированные глаза */}
-        <g style={{ animation: "blink 6s infinite", transformOrigin: "50% 60%" }}>
-          {/* Левый */}
-          <ellipse cx="36" cy="58" rx="15" ry="17" fill="white" />
-          <ellipse cx="36" cy="58" rx="11" ry="13" fill="url(#irisG)" />
-          {/* Блики (слезливые) */}
-          <path d="M30 52 A 7 7 0 0 1 42 52" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.9" />
-          <ellipse cx="34" cy="65" rx="2.5" ry="1.5" fill="white" opacity="0.6" />
-
-          {/* Правый */}
-          <ellipse cx="64" cy="58" rx="15" ry="17" fill="white" />
-          <ellipse cx="64" cy="58" rx="11" ry="13" fill="url(#irisG)" />
-          {/* Блики (слезливые) */}
-          <path d="M58 52 A 7 7 0 0 1 70 52" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.9" />
-          <ellipse cx="62" cy="65" rx="2.5" ry="1.5" fill="white" opacity="0.6" />
-        </g>
-
-        {/* Клюв (точный треугольник с легким скруглением) */}
-        <path d="M46 72 Q 50 78 54 72 Q 50 71 46 72 Z" fill="#FF9600" stroke="#B84A00" strokeWidth="0.5" />
-      </svg>
+          {/* 6. ГЛАЗА (С МОРАГНИЕМ) */}
+          <div style={{ 
+            position: "absolute", 
+            top: 0, left: 0, width: "100%", height: "100%",
+            animation: "blink 6s infinite",
+            transformOrigin: "50% 58%" // Точка, вокруг которой схлопываются веки
+          }}>
+            <img src="https://i.ibb.co/3mqZW48Y/image-1.png" style={layerStyle} alt="eyes" />
+          </div>
+        </div>
+      </div>
 
       <style>{`
-        @keyframes flameWobble { 
-          0%, 100% { transform: rotate(-1.5deg) translateY(0); } 
-          50% { transform: rotate(1.5deg) translateY(-2px); } 
+        /* Мягкое покачивание и "дыхание" */
+        @keyframes flameWobble {
+          0%, 100% { transform: rotate(-1.5deg) scale(1) translateY(0); }
+          50% { transform: rotate(1.5deg) scale(1.02) translateY(-2px); }
         }
-        @keyframes flameGlow { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.8; } }
-        @keyframes blink { 
-          0%, 90%, 94%, 100% { transform: scaleY(1); } 
-          92% { transform: scaleY(0.1); } 
+
+        /* Моргание глаз */
+        @keyframes blink {
+          0%, 92%, 96%, 100% { transform: scaleY(1); }
+          94% { transform: scaleY(0.1); }
+        }
+
+        /* "Дыхание" внутреннего эффекта */
+        @keyframes effectBreath {
+          0%, 100% { opacity: 0.9; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.01); }
+        }
+
+        /* Пульсация свечения */
+        @keyframes flameGlow {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.1); }
         }
       `}</style>
     </div>
   );
 };
+
+export default StreakFlame;
 /* ───────────── SHOP ───────────── */
 const Shop = () => {
   const nick = localStorage.getItem("crp_nick") || "";
