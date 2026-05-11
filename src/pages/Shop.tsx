@@ -245,6 +245,8 @@ const Shop = () => {
   const [nftGifts, setNftGifts] = useState<{ id: number; name: string; image_url: string; price: number }[]>([]);
   const [claimedNfts, setClaimedNfts] = useState<Set<number>>(new Set());
   const [claimingNft, setClaimingNft] = useState<number | null>(null);
+  const [flameRevealed, setFlameRevealed] = useState(false); // for first-time reveal animation
+  const [flameAnimating, setFlameAnimating] = useState(false);
 
   // 24h expiry logic
   const now = Date.now();
@@ -313,21 +315,20 @@ const Shop = () => {
     if (streak < days || claimedNfts.has(nft.id) || claimingNft !== null) return;
     setClaimingNft(nft.id);
     try {
-      // Save to supabase (nft_claims table or user_nfts table — adjust to your schema)
-      const { error } = await supabase.from("user_nfts").insert({
-        username: nick,
+      // Save to nft_owners — the table that Profile reads from
+      const { error } = await supabase.from("nft_owners").insert({
+        owner_nick: nick,
         nft_id: nft.id,
-        claimed_at: new Date().toISOString(),
+        obtained_at: new Date().toISOString(),
       });
       if (error) {
-        // If table doesn't exist or error, still mark locally
         console.warn("NFT claim DB error:", error);
       }
       const newClaimed = new Set(claimedNfts);
       newClaimed.add(nft.id);
       setClaimedNfts(newClaimed);
       localStorage.setItem("crp_claimed_nfts", JSON.stringify([...newClaimed]));
-      toast.success(`🎁 NFT «${nft.name}» отримано!`);
+      toast.success(`🎁 NFT «${nft.name}» отримано і додано до профілю!`);
     } catch (e) {
       toast.error("Помилка отримання NFT");
     }
