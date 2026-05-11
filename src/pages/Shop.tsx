@@ -259,6 +259,8 @@ const Shop = () => {
   const timeUntilFreeze = Math.max(0, freezeAt - now);
   const hoursUntilFreeze = Math.floor(timeUntilFreeze / 3600000);
   const minsUntilFreeze = Math.floor((timeUntilFreeze % 3600000) / 60000);
+  // Серия под угрозой — окно закрывается менее чем через 24ч, но ещё не истекло
+  const streakAtRisk = canClaim && !streakFrozen && lastReward > 0 && timeUntilFreeze < 24 * 60 * 60 * 1000;
 
   useEffect(() => {
     supabase.from("users").select("balance").ilike("username", nick).maybeSingle().then(({ data }: any) => {
@@ -343,9 +345,9 @@ const Shop = () => {
   ];
 
   const milestoneDays = [15, 50, 150, 365];
-  const flameC = streakColor(streakFrozen ? 0 : streak);
-  const flameCss = streakFrozen ? "rgba(150,210,255,0.9)" : hsl(flameC, 1);
-  const isRgb = streak >= 100 && !streakFrozen;
+  const flameC = streakColor((streakFrozen || streakAtRisk) ? 0 : streak);
+  const flameCss = (streakFrozen || streakAtRisk) ? "rgba(150,210,255,0.9)" : hsl(flameC, 1);
+  const isRgb = streak >= 100 && !streakFrozen && !streakAtRisk;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
@@ -366,11 +368,11 @@ const Shop = () => {
       {/* ─── STREAK CARD ─── */}
       <section className="rounded-2xl overflow-hidden"
         style={{
-          background: streakFrozen
+          background: (streakFrozen || streakAtRisk)
             ? "linear-gradient(180deg, rgba(100,180,255,0.08), rgba(50,120,200,0.03))"
             : "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))",
-          border: `1px solid ${streakFrozen ? "rgba(100,180,255,0.3)" : hsl(flameC, 0.3)}`,
-          boxShadow: streakFrozen
+          border: `1px solid ${(streakFrozen || streakAtRisk) ? "rgba(100,180,255,0.3)" : hsl(flameC, 0.3)}`,
+          boxShadow: (streakFrozen || streakAtRisk)
             ? "0 0 40px -10px rgba(100,180,255,0.3) inset"
             : `0 0 40px -10px ${hsl(flameC, 0.3)} inset`,
         }}>
@@ -408,7 +410,7 @@ const Shop = () => {
               {streakDays.map((d) => {
                 const done = streak >= d.day;
                 const current = streak + 1 === d.day;
-                const frozen = streakFrozen && done;
+                const frozen = (streakFrozen || streakAtRisk) && done;
                 const c = streakColor(d.day);
                 return (
                   <div key={d.day} className="flex-1 flex flex-col items-center gap-1">
@@ -453,7 +455,7 @@ const Shop = () => {
 
           {/* ── FLAME DISPLAY + STREAK NUMBER ── */}
           <div className="flex flex-col items-center py-2">
-            {streakFrozen ? (
+            {(streakFrozen || streakAtRisk) ? (
               <FrozenFlame size={140} />
             ) : (
               <StreakFlame streak={streak} size={140} />
@@ -462,7 +464,7 @@ const Shop = () => {
               <div className="text-4xl font-extrabold tabular-nums tracking-tight"
                 style={{
                   color: flameCss,
-                  textShadow: streakFrozen
+                  textShadow: (streakFrozen || streakAtRisk)
                     ? "0 0 20px rgba(100,180,255,0.6)"
                     : `0 0 20px ${hsl(flameC, 0.6)}`,
                   animation: isRgb ? "rgbText 2s linear infinite" : undefined,
@@ -470,7 +472,7 @@ const Shop = () => {
                 {streak}
               </div>
               <div className="text-xs uppercase tracking-[0.2em] text-white/50 mt-0.5">
-                {streakFrozen ? "🧊 серія заморожена" : "днів поспіль"}
+                {streakFrozen ? "🧊 серія заморожена" : streakAtRisk ? "⚠️ серія під загрозою" : "днів поспіль"}
               </div>
             </div>
           </div>
