@@ -26,6 +26,7 @@ type FactionItem = {
   color: string;
   gradient: string;
   bgImage: string;
+  bannerImage?: string;
   dangerous: boolean;
   memberCount: number;
 };
@@ -85,7 +86,8 @@ const Factions = () => {
             iconName: (f.icon_name as string) || "Shield",
             color,
             gradient: (f.gradient as string) || `linear-gradient(135deg,${color}22,${color}08)`,
-            bgImage: (ov?.bg_image as string) || "",
+            bgImage: (f.background_image as string) || (ov?.background_image as string) || "",
+            bannerImage: (f.banner_image as string) || (ov?.banner_image as string) || undefined,
             dangerous: (f.dangerous as boolean) || false,
             memberCount: countById[String(f.id)] || countByName[name.toLowerCase()] || 0,
           });
@@ -106,7 +108,8 @@ const Factions = () => {
           iconName: (ov?.icon_name as string) || sf.icon,
           color,
           gradient: (ov?.gradient as string) || sf.gradient,
-          bgImage: (ov?.bg_image as string) || "",
+          bgImage: (ov?.background_image as string) || "",
+          bannerImage: (ov?.banner_image as string) || undefined,
           dangerous: (ov?.dangerous as boolean) ?? sf.dangerous,
           memberCount: countByName[sf.name.toLowerCase()] || countByName[name.toLowerCase()] || 0,
         });
