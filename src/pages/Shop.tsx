@@ -16,6 +16,34 @@ import { toast } from "sonner";
 import { supabase } from "../lib/store";
 import { dbUpdate, ilike } from "../lib/db";
 
+export type ThemeId = string;
+
+export const THEMES = {
+  default: {
+    id: "default",
+    name: "Default",
+    className: "theme-default",
+  },
+  dark: {
+    id: "dark",
+    name: "Dark",
+    className: "theme-dark",
+  },
+  neon: {
+    id: "neon",
+    name: "Neon",
+    className: "theme-neon",
+  },
+} as const;
+
+export const applyTheme = (themeId: ThemeId) => {
+  const theme = THEMES[themeId as keyof typeof THEMES];
+  if (!theme) return;
+
+  document.documentElement.className = theme.className;
+  localStorage.setItem("theme", themeId);
+};
+
 /* ──────────────────────────────────────────────────────────────
    TYPES
 ────────────────────────────────────────────────────────────── */
