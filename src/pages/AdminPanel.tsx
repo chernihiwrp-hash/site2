@@ -918,32 +918,17 @@ const PlatesTab = () => {
 
   const decide = async (id: number, status: "approved" | "rejected") => {
     try {
-      console.log("Спроба оновити ID:", id, "Статус:", status);
-      
-     
-      const { data, error } = await dbUpdate(
-        "car_plates",
-        { status: status },
-        { id: eq(id) },
-        { returning: true },
-      );
+      const { error } = await dbUpdate("car_plates", { status }, { id: eq(id) });
       if (error) {
-        console.error("Помилка Supabase:", error);
-        throw error;
+        toast.error("\u041f\u043e\u043c\u0438\u043b\u043a\u0430: " + error.message);
+        return;
       }
-
-      console.log("Успішно оновлено:", data);
-
-
       setPlates(prev => prev.map(p => p.id === id ? { ...p, status } : p));
-      toast.success(status === "approved" ? "Номер видано!" : "Відхилено");
-      
+      toast.success(status === "approved" ? "\u041d\u043e\u043c\u0435\u0440 \u0432\u0438\u0434\u0430\u043d\u043e!" : "\u0412\u0456\u0434\u0445\u0438\u043b\u0435\u043d\u043e");
     } catch (err: any) {
-      console.error("Деталі помилки:", err);
-      toast.error(`Помилка: ${err.message || "Збереження"}`);
+      toast.error("\u041f\u043e\u043c\u0438\u043b\u043a\u0430: " + (err.message || "err"));
     }
   };
-
   if (loading) return <div className="text-center py-10 opacity-50 text-[10px] font-black animate-pulse uppercase">Завантаження...</div>;
 
   return (
@@ -985,8 +970,8 @@ const PlatesTab = () => {
                 <button onClick={() => decide(p.id, "approved")} className="flex-1 py-2.5 bg-primary/20 border border-primary/30 text-primary text-[10px] font-black uppercase rounded-xl hover:bg-primary/30 active:scale-95 transition-all">
                   Видати номер
                 </button>
-                <button onClick={() => decide(p.id, "rejected")} className="px-4 py-2.5 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl active:scale-95 transition-all">
-                  <X className="w-5 h-5" />
+                <button onClick={() => decide(p.id, "rejected")} className="flex-1 py-2.5 bg-destructive/15 border border-destructive/30 text-destructive text-[10px] font-black uppercase rounded-xl hover:bg-destructive/25 active:scale-95 transition-all">
+                  Відхилити
                 </button>
               </div>
             )}
