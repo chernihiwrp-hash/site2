@@ -71,81 +71,74 @@ const hsl = (c: { h: number; s: number; l: number }, a = 1) => `hsla(${c.h.toFix
 /* ───────────── БОЛЬШОЙ ОГОНЬ СЕРИИ ───────────── */
 const StreakFlame = ({ streak, size = 140 }: { streak: number; size?: number }) => {
   const c = useMemo(() => streakColor(streak), [streak]);
-  const core   = hsl(c, 1);
-  const mid    = hsl({ ...c, l: Math.min(70, c.l + 10) }, 0.95);
-  const tip    = hsl({ ...c, l: Math.min(85, c.l + 25) }, 0.9);
-  const glowA  = hsl(c, 0.55);
-  const glowB  = hsl(c, 0.35);
+  const base = hsl(c, 1);
+  const light = hsl({ ...c, l: Math.min(90, c.l + 25) }, 1);
+  const dark  = hsl({ ...c, l: Math.max(25, c.l - 20) }, 1);
+  const glow  = hsl(c, 0.55);
 
   return (
-    <div className="relative flex flex-col items-center justify-center select-none" style={{ width: size, height: size }}>
-      {/* мягкое свечение фоном */}
-      <div className="absolute inset-0 rounded-full blur-2xl"
-           style={{ background: `radial-gradient(circle at 50% 60%, ${glowA} 0%, ${glowB} 35%, transparent 70%)` }} />
-      {/* SVG пламя с wobble */}
-      <svg viewBox="0 0 100 130" width={size} height={size * 1.25}
-           style={{
-             filter: `drop-shadow(0 0 ${size*0.18}px ${core}) drop-shadow(0 0 ${size*0.08}px ${core})`,
-             animation: "flameWobble 1.6s ease-in-out infinite alternate",
-             transformOrigin: "50% 100%",
-           }}>
+    <div style={{ position: "relative", width: size, height: size }}>
+      {/* свечение */}
+      <div style={{
+        position: "absolute", inset: -20, borderRadius: "50%",
+        background: `radial-gradient(circle, ${glow} 0%, transparent 65%)`,
+        filter: "blur(14px)", animation: "flameGlow 2.4s ease-in-out infinite",
+      }} />
+      <svg viewBox="0 0 100 120" width={size} height={size}
+           style={{ position: "relative", animation: "flameWobble 2.6s ease-in-out infinite", transformOrigin: "50% 90%" }}>
         <defs>
-          <radialGradient id="fg" cx="50%" cy="80%" r="65%">
-            <stop offset="0%" stopColor={tip} />
-            <stop offset="55%" stopColor={mid} />
-            <stop offset="100%" stopColor={core} />
+          <radialGradient id="bodyG" cx="50%" cy="65%" r="60%">
+            <stop offset="0%"  stopColor={light} />
+            <stop offset="60%" stopColor={base} />
+            <stop offset="100%" stopColor={dark} />
           </radialGradient>
-          <radialGradient id="fc" cx="50%" cy="85%" r="40%">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.95)" />
-            <stop offset="60%" stopColor={tip} stopOpacity="0.6" />
-            <stop offset="100%" stopColor={core} stopOpacity="0" />
+          <radialGradient id="cheekG" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"  stopColor="rgba(255,120,120,.55)" />
+            <stop offset="100%" stopColor="rgba(255,120,120,0)" />
           </radialGradient>
         </defs>
-        {/* основная капля огня */}
-        <path
-          d="M50 5 C 62 30, 85 45, 78 75 C 74 100, 58 110, 50 125 C 42 110, 26 100, 22 75 C 15 45, 38 30, 50 5 Z"
-          fill="url(#fg)"
-        />
-        {/* внутреннее ядро */}
-        <ellipse cx="50" cy="92" rx="16" ry="22" fill="url(#fc)"
-                 style={{ animation: "flameCore 1.1s ease-in-out infinite alternate", transformOrigin: "50% 95%" }} />
+
+        {/* пухлая капля-маскот */}
+        <path d="M50 8 C 22 38, 14 64, 22 86 C 30 108, 70 108, 78 86 C 86 64, 78 38, 50 8 Z"
+              fill="url(#bodyG)" stroke={dark} strokeWidth="1.5" strokeOpacity=".35"/>
+        {/* блик */}
+        <path d="M34 30 C 28 45, 28 60, 34 70 C 28 60, 28 42, 34 30 Z" fill="rgba(255,255,255,.55)"/>
+        {/* щёчки */}
+        <ellipse cx="33" cy="74" rx="7" ry="4" fill="url(#cheekG)"/>
+        <ellipse cx="67" cy="74" rx="7" ry="4" fill="url(#cheekG)"/>
+        {/* глаза */}
+        <g style={{ animation: "blink 4.5s infinite", transformOrigin: "50% 65%" }}>
+          <ellipse cx="40" cy="65" rx="7" ry="9" fill="#1a1a1a"/>
+          <ellipse cx="60" cy="65" rx="7" ry="9" fill="#1a1a1a"/>
+          <circle cx="42" cy="62" r="2.6" fill="#fff"/>
+          <circle cx="62" cy="62" r="2.6" fill="#fff"/>
+          <circle cx="38" cy="68" r="1.3" fill="#fff" opacity=".8"/>
+          <circle cx="58" cy="68" r="1.3" fill="#fff" opacity=".8"/>
+        </g>
+        {/* клюв */}
+        <path d="M46 80 Q50 86 54 80 Q50 83 46 80 Z" fill="#ff9a1f" stroke="#c46a00" strokeWidth=".6"/>
       </svg>
 
       {/* искры */}
-      {[0,1,2,3].map(i => (
-        <span key={i}
-          className="absolute rounded-full"
-          style={{
-            width: 6, height: 6, background: tip, opacity: 0.9,
-            left: `${30 + i*12}%`, bottom: `${20 + (i%2)*10}%`,
-            filter: `drop-shadow(0 0 6px ${core})`,
-            animation: `spark${i%2} ${1.4 + i*0.2}s ease-in-out infinite`,
-          }}
-        />
+      {[0,1,2].map(i => (
+        <span key={i} style={{
+          position: "absolute", left: `${30 + i*18}%`, top: -4,
+          width: 6, height: 6, borderRadius: "50%", background: light,
+          boxShadow: `0 0 8px ${base}`,
+          animation: `spark 1.8s ${i*0.4}s ease-out infinite`,
+        }} />
       ))}
 
       <style>{`
-        @keyframes flameWobble {
-          0%   { transform: scaleY(1)    scaleX(1)    rotate(-2deg); }
-          50%  { transform: scaleY(1.06) scaleX(0.97) rotate(1deg); }
-          100% { transform: scaleY(1.1)  scaleX(0.94) rotate(2deg); }
-        }
-        @keyframes flameCore {
-          from { opacity: .75; transform: scaleY(.92) scaleX(1.02); }
-          to   { opacity: 1;   transform: scaleY(1.08) scaleX(.95); }
-        }
-        @keyframes spark0 {
-          0%   { transform: translateY(0)    scale(1); opacity: .9; }
-          100% { transform: translateY(-40px) scale(.2); opacity: 0; }
-        }
-        @keyframes spark1 {
-          0%   { transform: translateY(0)    scale(1); opacity: .9; }
-          100% { transform: translateY(-55px) scale(.2); opacity: 0; }
-        }
+        @keyframes flameWobble { 0%,100%{transform:rotate(-2deg) scale(1)} 50%{transform:rotate(2deg) scale(1.04)} }
+        @keyframes flameGlow   { 0%,100%{opacity:.7} 50%{opacity:1} }
+        @keyframes blink       { 0%,92%,100%{transform:scaleY(1)} 95%{transform:scaleY(.1)} }
+        @keyframes spark       { 0%{transform:translateY(0) scale(1);opacity:.9} 100%{transform:translateY(-40px) scale(.2);opacity:0} }
       `}</style>
     </div>
   );
 };
+
 
 /* ───────────── SHOP ───────────── */
 const Shop = () => {
@@ -163,9 +156,11 @@ const Shop = () => {
         syncBalance(nick, bal); setBalanceState(bal);
       }
     });
-    supabase.from("nft_gifts").select("*").order("created_at", { ascending: false }).then(({ data }:any) => {
-      if (data) setNftGifts(data);
-    });
+    supabase  .from("nft_gifts")
+  .select("*")
+  .order("price", { ascending: true })   // ← сортируем по цене
+  .limit(4)
+  .then(({ data }: any) => { if (data) setNftGifts(data); });
   }, [nick]);
 
   const canClaim = Date.now() - lastReward > 24*60*60*1000;
