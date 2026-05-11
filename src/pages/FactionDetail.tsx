@@ -92,7 +92,7 @@ const FactionDetail = () => {
             desc: (dbFaction.description as string) || "Фракція сервера",
             dangerous: (dbFaction.dangerous as boolean) || false,
             leaderUsername: (dbFaction.leader_username as string) || null,
-            bgImage: (dbFaction.bg_image as string) || undefined,
+            bgImage: (dbFaction.background_image as string) || undefined,
             bannerImage: (dbFaction.banner_image as string) || undefined,
           };
           return setFaction(found);
@@ -119,7 +119,7 @@ const FactionDetail = () => {
             desc: (ov.description as string) || staticF.desc,
             dangerous: (ov.dangerous as boolean) ?? staticF.dangerous ?? false,
             leaderUsername: undefined,
-            bgImage: (ov.bg_image as string) || undefined,
+            bgImage: (ov.background_image as string) || undefined,
             bannerImage: (ov.banner_image as string) || undefined,
           };
         } else {
