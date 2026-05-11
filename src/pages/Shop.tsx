@@ -188,7 +188,6 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
   );
 };
 
-export default StreakFlame;
 /* ───────────── SHOP ───────────── */
 const Shop = () => {
   const nick = localStorage.getItem("crp_nick") || "";
