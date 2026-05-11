@@ -2346,7 +2346,7 @@ useEffect(() => {
         setEditIcon((fd.icon_name as string) || "Shield");
         setEditDangerous((fd.dangerous as boolean) || false);
         setEditGradient((fd.gradient as string) || "");
-        setEditBgImage((fd.bg_image as string) || "");
+        setEditBgImage((fd.background_image as string) || "");
         setEditBannerImage((fd.banner_image as string) || "");
         const qs = (fd.questions as string[]) || [];
         setEditQuestions(qs.length ? qs : ["Чому хочеш вступити у фракцію?", "Який у тебе досвід в RP?"]);
@@ -2362,7 +2362,7 @@ useEffect(() => {
       setEditIcon((ov.icon_name as string) || "Shield");
       setEditDangerous((ov.dangerous as boolean) || false);
       setEditGradient((ov.gradient as string) || "");
-      setEditBgImage((ov.bg_image as string) || "");
+      setEditBgImage((ov.background_image as string) || "");
       setEditBannerImage((ov.banner_image as string) || "");
       const qs = (ov.questions as string[]) || [];
       setEditQuestions(qs.length ? qs : ["Чому хочеш вступити у фракцію?", "Який у тебе досвід в RP?"]);
@@ -2377,7 +2377,6 @@ useEffect(() => {
     const faction = factions.find(f => f.id === editingId);
     
     if (editingId > 0) {
-      // DB faction — update fields in factions table (no bg_image/banner_image — stored in faction_overrides)
       const { error } = await dbUpdate("factions", {
         name: editName.trim(),
         color: editColor,
@@ -2387,16 +2386,10 @@ useEffect(() => {
         dangerous: editDangerous,
         gradient: editGradient || null,
         questions: editQuestions,
+        background_image: editBgImage || null,
+        banner_image: editBannerImage || null,
       }, { id: eq(editingId) });
       if (error) return toast.error("Помилка збереження: " + error.message);
-      // Also save bg_image/banner_image to faction_overrides
-      const slug = editName.trim().toLowerCase().replace(/\s+/g, "_");
-      await dbUpsert("faction_overrides", {
-        faction_slug: slug,
-        bg_image: editBgImage || null,
-        banner_image: editBannerImage || null,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "faction_slug" });
     }
     
     // Static faction — save to Supabase faction_overrides
@@ -2407,7 +2400,7 @@ useEffect(() => {
         name: editName.trim(),
         color: editColor,
         gradient: editGradient || null,
-        bg_image: editBgImage || null,
+        background_image: editBgImage || null,
         banner_image: editBannerImage || null,
         description: editDesc,
         icon_name: editIcon,
