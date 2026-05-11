@@ -1,44 +1,41 @@
-import { useState, useEffect, useRef } from "react";
-import { Gift, Clock, Zap, Star, Flame, Trophy, Sparkles, Lock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Gift, Clock, Zap, Star, Flame, Trophy, Sparkles } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
 import { setBalance as syncBalance, supabase } from "../lib/store";
 import { dbUpdate, ilike } from "../lib/db";
 
-// ─── FlameVFX (оновлений) ─────────────────────────────────────
-const FlameVFX = ({ size = 72, active = true, streak = 0 }: { size?: number; active?: boolean; streak?: number }) => {
-  const getTargetColor = (s: number): string => {
+// ─── АНІМОВАНИЙ ВОГОНЬ ─────────────────────────────────────
+const FlameVFX = ({ streak = 0 }: { streak?: number }) => {
+  const getFlameColor = (s: number): string => {
     if (s >= 365) return "#3b82f6";      // Blue
     if (s >= 150) return "#22c55e";      // Green
-    if (s >= 50) return "#a855f7";       // Purple
-    if (s >= 15) return "#ef4444";       // Red
+    if (s >= 50)  return "#a855f7";      // Purple
+    if (s >= 15)  return "#ef4444";      // Red
     return "#facc15";                    // Yellow
   };
 
-  const targetColor = getTargetColor(streak);
-  const glow = active ? `drop-shadow(0 0 25px ${targetColor}) drop-shadow(0 0 40px ${targetColor}) drop-shadow(0 0 60px ${targetColor})` : "none";
+  const color = getFlameColor(streak);
 
   return (
-    <div className="relative flex items-center justify-center">
+    <div className="relative flex justify-center">
       <div
-        className="transition-all duration-700"
+        className="text-[92px] transition-all duration-700 animate-[flameWobble_1.1s_ease-in-out_infinite_alternate]"
         style={{
-          filter: glow,
-          animation: active ? "flameWobble 1.2s ease-in-out infinite alternate, flamePulse 2s ease-in-out infinite" : "none"
+          filter: `drop-shadow(0 0 20px ${color}) drop-shadow(0 0 40px ${color}) drop-shadow(0 0 70px ${color})`,
+          color: color,
         }}
       >
-        <span className="text-[72px] drop-shadow-xl">🔥</span>
+        🔥
       </div>
-      <style jsx>{`
-        @keyframes flameWobble {
-          from { transform: scale(1) rotate(-8deg); }
-          to   { transform: scale(1.12) rotate(8deg); }
-        }
-        @keyframes flamePulse {
-          0%, 100% { opacity: 0.95; }
-          50% { opacity: 1; }
-        }
-      `}</style>
+
+      {/* Додатковий шар для пульсації */}
+      <div
+        className="absolute text-[92px] opacity-60 animate-[flamePulse_1.8s_ease-in-out_infinite]"
+        style={{ color }}
+      >
+        🔥
+      </div>
     </div>
   );
 };
@@ -137,12 +134,12 @@ const Shop = () => {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 pt-8 space-y-12">
-        {/* СТREAK SECTION */}
+        {/* STREK SECTION */}
         <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <FlameVFX size={80} active={true} streak={streak} />
-          </div>
-          <h2 className="text-5xl font-bold mb-2 tracking-tighter">Серія: <span className="text-orange-400">{streak}</span> днів</h2>
+          <FlameVFX streak={streak} />
+          <h2 className="text-5xl font-bold mt-4 mb-2 tracking-tighter">
+            Серія: <span className="text-orange-400">{streak}</span> днів
+          </h2>
           {streak >= 3 && <p className="text-green-400 text-xl">Бонус активний 🔥</p>}
         </div>
 
@@ -157,7 +154,9 @@ const Shop = () => {
                 <div
                   key={d.day}
                   className={`relative p-4 rounded-2xl text-center transition-all duration-300 border ${
-                    isDone ? "bg-green-900/30 border-green-500/50" : isCurrent ? "bg-orange-500/20 border-orange-400 scale-105" : "bg-zinc-900/80 border-white/10"
+                    isDone ? "bg-green-900/30 border-green-500/50" 
+                    : isCurrent ? "bg-orange-500/20 border-orange-400 scale-105" 
+                    : "bg-zinc-900/80 border-white/10"
                   }`}
                 >
                   {isDone && <div className="absolute -top-2 -right-2 bg-green-500 text-black text-xs px-2 py-0.5 rounded-full">✓</div>}
@@ -237,7 +236,7 @@ const Shop = () => {
           </div>
         )}
 
-        {/* Daily Claim */}
+        {/* Daily Claim Card */}
         <div className="bg-gradient-to-br from-zinc-900 to-black border border-white/10 rounded-3xl p-8 text-center">
           <div className="flex justify-center mb-6">
             {canClaim ? (
@@ -269,6 +268,18 @@ const Shop = () => {
           )}
         </div>
       </div>
+
+      {/* Глобальні анімації */}
+      <style>{`
+        @keyframes flameWobble {
+          from { transform: scale(0.95) rotate(-12deg); }
+          to   { transform: scale(1.08) rotate(12deg); }
+        }
+        @keyframes flamePulse {
+          0%, 100% { transform: scale(0.9); opacity: 0.6; }
+          50% { transform: scale(1.05); opacity: 0.9; }
+        }
+      `}</style>
     </div>
   );
 };
