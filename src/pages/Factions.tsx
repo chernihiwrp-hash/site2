@@ -41,7 +41,7 @@ const Factions = () => {
       // 1. DB фракції з Supabase (з усіма кастомними полями)
       const { data: dbFactions } = await supabase
         .from("factions")
-        .select("id, name, color, gradient, description, icon_name, dangerous, questions, section")
+        .select("id, name, color, gradient, description, icon_name, dangerous, questions, section, background_image, banner_image")
         .order("created_at", { ascending: true });
 
       // 2. Рахуємо учасників
