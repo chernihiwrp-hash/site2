@@ -69,21 +69,9 @@ const streakColor = (s: number) => {
 const hsl = (c: { h: number; s: number; l: number }, a = 1) => `hsla(${c.h.toFixed(1)},${c.s.toFixed(1)}%,${c.l.toFixed(1)}%,${a})`;
 
 /* ───────────── БОЛЬШОЙ ОГОНЬ СЕРИИ ───────────── */
-import React, { useMemo } from "react";
-
-// Размеры всех PNG-исходников: 530×640
-const LAYER_SIZE = { width: 530, height: 640 };
-
 const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) => {
-  // Логика сдвига цвета (hue-rotate)
-  // Можешь настроить ее под свои нужды:
-  // streak > 10 => -25 (красный)
-  // streak > 50 => 240 (фиолетовый)
-  const hueShift = useMemo(() => {
-    if (streak > 50) return 240; 
-    if (streak > 10) return -25;
-    return 0; // Оранжевый (оригинал)
-  }, [streak]);
+  // Вычисляем сдвиг цвета: 0 - оранжевый, -25 - красный, 240 - фиолетовый
+  const hueShift = streak > 50 ? 240 : (streak > 10 ? -25 : 0);
 
   const layerStyle: React.CSSProperties = {
     position: "absolute",
@@ -91,32 +79,31 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
     left: 0,
     width: "100%",
     height: "100%",
-    pointerEvents: "none", // Чтобы не мешали кликам
+    objectFit: "contain",
+    display: "block",
+    pointerEvents: "none",
   };
 
   return (
     <div style={{ 
       position: "relative", 
       width: size, 
-      height: size, 
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
+      height: size,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center" 
     }}>
-      {/* 1. Внешнее свечение (генерируется кодом, чтобы быть пушистым) */}
+      {/* 1. Заднее свечение */}
       <div style={{
-        position: "absolute",
-        width: "75%",
-        height: "80%",
+        position: "absolute", 
+        width: "80%", 
+        height: "80%", 
         borderRadius: "50%",
-        // Свечение тоже меняет цвет вместе с телом
-        background: `radial-gradient(circle, rgba(255,165,0,0.5) 0%, transparent 70%)`,
+        background: `radial-gradient(circle, rgba(255,140,0,0.4) 0%, transparent 70%)`,
         filter: `blur(15px) hue-rotate(${hueShift}deg)`,
         animation: "flameGlow 3s ease-in-out infinite",
-        transformOrigin: "50% 90%"
       }} />
 
-      {/* Контейнер для всей анимации покачивания (тело, лицо, лапки) */}
       <div style={{ 
         position: "relative", 
         width: "100%", 
@@ -124,64 +111,68 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
         animation: "flameWobble 3.2s ease-in-out infinite",
         transformOrigin: "50% 90%"
       }}>
-        
-        {/* 2. Слой ОСНОВНОЙ ОСНОВЫ (меняем цвет) */}
+        {/* 2. Основная основа */}
         <img 
-          src="https://i.ibb.co/60qXzH5k/Untitled190-20260511153855.png" 
-          style={{ ...layerStyle, filter: `hue-rotate(${hueShift}deg) saturate(1.1)` }} 
-          alt="main body"
+          src="https://i.ibb.co/3mg4dWt4/Untitled190-20260511153855.png" 
+          style={{ ...layerStyle, filter: `hue-rotate(${hueShift}deg)` }} 
+          alt="body"
         />
 
-        {/* 3. Слой ВНУТРЕННЕГО ЭФФЕКТА (меняем цвет) */}
+        {/* 3. Внутренний эффект */}
         <img 
-          src="https://i.ibb.co/3mqZW48Y/Untitled190-20260511153903.png" 
-          style={{ ...layerStyle, filter: `hue-rotate(${hueShift}deg) saturate(1.2)`, animation: "effectBreath 2s infinite" }} 
-          alt="internal effect"
+          src="https://i.ibb.co/WvBJRvQc/Untitled190-20260511153903.png" 
+          style={{ ...layerStyle, filter: `hue-rotate(${hueShift}deg)`, animation: "effectBreath 2.5s infinite" }} 
+          alt="effect"
         />
 
-        {/* --- Лицо --- */}
-        <div style={{ position: "absolute", inset: 0, transformOrigin: "50% 60%" }}>
-          {/* 4. Брови (оригинал) */}
-          <img src="https://i.ibb.co/3mqZW48Y/image-3.png" style={layerStyle} alt="brows" />
-          
-          {/* 5. Рот (оригинал) */}
-          <img src="https://i.ibb.co/3mqZW48Y/image-2.png" style={layerStyle} alt="mouth" />
+        {/* --- Группа ЛИЦА (не красится фильтром) --- */}
+        <div style={{ position: "absolute", inset: 0 }}>
+          {/* 4. Рот */}
+          <img 
+            src="https://i.ibb.co/MDJnjp7k/image-2.png" 
+            style={layerStyle} 
+            alt="mouth" 
+          />
 
-          {/* 6. ГЛАЗА (С МОРАГНИЕМ) */}
+          {/* 5. Брови */}
+          <img 
+            src="https://i.ibb.co/wF1TRzYX/image-3.png" 
+            style={layerStyle} 
+            alt="brows" 
+          />
+
+          {/* 6. Глаза (анимируем моргание прямо на контейнере) */}
           <div style={{ 
             position: "absolute", 
-            top: 0, left: 0, width: "100%", height: "100%",
-            animation: "blink 6s infinite",
-            transformOrigin: "50% 58%" // Точка, вокруг которой схлопываются веки
+            inset: 0, 
+            animation: "blink 6s infinite", 
+            transformOrigin: "50% 55%" 
           }}>
-            <img src="https://i.ibb.co/3mqZW48Y/image-1.png" style={layerStyle} alt="eyes" />
+            <img 
+              src="https://i.ibb.co/3mqZW48Y/image-1.png" 
+              style={layerStyle} 
+              alt="eyes" 
+            />
           </div>
         </div>
       </div>
 
       <style>{`
-        /* Мягкое покачивание и "дыхание" */
         @keyframes flameWobble {
-          0%, 100% { transform: rotate(-1.5deg) scale(1) translateY(0); }
-          50% { transform: rotate(1.5deg) scale(1.02) translateY(-2px); }
+          0%, 100% { transform: rotate(-1.5deg) scale(1); }
+          50% { transform: rotate(1.5deg) scale(1.03); }
         }
-
-        /* Моргание глаз */
         @keyframes blink {
           0%, 92%, 96%, 100% { transform: scaleY(1); }
           94% { transform: scaleY(0.1); }
         }
-
-        /* "Дыхание" внутреннего эффекта */
         @keyframes effectBreath {
-          0%, 100% { opacity: 0.9; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.01); }
+          0%, 100% { opacity: 0.7; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.02); }
         }
-
-        /* Пульсация свечения */
         @keyframes flameGlow {
-          0%, 100% { opacity: 0.5; transform: scale(1); }
-          50% { opacity: 0.8; transform: scale(1.1); }
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 0.8; }
         }
       `}</style>
     </div>
