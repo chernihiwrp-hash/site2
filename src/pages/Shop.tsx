@@ -1,776 +1,361 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Flame,
-  Gift,
-  Lock,
-  Sparkles,
-  Star,
-  Trophy,
-  Zap,
-  Crown,
-  Gem,
-  ChevronRight,
-} from "lucide-react";
-
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Gift, Clock, Zap, Star, Trophy, Sparkles, Lock, Flame } from "lucide-react";
+import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
-import { supabase } from "../lib/store";
+import { setBalance as syncBalance, supabase } from "../lib/store";
 import { dbUpdate, ilike } from "../lib/db";
 
-export type ThemeId = string;
-
-export const THEMES = {
-  default: {
-    id: "default",
-    name: "Default",
-    className: "theme-default",
-  },
-  dark: {
-    id: "dark",
-    name: "Dark",
-    className: "theme-dark",
-  },
-  neon: {
-    id: "neon",
-    name: "Neon",
-    className: "theme-neon",
-  },
-} as const;
-
-export const applyTheme = (themeId: ThemeId) => {
-  const theme = THEMES[themeId as keyof typeof THEMES];
-  if (!theme) return;
-
-  document.documentElement.className = theme.className;
-  localStorage.setItem("theme", themeId);
-};
-
-/* ──────────────────────────────────────────────────────────────
-   TYPES
-────────────────────────────────────────────────────────────── */
-
-interface NFTGift {
-  id: number;
-  name: string;
-  image_url: string;
-  price: number;
-}
-
-interface Milestone {
-  days: number;
-  title: string;
-  reward: string;
-  icon: any;
-}
-
-/* ──────────────────────────────────────────────────────────────
-   CONSTANTS
-────────────────────────────────────────────────────────────── */
-
-const DAILY_REWARDS = [
-  { days: "1-2", reward: 100, color: "#facc15" },
-  { days: "3-5", reward: 150, color: "#f97316" },
-  { days: "6-7", reward: 200, color: "#22c55e" },
+/* ───────────── ТЕМЫ (без изменений по сути) ───────────── */
+export type ThemeId = "lime" | "neon_blue" | "cyber_red" | "gold_vip" | "purple_haze" | "arctic" | "matrix" | "sunset";
+export interface Theme { id: ThemeId; name: string; price: number; preview: string; vars: Record<string,string>; bgGradient: string; description: string; }
+export const THEMES: Theme[] = [
+  { id:"lime", name:"Lime (default)", price:0, preview:"linear-gradient(135deg,hsl(84,81%,44%),hsl(142,71%,45%))", vars:{"--primary":"84 81% 44%","--secondary":"142 71% 45%","--accent":"84 81% 44%","--ring":"84 81% 44%","--neon-lime":"84 81% 44%","--passport-bg":"linear-gradient(145deg,hsl(240 15% 8%/.95),hsl(84 40% 8%/.9))","--passport-border":"hsl(84 81% 44%/.25)"}, bgGradient:"radial-gradient(ellipse 100% 50% at 50% 100%,hsl(142 71% 45%/.18) 0%,transparent 65%),radial-gradient(ellipse 70% 35% at 50% 100%,hsl(84 81% 44%/.12) 0%,transparent 55%)", description:"Класичний неоновий лайм" },
+  { id:"neon_blue", name:"Neon Blue", price:300, preview:"linear-gradient(135deg,hsl(210,100%,55%),hsl(200,90%,45%))", vars:{"--primary":"210 100% 55%","--secondary":"200 90% 45%","--accent":"210 100% 55%","--ring":"210 100% 55%","--neon-lime":"210 100% 55%","--passport-bg":"linear-gradient(145deg,hsl(220 30% 6%/.97),hsl(210 50% 10%/.92))","--passport-border":"hsl(210 100% 55%/.3)"}, bgGradient:"radial-gradient(ellipse 120% 60% at 50% 110%,hsl(210 100% 55%/.2) 0%,transparent 60%)", description:"Електричний синій неон" },
+  { id:"cyber_red", name:"Cyber Red", price:300, preview:"linear-gradient(135deg,hsl(0,85%,55%),hsl(15,80%,45%))", vars:{"--primary":"0 85% 55%","--secondary":"15 80% 45%","--accent":"0 85% 55%","--ring":"0 85% 55%","--neon-lime":"0 85% 55%","--passport-bg":"linear-gradient(145deg,hsl(0 20% 5%/.97),hsl(15 30% 8%/.93))","--passport-border":"hsl(0 85% 55%/.3)"}, bgGradient:"radial-gradient(ellipse 100% 50% at 30% 100%,hsl(0 85% 55%/.18) 0%,transparent 60%)", description:"Кіберпанк у червоному" },
+  { id:"gold_vip", name:"Gold VIP", price:750, preview:"linear-gradient(135deg,hsl(45,100%,55%),hsl(38,90%,45%))", vars:{"--primary":"45 100% 55%","--secondary":"38 90% 45%","--accent":"45 100% 55%","--ring":"45 100% 55%","--neon-lime":"45 100% 55%","--passport-bg":"linear-gradient(145deg,hsl(40 20% 6%/.97),hsl(45 30% 9%/.93))","--passport-border":"hsl(45 100% 55%/.4)"}, bgGradient:"radial-gradient(ellipse 100% 50% at 50% 100%,hsl(45 100% 55%/.2) 0%,transparent 60%)", description:"VIP золото для обраних" },
+  { id:"purple_haze", name:"Purple Haze", price:500, preview:"linear-gradient(135deg,hsl(275,80%,60%),hsl(290,70%,50%))", vars:{"--primary":"275 80% 60%","--secondary":"290 70% 50%","--accent":"275 80% 60%","--ring":"275 80% 60%","--neon-lime":"275 80% 60%","--passport-bg":"linear-gradient(145deg,hsl(270 25% 6%/.97),hsl(290 20% 8%/.93))","--passport-border":"hsl(275 80% 60%/.35)"}, bgGradient:"radial-gradient(ellipse 110% 55% at 40% 100%,hsl(275 80% 60%/.18) 0%,transparent 60%)", description:"Містичний фіолетовий" },
+  { id:"arctic", name:"Arctic White", price:400, preview:"linear-gradient(135deg,hsl(195,80%,70%),hsl(185,60%,55%))", vars:{"--primary":"195 80% 70%","--secondary":"185 60% 55%","--accent":"195 80% 70%","--ring":"195 80% 70%","--neon-lime":"195 80% 70%","--passport-bg":"linear-gradient(145deg,hsl(200 25% 6%/.97),hsl(185 20% 8%/.93))","--passport-border":"hsl(195 80% 70%/.3)"}, bgGradient:"radial-gradient(ellipse 100% 50% at 60% 100%,hsl(195 80% 70%/.15) 0%,transparent 60%)", description:"Холодний арктичний лід" },
+  { id:"matrix", name:"Matrix Green", price:600, preview:"linear-gradient(135deg,hsl(120,100%,40%),hsl(140,90%,30%))", vars:{"--primary":"120 100% 40%","--secondary":"140 90% 30%","--accent":"120 100% 40%","--ring":"120 100% 40%","--neon-lime":"120 100% 40%","--passport-bg":"linear-gradient(145deg,hsl(130 30% 4%/.98),hsl(120 20% 7%/.93))","--passport-border":"hsl(120 100% 40%/.4)"}, bgGradient:"radial-gradient(ellipse 100% 50% at 50% 100%,hsl(120 100% 40%/.2) 0%,transparent 60%)", description:"Матриця хакера" },
+  { id:"sunset", name:"Sunset Orange", price:450, preview:"linear-gradient(135deg,hsl(25,100%,55%),hsl(350,90%,55%))", vars:{"--primary":"25 100% 55%","--secondary":"350 90% 55%","--accent":"25 100% 55%","--ring":"25 100% 55%","--neon-lime":"25 100% 55%","--passport-bg":"linear-gradient(145deg,hsl(20 25% 6%/.97),hsl(350 20% 7%/.93))","--passport-border":"hsl(25 100% 55%/.35)"}, bgGradient:"radial-gradient(ellipse 110% 55% at 30% 100%,hsl(25 100% 55%/.18) 0%,transparent 60%)", description:"Захід сонця" },
 ];
+export const applyTheme = (theme: Theme) => {
+  const root = document.documentElement;
+  Object.entries(theme.vars).forEach(([k,v]) => { if(!k.startsWith("--passport")) root.style.setProperty(k,v); });
+  root.style.setProperty("--neon-lime", theme.vars["--primary"] || "84 81% 44%");
+  root.style.setProperty("--neon-green", theme.vars["--secondary"] || "142 71% 45%");
+  document.body.style.backgroundImage = theme.bgGradient;
+  document.body.style.transition = "background-image 0.5s ease";
+  root.setAttribute("data-passport-bg", theme.vars["--passport-bg"] || "");
+  root.setAttribute("data-passport-border", theme.vars["--passport-border"] || "");
+  root.setAttribute("data-theme-id", theme.id);
+  localStorage.setItem("crp_theme", theme.id);
+};
+export const loadSavedTheme = () => {
+  const localTheme = localStorage.getItem("crp_theme") as ThemeId | null;
+  if (localTheme) { const t = THEMES.find(x=>x.id===localTheme); if (t) applyTheme(t); }
+  const nick = localStorage.getItem("crp_nick"); if (!nick) return;
+  supabase.from("users").select("active_theme").ilike("username", nick).maybeSingle()
+    .then(({data}:any)=>{ if (data?.active_theme && data.active_theme !== localTheme) { const t = THEMES.find(x=>x.id===data.active_theme); if (t) applyTheme(t); } }).catch(()=>{});
+};
 
-const NFT_MILESTONES: Milestone[] = [
-  {
-    days: 15,
-    title: "Bronze",
-    reward: "+200 CR",
-    icon: Star,
-  },
-  {
-    days: 50,
-    title: "Inferno",
-    reward: "+350 CR",
-    icon: Flame,
-  },
-  {
-    days: 150,
-    title: "Mythic",
-    reward: "+500 CR",
-    icon: Crown,
-  },
-  {
-    days: 365,
-    title: "Legend",
-    reward: "+800 CR",
-    icon: Trophy,
-  },
+/* ───────────── ЦВЕТ ОГНЯ ОТ СТРИКА (плавная HSL-интерполяция) ───────────── */
+// 0→жёлтый, 15→красный, 30→фиолетовый, 60→зелёный, 100+→синий
+const STREAK_STOPS: { at: number; h: number; s: number; l: number }[] = [
+  { at: 0,   h: 50,  s: 100, l: 55 }, // жёлтый
+  { at: 15,  h: 0,   s: 90,  l: 55 }, // красный
+  { at: 30,  h: 280, s: 85,  l: 60 }, // фиолетовый
+  { at: 60,  h: 135, s: 85,  l: 50 }, // зелёный
+  { at: 100, h: 215, s: 100, l: 55 }, // синий
 ];
-
-/* ──────────────────────────────────────────────────────────────
-   FLAME COLOR SYSTEM
-────────────────────────────────────────────────────────────── */
-
-const lerp = (a: number, b: number, t: number) => {
-  return a + (b - a) * t;
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+// корректная интерполяция оттенка по короткой дуге
+const lerpHue = (a: number, b: number, t: number) => {
+  let d = b - a;
+  if (d > 180) d -= 360; else if (d < -180) d += 360;
+  return (a + d * t + 360) % 360;
 };
-
-const mixColor = (
-  c1: [number, number, number],
-  c2: [number, number, number],
-  t: number
-) => {
-  return `rgb(
-    ${Math.round(lerp(c1[0], c2[0], t))},
-    ${Math.round(lerp(c1[1], c2[1], t))},
-    ${Math.round(lerp(c1[2], c2[2], t))}
-  )`;
+const streakColor = (s: number) => {
+  if (s <= STREAK_STOPS[0].at) return STREAK_STOPS[0];
+  if (s >= STREAK_STOPS[STREAK_STOPS.length - 1].at) return STREAK_STOPS[STREAK_STOPS.length - 1];
+  for (let i = 0; i < STREAK_STOPS.length - 1; i++) {
+    const a = STREAK_STOPS[i], b = STREAK_STOPS[i + 1];
+    if (s >= a.at && s <= b.at) {
+      const t = (s - a.at) / (b.at - a.at);
+      return { at: s, h: lerpHue(a.h, b.h, t), s: lerp(a.s, b.s, t), l: lerp(a.l, b.l, t) };
+    }
+  }
+  return STREAK_STOPS[0];
 };
+const hsl = (c: { h: number; s: number; l: number }, a = 1) => `hsla(${c.h.toFixed(1)},${c.s.toFixed(1)}%,${c.l.toFixed(1)}%,${a})`;
 
-const getFlameColor = (streak: number) => {
-  if (streak <= 15) {
-    return mixColor([255, 210, 50], [255, 120, 30], streak / 15);
-  }
-
-  if (streak <= 50) {
-    return mixColor(
-      [255, 120, 30],
-      [255, 40, 80],
-      (streak - 15) / 35
-    );
-  }
-
-  if (streak <= 150) {
-    return mixColor(
-      [255, 40, 80],
-      [168, 85, 247],
-      (streak - 50) / 100
-    );
-  }
-
-  if (streak <= 365) {
-    return mixColor(
-      [168, 85, 247],
-      [34, 197, 94],
-      (streak - 150) / 215
-    );
-  }
-
-  return "#3b82f6";
-};
-
-/* ──────────────────────────────────────────────────────────────
-   ANIMATED BACKGROUND
-────────────────────────────────────────────────────────────── */
-
-const AnimatedBackground = () => {
-  return (
-    <div className="pointer-events-none fixed inset-0 overflow-hidden">
-      <div className="absolute left-[10%] top-[15%] h-[300px] w-[300px] rounded-full bg-orange-500/10 blur-[120px]" />
-
-      <div className="absolute right-[5%] top-[30%] h-[250px] w-[250px] rounded-full bg-yellow-500/10 blur-[120px]" />
-
-      <div className="absolute bottom-[10%] left-[35%] h-[350px] w-[350px] rounded-full bg-purple-500/10 blur-[150px]" />
-
-      <div className="absolute bottom-[-100px] right-[20%] h-[300px] w-[300px] rounded-full bg-blue-500/10 blur-[150px]" />
-    </div>
-  );
-};
-
-/* ──────────────────────────────────────────────────────────────
-   FLAME
-────────────────────────────────────────────────────────────── */
-
-const AnimatedFlame = ({ streak }: { streak: number }) => {
-  const color = useMemo(() => getFlameColor(streak), [streak]);
+/* ───────────── БОЛЬШОЙ ОГОНЬ СЕРИИ ───────────── */
+const StreakFlame = ({ streak, size = 140 }: { streak: number; size?: number }) => {
+  const c = useMemo(() => streakColor(streak), [streak]);
+  const core   = hsl(c, 1);
+  const mid    = hsl({ ...c, l: Math.min(70, c.l + 10) }, 0.95);
+  const tip    = hsl({ ...c, l: Math.min(85, c.l + 25) }, 0.9);
+  const glowA  = hsl(c, 0.55);
+  const glowB  = hsl(c, 0.35);
 
   return (
-    <div className="relative flex items-center justify-center">
-      <div
-        className="absolute h-[180px] w-[180px] rounded-full blur-[70px]"
-        style={{
-          background: color,
-          opacity: 0.25,
-          animation: "pulseGlow 3s ease-in-out infinite",
-        }}
-      />
+    <div className="relative flex flex-col items-center justify-center select-none" style={{ width: size, height: size }}>
+      {/* мягкое свечение фоном */}
+      <div className="absolute inset-0 rounded-full blur-2xl"
+           style={{ background: `radial-gradient(circle at 50% 60%, ${glowA} 0%, ${glowB} 35%, transparent 70%)` }} />
+      {/* SVG пламя с wobble */}
+      <svg viewBox="0 0 100 130" width={size} height={size * 1.25}
+           style={{
+             filter: `drop-shadow(0 0 ${size*0.18}px ${core}) drop-shadow(0 0 ${size*0.08}px ${core})`,
+             animation: "flameWobble 1.6s ease-in-out infinite alternate",
+             transformOrigin: "50% 100%",
+           }}>
+        <defs>
+          <radialGradient id="fg" cx="50%" cy="80%" r="65%">
+            <stop offset="0%" stopColor={tip} />
+            <stop offset="55%" stopColor={mid} />
+            <stop offset="100%" stopColor={core} />
+          </radialGradient>
+          <radialGradient id="fc" cx="50%" cy="85%" r="40%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.95)" />
+            <stop offset="60%" stopColor={tip} stopOpacity="0.6" />
+            <stop offset="100%" stopColor={core} stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        {/* основная капля огня */}
+        <path
+          d="M50 5 C 62 30, 85 45, 78 75 C 74 100, 58 110, 50 125 C 42 110, 26 100, 22 75 C 15 45, 38 30, 50 5 Z"
+          fill="url(#fg)"
+        />
+        {/* внутреннее ядро */}
+        <ellipse cx="50" cy="92" rx="16" ry="22" fill="url(#fc)"
+                 style={{ animation: "flameCore 1.1s ease-in-out infinite alternate", transformOrigin: "50% 95%" }} />
+      </svg>
 
-      <div
-        style={{
-          filter: `
-            drop-shadow(0 0 10px ${color})
-            drop-shadow(0 0 30px ${color})
-            drop-shadow(0 0 60px ${color})
-          `,
-        }}
-      >
-        <Flame
-          size={96}
-          fill={color}
-          color={color}
-          strokeWidth={2.5}
+      {/* искры */}
+      {[0,1,2,3].map(i => (
+        <span key={i}
+          className="absolute rounded-full"
           style={{
-            animation: "flameFloat 3s ease-in-out infinite",
+            width: 6, height: 6, background: tip, opacity: 0.9,
+            left: `${30 + i*12}%`, bottom: `${20 + (i%2)*10}%`,
+            filter: `drop-shadow(0 0 6px ${core})`,
+            animation: `spark${i%2} ${1.4 + i*0.2}s ease-in-out infinite`,
           }}
         />
-      </div>
+      ))}
 
       <style>{`
-        @keyframes flameFloat {
-          0% {
-            transform: translateY(0px) scale(1) rotate(-2deg);
-          }
-
-          25% {
-            transform: translateY(-5px) scale(1.04) rotate(2deg);
-          }
-
-          50% {
-            transform: translateY(-8px) scale(1.08) rotate(-2deg);
-          }
-
-          75% {
-            transform: translateY(-4px) scale(1.03) rotate(1deg);
-          }
-
-          100% {
-            transform: translateY(0px) scale(1) rotate(-2deg);
-          }
+        @keyframes flameWobble {
+          0%   { transform: scaleY(1)    scaleX(1)    rotate(-2deg); }
+          50%  { transform: scaleY(1.06) scaleX(0.97) rotate(1deg); }
+          100% { transform: scaleY(1.1)  scaleX(0.94) rotate(2deg); }
         }
-
-        @keyframes pulseGlow {
-          0% {
-            opacity: 0.2;
-            transform: scale(1);
-          }
-
-          50% {
-            opacity: 0.35;
-            transform: scale(1.12);
-          }
-
-          100% {
-            opacity: 0.2;
-            transform: scale(1);
-          }
+        @keyframes flameCore {
+          from { opacity: .75; transform: scaleY(.92) scaleX(1.02); }
+          to   { opacity: 1;   transform: scaleY(1.08) scaleX(.95); }
+        }
+        @keyframes spark0 {
+          0%   { transform: translateY(0)    scale(1); opacity: .9; }
+          100% { transform: translateY(-40px) scale(.2); opacity: 0; }
+        }
+        @keyframes spark1 {
+          0%   { transform: translateY(0)    scale(1); opacity: .9; }
+          100% { transform: translateY(-55px) scale(.2); opacity: 0; }
         }
       `}</style>
     </div>
   );
 };
 
-/* ──────────────────────────────────────────────────────────────
-   HEADER
-────────────────────────────────────────────────────────────── */
+/* ───────────── SHOP ───────────── */
+const Shop = () => {
+  const nick = localStorage.getItem("crp_nick") || "";
+  const [balance, setBalanceState] = useState(0);
+  const [lastReward, setLastReward] = useState(() => parseInt(localStorage.getItem("crp_last_reward") || "0"));
+  const [streak, setStreak] = useState(() => parseInt(localStorage.getItem("crp_streak") || "0"));
+  const [loading, setLoading] = useState(false);
+  const [nftGifts, setNftGifts] = useState<{ id:number; name:string; image_url:string; price:number }[]>([]);
 
-const Header = ({ balance }: { balance: number }) => {
+  useEffect(() => {
+    supabase.from("users").select("balance").ilike("username", nick).maybeSingle().then(({ data }:any) => {
+      if (data?.balance !== undefined) {
+        const bal = (data.balance as number) || 0;
+        syncBalance(nick, bal); setBalanceState(bal);
+      }
+    });
+    supabase.from("nft_gifts").select("*").order("created_at", { ascending: false }).then(({ data }:any) => {
+      if (data) setNftGifts(data);
+    });
+  }, [nick]);
+
+  const canClaim = Date.now() - lastReward > 24*60*60*1000;
+  const timeLeft = () => {
+    const diff = 24*60*60*1000 - (Date.now() - lastReward);
+    const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000);
+    return `${h}г ${m}хв`;
+  };
+  const progress = Math.min(100, ((Date.now() - lastReward) / (24*60*60*1000)) * 100);
+
+  const claimReward = async () => {
+    if (!canClaim || loading) return;
+    setLoading(true);
+    try {
+      const bonus = streak >= 6 ? 200 : streak >= 3 ? 150 : 100;
+      const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
+      const currentBal = (user?.balance as number) ?? 0;
+      const newBal = currentBal + bonus;
+      const { error } = await dbUpdate("users", { balance: newBal }, { username: ilike(nick) });
+      if (error) { toast.error("Помилка нарахування балансу"); setLoading(false); return; }
+      syncBalance(nick, newBal); setBalanceState(newBal);
+      const now = Date.now(); const newStreak = streak + 1;
+      setLastReward(now); setStreak(newStreak);
+      localStorage.setItem("crp_last_reward", String(now));
+      localStorage.setItem("crp_streak", String(newStreak));
+      toast.success(`+${bonus} CR нараховано! Серія: ${newStreak} днів`);
+    } catch { toast.error("Щось пішло не так"); }
+    setLoading(false);
+  };
+
+  const streakDays = [
+    { day:1, reward:100, label:"Д1" }, { day:2, reward:100, label:"Д2" },
+    { day:3, reward:150, label:"Д3" }, { day:4, reward:150, label:"Д4" },
+    { day:5, reward:150, label:"Д5" }, { day:6, reward:200, label:"Д6" },
+    { day:7, reward:200, label:"Д7" },
+  ];
+
+  // милстоуны NFT — тянем из БД (имя + цена)
+  const milestoneDays = [15, 50, 150, 365];
+  const flameC = streakColor(streak);
+  const flameCss = hsl(flameC, 1);
+
   return (
-    <div className="relative overflow-hidden rounded-[36px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-2xl">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_60%)]" />
-
-      <div className="relative flex items-center justify-between">
+    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      {/* HEADER */}
+      <div className="flex items-center justify-between rounded-2xl px-5 py-4"
+           style={{ background:"linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))", border:"1px solid rgba(255,255,255,0.08)" }}>
         <div>
-          <div className="mb-2 flex items-center gap-3">
-            <div className="rounded-2xl bg-orange-500/15 p-3">
-              <Gift className="text-orange-400" size={26} />
-            </div>
-
-            <div>
-              <h1 className="text-4xl font-black tracking-tight text-white">
-                НАГРАДЫ
-              </h1>
-
-              <p className="text-zinc-400">
-                Ежедневные бонусы и NFT награды
-              </p>
-            </div>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight">НАГОРОДИ</h1>
+          <p className="text-sm text-white/60">Щоденні бонуси</p>
         </div>
-
-        <div className="rounded-3xl border border-yellow-500/20 bg-yellow-500/10 px-6 py-4">
-          <div className="text-xs uppercase tracking-[0.3em] text-yellow-200/70">
-            balance
-          </div>
-
-          <div className="mt-1 flex items-center gap-2 text-3xl font-black text-yellow-300">
-            <Zap fill="currentColor" size={26} />
-            {balance}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ──────────────────────────────────────────────────────────────
-   STREAK HERO
-────────────────────────────────────────────────────────────── */
-
-const StreakHero = ({ streak }: { streak: number }) => {
-  const color = getFlameColor(streak);
-
-  return (
-    <div className="relative overflow-hidden rounded-[36px] border border-white/10 bg-[#0d0d10]/90 p-10 backdrop-blur-2xl">
-      <div
-        className="absolute inset-0 opacity-20"
-        style={{
-          background: `radial-gradient(circle at top, ${color}, transparent 70%)`,
-        }}
-      />
-
-      <div className="relative flex flex-col items-center justify-center">
-        <AnimatedFlame streak={streak} />
-
-        <div className="mt-6 text-7xl font-black tracking-tight text-white">
-          {streak}
-        </div>
-
-        <div className="mt-2 text-sm uppercase tracking-[0.45em] text-zinc-400">
-          streak days
-        </div>
-
-        <div
-          className="mt-5 rounded-full px-5 py-2 text-sm font-bold"
-          style={{
-            background: `${color}20`,
-            border: `1px solid ${color}55`,
-            color,
-          }}
-        >
-          🔥 ACTIVE SERIES BONUS
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ──────────────────────────────────────────────────────────────
-   NFT TIMELINE
-────────────────────────────────────────────────────────────── */
-
-const NFTTimeline = ({
-  streak,
-  nftGifts,
-}: {
-  streak: number;
-  nftGifts: NFTGift[];
-}) => {
-  const progress = Math.min((streak / 365) * 100, 100);
-
-  return (
-    <div className="relative overflow-hidden rounded-[36px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-2xl">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-black text-white">
-            NFT MILESTONES
-          </h2>
-
-          <p className="mt-2 text-zinc-400">
-            Получай уникальные NFT за серию дней
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-purple-500/20 bg-purple-500/10 px-5 py-3 text-sm font-bold text-purple-300">
-          {streak}/365
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)" }}>
+          <Zap size={16} style={{ color: flameCss }} />
+          <span className="font-semibold tabular-nums">{balance} CR</span>
         </div>
       </div>
 
-      <div className="relative mt-16">
-        <div className="absolute left-0 top-[54px] h-[4px] w-full rounded-full bg-zinc-800" />
-
-        <div
-          className="absolute left-0 top-[54px] h-[4px] rounded-full transition-all duration-1000"
-          style={{
-            width: `${progress}%`,
-            background: getFlameColor(streak),
-            boxShadow: `0 0 25px ${getFlameColor(streak)}`,
-          }}
-        />
-
-        <div className="relative grid grid-cols-4 gap-5">
-          {NFT_MILESTONES.map((m, idx) => {
-            const nft = nftGifts[idx];
-            const reached = streak >= m.days;
-
-            const Icon = m.icon;
-
+      {/* STREAK CARD */}
+      <section className="rounded-2xl p-5"
+               style={{ background:"linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))", border:`1px solid ${hsl(flameC,0.25)}`, boxShadow:`0 0 40px -10px ${hsl(flameC,0.35)} inset` }}>
+        {/* колонки дней */}
+        <div className="grid grid-cols-7 gap-2">
+          {streakDays.map(d => {
+            const done = streak >= d.day;
+            const current = streak + 1 === d.day;
+            const dotColor = hsl(streakColor(d.day), done ? 1 : 0.35);
             return (
-              <div
-                key={m.days}
-                className="flex flex-col items-center"
-              >
-                <div
-                  className={`
-                    relative flex h-[110px] w-[110px]
-                    items-center justify-center overflow-hidden
-                    rounded-[30px] border transition-all duration-700
-                    ${
-                      reached
-                        ? "scale-105 border-white/20 bg-white/[0.08]"
-                        : "border-zinc-800 bg-zinc-900"
-                    }
-                  `}
-                  style={{
-                    boxShadow: reached
-                      ? `0 0 40px ${getFlameColor(streak)}55`
-                      : "none",
-                  }}
-                >
-                  {nft?.image_url ? (
-                    <img
-                      src={nft.image_url}
-                      className={`h-full w-full object-cover ${
-                        reached ? "" : "grayscale opacity-40"
-                      }`}
-                    />
-                  ) : (
-                    <Icon
-                      size={42}
-                      className={
-                        reached
-                          ? "text-white"
-                          : "text-zinc-600"
-                      }
-                    />
-                  )}
-
-                  {!reached && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                      <Lock className="text-zinc-300" size={28} />
-                    </div>
-                  )}
+              <div key={d.day} className="flex flex-col items-center gap-1.5">
+                <div className="w-full aspect-square rounded-xl flex items-center justify-center"
+                     style={{
+                       background: done ? `linear-gradient(180deg, ${hsl(streakColor(d.day),0.25)}, ${hsl(streakColor(d.day),0.08)})` : "rgba(255,255,255,0.03)",
+                       border: `1px solid ${current ? hsl(flameC,0.6) : done ? hsl(streakColor(d.day),0.5) : "rgba(255,255,255,0.06)"}`,
+                       boxShadow: current ? `0 0 18px ${hsl(flameC,0.4)}` : "none",
+                     }}>
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: dotColor, boxShadow: done ? `0 0 8px ${dotColor}` : "none" }} />
                 </div>
-
-                <div className="mt-5 text-center">
-                  <div className="text-lg font-black text-white">
-                    {m.title}
-                  </div>
-
-                  <div className="mt-1 text-sm text-zinc-400">
-                    {m.days} days
-                  </div>
-
-                  <div className="mt-2 text-sm font-bold text-yellow-300">
-                    {m.reward}
-                  </div>
-
-                  {!reached && (
-                    <div className="mt-2 text-xs text-zinc-500">
-                      {m.days - streak} days left
-                    </div>
-                  )}
-                </div>
+                <div className="text-[10px] text-white/50 tabular-nums">+{d.reward}</div>
+                <div className="text-[10px] text-white/70 font-medium">{d.label}</div>
               </div>
             );
           })}
         </div>
-      </div>
-    </div>
-  );
-};
 
-/* ──────────────────────────────────────────────────────────────
-   DAILY CARD
-────────────────────────────────────────────────────────────── */
-
-const DailyRewardCard = ({
-  canClaim,
-  loading,
-  streak,
-  onClaim,
-  progress,
-  timeLeft,
-}: any) => {
-  const reward =
-    streak >= 6 ? 200 : streak >= 3 ? 150 : 100;
-
-  return (
-    <div className="relative overflow-hidden rounded-[36px] border border-white/10 bg-gradient-to-br from-orange-500/10 to-yellow-500/5 p-8 backdrop-blur-2xl">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,180,50,0.12),transparent_60%)]" />
-
-      <div className="relative flex items-center justify-between gap-10">
-        <div className="flex-1">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="rounded-2xl bg-orange-500/15 p-3">
-              <Sparkles className="text-orange-300" />
+        {/* БОЛЬШОЙ ОГОНЬ + ЛЕЙБЛ */}
+        <div className="mt-6 flex flex-col items-center">
+          <StreakFlame streak={streak} size={140} />
+          <div className="mt-1 text-center">
+            <div className="text-3xl font-extrabold tracking-tight" style={{ color: flameCss, textShadow: `0 0 20px ${hsl(flameC,0.6)}` }}>
+              {streak}
             </div>
-
-            <div>
-              <div className="text-3xl font-black text-white">
-                Daily Reward
-              </div>
-
-              <div className="text-zinc-400">
-                Заходи каждый день и получай CR
-              </div>
-            </div>
+            <div className="text-xs uppercase tracking-[0.2em] text-white/60">днів поспіль</div>
           </div>
+        </div>
+      </section>
 
-          <div className="mt-8">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm text-zinc-400">
-                reward
-              </div>
-
-              <div className="text-sm font-bold text-yellow-300">
-                +{reward} CR
-              </div>
+      {/* DAILY CLAIM */}
+      <section className="rounded-2xl p-5" style={{ background:"linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))", border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/60">
+              {canClaim ? <Sparkles size={12} /> : <Clock size={12} />}
+              {canClaim ? "Готово до отримання" : "На сьогодні достатньо"}
             </div>
-
-            <div className="h-3 overflow-hidden rounded-full bg-zinc-800">
-              <div
-                className="h-full rounded-full transition-all duration-1000"
-                style={{
-                  width: `${progress}%`,
-                  background:
-                    "linear-gradient(90deg,#facc15,#fb923c)",
-                }}
-              />
-            </div>
-
-            <div className="mt-2 text-xs text-zinc-500">
-              {Math.round(progress)}% completed
-            </div>
+            <h3 className="mt-1 text-lg font-semibold">Щоденна нагорода</h3>
+            <p className="text-sm text-white/60">Заходь кожного дня і отримуй CR</p>
+          </div>
+          <div className="flex items-center gap-1 text-2xl font-bold" style={{ color: flameCss }}>
+            <Zap size={20} /> +{streak >= 6 ? 200 : streak >= 3 ? 150 : 100}
           </div>
         </div>
 
-        <div>
+        <div className="mt-4">
           {canClaim ? (
-            <button
-              onClick={onClaim}
-              disabled={loading}
-              className="
-                group relative overflow-hidden rounded-[24px]
-                bg-gradient-to-r from-yellow-400 to-orange-500
-                px-10 py-5 text-lg font-black text-black
-                transition-all duration-300 hover:scale-105
-              "
-            >
-              <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-white/20" />
-
-              <div className="relative flex items-center gap-3">
-                {loading ? "Loading..." : "CLAIM"}
-
-                <ChevronRight />
-              </div>
-            </button>
+            <GradientButton onClick={claimReward} disabled={loading} className="w-full">
+              {loading ? "Нараховую..." : "Забрати нагороду"}
+            </GradientButton>
           ) : (
-            <div className="rounded-[24px] border border-white/10 bg-white/[0.04] px-8 py-5 text-center">
-              <div className="text-sm text-zinc-500">
-                Next reward
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-white/60">
+                <span className="flex items-center gap-1"><Clock size={12}/> Наступна через</span>
+                <span className="tabular-nums">{timeLeft()}</span>
               </div>
-
-              <div className="mt-2 text-2xl font-black text-white">
-                {timeLeft()}
+              <div className="h-2 rounded-full overflow-hidden" style={{ background:"rgba(255,255,255,0.06)" }}>
+                <div className="h-full rounded-full transition-all" style={{ width:`${progress}%`, background:`linear-gradient(90deg, ${hsl(flameC,0.8)}, ${hsl({...flameC, h:(flameC.h+30)%360},0.8)})` }} />
               </div>
+              <div className="text-[11px] text-white/50 text-right">{Math.round(progress)}% до нагороди</div>
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
-};
+      </section>
 
-/* ──────────────────────────────────────────────────────────────
-   BONUS TABLE
-────────────────────────────────────────────────────────────── */
-
-const BonusTable = () => {
-  return (
-    <div className="grid gap-5 md:grid-cols-3">
-      {DAILY_REWARDS.map((b) => (
-        <div
-          key={b.days}
-          className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl"
-        >
-          <div
-            className="mb-5 h-2 rounded-full"
-            style={{
-              background: b.color,
-              boxShadow: `0 0 25px ${b.color}`,
-            }}
-          />
-
-          <div className="text-xl font-black text-white">
-            {b.days} days
-          </div>
-
-          <div className="mt-2 text-zinc-400">
-            Daily streak bonus
-          </div>
-
-          <div
-            className="mt-6 text-3xl font-black"
-            style={{
-              color: b.color,
-            }}
-          >
-            +{b.reward} CR
-          </div>
+      {/* NFT MILESTONES (только из БД) */}
+      <section className="rounded-2xl p-5" style={{ background:"linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))", border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div className="flex items-center gap-2 mb-4">
+          <Gift size={18} className="text-white/80" />
+          <h3 className="text-lg font-semibold">NFT Нагороди за серію</h3>
         </div>
-      ))}
-    </div>
-  );
-};
-
-/* ──────────────────────────────────────────────────────────────
-   MAIN SHOP
-────────────────────────────────────────────────────────────── */
-
-const Shop = () => {
-  const nick =
-    localStorage.getItem("crp_nick") || "";
-
-  const [balance, setBalance] = useState(0);
-
-  const [loading, setLoading] = useState(false);
-
-  const [nftGifts, setNftGifts] = useState<NFTGift[]>(
-    []
-  );
-
-  const [lastReward, setLastReward] = useState(
-    () =>
-      parseInt(
-        localStorage.getItem("crp_last_reward") || "0"
-      )
-  );
-
-  const [streak, setStreak] = useState(() =>
-    parseInt(
-      localStorage.getItem("crp_streak") || "0"
-    )
-  );
-
-  useEffect(() => {
-    loadUser();
-    loadNFTs();
-  }, []);
-
-  const loadUser = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("balance")
-      .ilike("username", nick)
-      .maybeSingle();
-
-    if (data?.balance !== undefined) {
-      setBalance(data.balance || 0);
-    }
-  };
-
-  const loadNFTs = async () => {
-    const { data } = await supabase
-      .from("nft_gifts")
-      .select("*")
-      .order("created_at", {
-        ascending: true,
-      });
-
-    if (data) {
-      setNftGifts(data as NFTGift[]);
-    }
-  };
-
-  const canClaim =
-    Date.now() - lastReward >
-    24 * 60 * 60 * 1000;
-
-  const progress = Math.min(
-    100,
-    ((Date.now() - lastReward) /
-      (24 * 60 * 60 * 1000)) *
-      100
-  );
-
-  const timeLeft = () => {
-    const diff =
-      24 * 60 * 60 * 1000 -
-      (Date.now() - lastReward);
-
-    const h = Math.floor(diff / 3600000);
-
-    const m = Math.floor(
-      (diff % 3600000) / 60000
-    );
-
-    return `${h}h ${m}m`;
-  };
-
-  const claimReward = async () => {
-    if (!canClaim || loading) return;
-
-    setLoading(true);
-
-    try {
-      const reward =
-        streak >= 6
-          ? 200
-          : streak >= 3
-          ? 150
-          : 100;
-
-      const newBalance = balance + reward;
-
-      await dbUpdate(
-        "users",
-        {
-          balance: newBalance,
-        },
-        {
-          username: ilike(nick),
-        }
-      );
-
-      setBalance(newBalance);
-
-      const now = Date.now();
-
-      const newStreak = streak + 1;
-
-      setStreak(newStreak);
-
-      setLastReward(now);
-
-      localStorage.setItem(
-        "crp_last_reward",
-        String(now)
-      );
-
-      localStorage.setItem(
-        "crp_streak",
-        String(newStreak)
-      );
-
-      toast.success(
-        `+${reward} CR • streak ${newStreak}`
-      );
-    } catch {
-      toast.error("error");
-    }
-
-    setLoading(false);
-  };
-
-  return (
-    <div className="relative min-h-screen overflow-hidden bg-[#050507] px-5 py-10 text-white">
-      <AnimatedBackground />
-
-      <div className="relative mx-auto flex max-w-[1500px] flex-col gap-8">
-        <Header balance={balance} />
-
-        <div className="grid gap-8 lg:grid-cols-[1.1fr,1fr]">
-          <StreakHero streak={streak} />
-
-          <DailyRewardCard
-            canClaim={canClaim}
-            loading={loading}
-            streak={streak}
-            onClaim={claimReward}
-            progress={progress}
-            timeLeft={timeLeft}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {milestoneDays.map((days, idx) => {
+            const reached = streak >= days;
+            const nft = nftGifts[idx];
+            const c = streakColor(days);
+            return (
+              <div key={days} className="flex items-center gap-3 rounded-xl p-3"
+                   style={{ background:"rgba(255,255,255,0.02)", border:`1px solid ${reached ? hsl(c,0.5) : "rgba(255,255,255,0.06)"}` }}>
+                <div className="relative w-16 h-16 rounded-lg overflow-hidden flex items-center justify-center shrink-0"
+                     style={{ background:`linear-gradient(135deg, ${hsl(c,0.2)}, ${hsl(c,0.05)})`, border:`1px solid ${hsl(c,0.3)}` }}>
+                  {nft?.image_url
+                    ? <img src={nft.image_url} alt={nft.name} className="w-full h-full object-cover" onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display="none";}} />
+                    : <Trophy size={24} style={{ color: hsl(c,0.8) }} />}
+                  {!reached && (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background:"rgba(0,0,0,0.55)", backdropFilter:"blur(2px)" }}>
+                      <Lock size={18} className="text-white/80" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold truncate">{nft?.name ?? `NFT #${idx+1}`}</div>
+                    {reached && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: hsl(c,0.2), color: hsl(c,1), border:`1px solid ${hsl(c,0.5)}` }}>ОТРИМАНО</span>}
+                  </div>
+                  <div className="text-xs text-white/60 mt-0.5">
+                    {days} днів{nft?.price != null && <> · <span className="text-white/80 tabular-nums">{nft.price} CR</span></>}
+                  </div>
+                </div>
+                {!reached && (
+                  <div className="text-right shrink-0">
+                    <div className="text-lg font-bold tabular-nums" style={{ color: hsl(c,1) }}>{Math.max(0, days - streak)}</div>
+                    <div className="text-[10px] text-white/50">днів</div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
+      </section>
 
-        <NFTTimeline
-          streak={streak}
-          nftGifts={nftGifts}
-        />
-
-        <BonusTable />
-      </div>
+      {/* ТАБЛИЦА БОНУСОВ */}
+      <section className="grid grid-cols-3 gap-2">
+        {[
+          { label:"1–2 дні", bonus:"+100", c: streakColor(1) },
+          { label:"3–5 днів", bonus:"+150", c: streakColor(4) },
+          { label:"6+ днів", bonus:"+200", c: streakColor(7) },
+        ].map((b,i)=>(
+          <div key={i} className="rounded-xl p-3 text-center" style={{ background:"rgba(255,255,255,0.03)", border:`1px solid ${hsl(b.c,0.3)}` }}>
+            <div className="text-[11px] text-white/60">{b.label}</div>
+            <div className="font-bold tabular-nums" style={{ color: hsl(b.c,1) }}>{b.bonus} CR</div>
+          </div>
+        ))}
+      </section>
     </div>
   );
 };
