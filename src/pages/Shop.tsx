@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { Gift, Clock, Zap, Trophy, Star, Flame } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Gift, Clock, Zap, Star, Flame, Trophy, Sparkles, Lock } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
 import { setBalance as syncBalance, supabase } from "../lib/store";
 import { dbUpdate, ilike } from "../lib/db";
 
-// ─── THEME SYSTEM (exported for Casino.tsx) ───────────────────────────────────
+// ─── THEME SYSTEM ─────────────────────────────────────────────────────────────
 export type ThemeId = "lime" | "neon_blue" | "cyber_red" | "gold_vip" | "purple_haze" | "arctic" | "matrix" | "sunset";
 
 export interface Theme {
@@ -19,78 +19,14 @@ export interface Theme {
 }
 
 export const THEMES: Theme[] = [
-  {
-    id: "lime",
-    name: "Lime (default)",
-    price: 0,
-    preview: "linear-gradient(135deg, hsl(84,81%,44%), hsl(142,71%,45%))",
-    vars: { "--primary": "84 81% 44%", "--secondary": "142 71% 45%", "--accent": "84 81% 44%", "--ring": "84 81% 44%", "--neon-lime": "84 81% 44%", "--passport-bg": "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(84 40% 8% / 0.9))", "--passport-border": "hsl(84 81% 44% / 0.25)" },
-    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(142 71% 45% / 0.18) 0%, transparent 65%), radial-gradient(ellipse 70% 35% at 50% 100%, hsl(84 81% 44% / 0.12) 0%, transparent 55%)",
-    description: "Класичний неоновий лайм",
-  },
-  {
-    id: "neon_blue",
-    name: "Neon Blue",
-    price: 300,
-    preview: "linear-gradient(135deg, hsl(210,100%,55%), hsl(200,90%,45%))",
-    vars: { "--primary": "210 100% 55%", "--secondary": "200 90% 45%", "--accent": "210 100% 55%", "--ring": "210 100% 55%", "--neon-lime": "210 100% 55%", "--passport-bg": "linear-gradient(145deg, hsl(220 30% 6% / 0.97), hsl(210 50% 10% / 0.92))", "--passport-border": "hsl(210 100% 55% / 0.3)" },
-    bgGradient: "radial-gradient(ellipse 120% 60% at 50% 110%, hsl(210 100% 55% / 0.2) 0%, transparent 60%), radial-gradient(ellipse 80% 40% at 20% 80%, hsl(200 90% 45% / 0.12) 0%, transparent 50%), radial-gradient(ellipse 60% 30% at 80% 20%, hsl(210 100% 55% / 0.06) 0%, transparent 50%)",
-    description: "Електричний синій неон",
-  },
-  {
-    id: "cyber_red",
-    name: "Cyber Red",
-    price: 300,
-    preview: "linear-gradient(135deg, hsl(0,85%,55%), hsl(15,80%,45%))",
-    vars: { "--primary": "0 85% 55%", "--secondary": "15 80% 45%", "--accent": "0 85% 55%", "--ring": "0 85% 55%", "--neon-lime": "0 85% 55%", "--passport-bg": "linear-gradient(145deg, hsl(0 20% 5% / 0.97), hsl(15 30% 8% / 0.93))", "--passport-border": "hsl(0 85% 55% / 0.3)" },
-    bgGradient: "radial-gradient(ellipse 100% 50% at 30% 100%, hsl(0 85% 55% / 0.18) 0%, transparent 60%), radial-gradient(ellipse 80% 40% at 70% 90%, hsl(15 80% 45% / 0.12) 0%, transparent 55%), radial-gradient(ellipse 50% 25% at 50% 0%, hsl(0 85% 55% / 0.05) 0%, transparent 50%)",
-    description: "Кіберпанк у червоному",
-  },
-  {
-    id: "gold_vip",
-    name: "Gold VIP",
-    price: 750,
-    preview: "linear-gradient(135deg, hsl(45,100%,55%), hsl(38,90%,45%))",
-    vars: { "--primary": "45 100% 55%", "--secondary": "38 90% 45%", "--accent": "45 100% 55%", "--ring": "45 100% 55%", "--neon-lime": "45 100% 55%", "--passport-bg": "linear-gradient(145deg, hsl(40 20% 6% / 0.97), hsl(45 30% 9% / 0.93))", "--passport-border": "hsl(45 100% 55% / 0.4)" },
-    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(45 100% 55% / 0.2) 0%, transparent 60%), radial-gradient(ellipse 60% 30% at 80% 60%, hsl(38 90% 45% / 0.1) 0%, transparent 50%), radial-gradient(ellipse 40% 20% at 20% 40%, hsl(45 100% 55% / 0.08) 0%, transparent 50%)",
-    description: "VIP золото для обраних",
-  },
-  {
-    id: "purple_haze",
-    name: "Purple Haze",
-    price: 500,
-    preview: "linear-gradient(135deg, hsl(275,80%,60%), hsl(290,70%,50%))",
-    vars: { "--primary": "275 80% 60%", "--secondary": "290 70% 50%", "--accent": "275 80% 60%", "--ring": "275 80% 60%", "--neon-lime": "275 80% 60%", "--passport-bg": "linear-gradient(145deg, hsl(270 25% 6% / 0.97), hsl(290 20% 8% / 0.93))", "--passport-border": "hsl(275 80% 60% / 0.35)" },
-    bgGradient: "radial-gradient(ellipse 110% 55% at 40% 100%, hsl(275 80% 60% / 0.18) 0%, transparent 60%), radial-gradient(ellipse 70% 35% at 70% 80%, hsl(290 70% 50% / 0.12) 0%, transparent 55%), radial-gradient(ellipse 50% 25% at 30% 20%, hsl(275 80% 60% / 0.07) 0%, transparent 50%)",
-    description: "Містичний фіолетовий",
-  },
-  {
-    id: "arctic",
-    name: "Arctic White",
-    price: 400,
-    preview: "linear-gradient(135deg, hsl(195,80%,70%), hsl(185,60%,55%))",
-    vars: { "--primary": "195 80% 70%", "--secondary": "185 60% 55%", "--accent": "195 80% 70%", "--ring": "195 80% 70%", "--neon-lime": "195 80% 70%", "--passport-bg": "linear-gradient(145deg, hsl(200 25% 6% / 0.97), hsl(185 20% 8% / 0.93))", "--passport-border": "hsl(195 80% 70% / 0.3)" },
-    bgGradient: "radial-gradient(ellipse 100% 50% at 60% 100%, hsl(195 80% 70% / 0.15) 0%, transparent 60%), radial-gradient(ellipse 70% 35% at 30% 80%, hsl(185 60% 55% / 0.1) 0%, transparent 55%), radial-gradient(ellipse 80% 40% at 50% 0%, hsl(195 80% 70% / 0.05) 0%, transparent 50%)",
-    description: "Холодний арктичний лід",
-  },
-  {
-    id: "matrix",
-    name: "Matrix Green",
-    price: 600,
-    preview: "linear-gradient(135deg, hsl(120,100%,40%), hsl(140,90%,30%))",
-    vars: { "--primary": "120 100% 40%", "--secondary": "140 90% 30%", "--accent": "120 100% 40%", "--ring": "120 100% 40%", "--neon-lime": "120 100% 40%", "--passport-bg": "linear-gradient(145deg, hsl(130 30% 4% / 0.98), hsl(120 20% 7% / 0.93))", "--passport-border": "hsl(120 100% 40% / 0.4)" },
-    bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(120 100% 40% / 0.2) 0%, transparent 60%), radial-gradient(ellipse 60% 30% at 20% 70%, hsl(140 90% 30% / 0.12) 0%, transparent 50%), radial-gradient(ellipse 40% 20% at 80% 30%, hsl(120 100% 40% / 0.08) 0%, transparent 50%)",
-    description: "Матриця хакера",
-  },
-  {
-    id: "sunset",
-    name: "Sunset Orange",
-    price: 450,
-    preview: "linear-gradient(135deg, hsl(25,100%,55%), hsl(350,90%,55%))",
-    vars: { "--primary": "25 100% 55%", "--secondary": "350 90% 55%", "--accent": "25 100% 55%", "--ring": "25 100% 55%", "--neon-lime": "25 100% 55%", "--passport-bg": "linear-gradient(145deg, hsl(20 25% 6% / 0.97), hsl(350 20% 7% / 0.93))", "--passport-border": "hsl(25 100% 55% / 0.35)" },
-    bgGradient: "radial-gradient(ellipse 110% 55% at 30% 100%, hsl(25 100% 55% / 0.18) 0%, transparent 60%), radial-gradient(ellipse 80% 40% at 70% 90%, hsl(350 90% 55% / 0.14) 0%, transparent 55%), radial-gradient(ellipse 50% 25% at 60% 10%, hsl(25 100% 55% / 0.06) 0%, transparent 50%)",
-    description: "Захід сонця",
-  },
+  { id: "lime", name: "Lime (default)", price: 0, preview: "linear-gradient(135deg, hsl(84,81%,44%), hsl(142,71%,45%))", vars: { "--primary": "84 81% 44%", "--secondary": "142 71% 45%", "--accent": "84 81% 44%", "--ring": "84 81% 44%", "--neon-lime": "84 81% 44%", "--passport-bg": "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(84 40% 8% / 0.9))", "--passport-border": "hsl(84 81% 44% / 0.25)" }, bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(142 71% 45% / 0.18) 0%, transparent 65%), radial-gradient(ellipse 70% 35% at 50% 100%, hsl(84 81% 44% / 0.12) 0%, transparent 55%)", description: "Класичний неоновий лайм" },
+  { id: "neon_blue", name: "Neon Blue", price: 300, preview: "linear-gradient(135deg, hsl(210,100%,55%), hsl(200,90%,45%))", vars: { "--primary": "210 100% 55%", "--secondary": "200 90% 45%", "--accent": "210 100% 55%", "--ring": "210 100% 55%", "--neon-lime": "210 100% 55%", "--passport-bg": "linear-gradient(145deg, hsl(220 30% 6% / 0.97), hsl(210 50% 10% / 0.92))", "--passport-border": "hsl(210 100% 55% / 0.3)" }, bgGradient: "radial-gradient(ellipse 120% 60% at 50% 110%, hsl(210 100% 55% / 0.2) 0%, transparent 60%)", description: "Електричний синій неон" },
+  { id: "cyber_red", name: "Cyber Red", price: 300, preview: "linear-gradient(135deg, hsl(0,85%,55%), hsl(15,80%,45%))", vars: { "--primary": "0 85% 55%", "--secondary": "15 80% 45%", "--accent": "0 85% 55%", "--ring": "0 85% 55%", "--neon-lime": "0 85% 55%", "--passport-bg": "linear-gradient(145deg, hsl(0 20% 5% / 0.97), hsl(15 30% 8% / 0.93))", "--passport-border": "hsl(0 85% 55% / 0.3)" }, bgGradient: "radial-gradient(ellipse 100% 50% at 30% 100%, hsl(0 85% 55% / 0.18) 0%, transparent 60%)", description: "Кіберпанк у червоному" },
+  { id: "gold_vip", name: "Gold VIP", price: 750, preview: "linear-gradient(135deg, hsl(45,100%,55%), hsl(38,90%,45%))", vars: { "--primary": "45 100% 55%", "--secondary": "38 90% 45%", "--accent": "45 100% 55%", "--ring": "45 100% 55%", "--neon-lime": "45 100% 55%", "--passport-bg": "linear-gradient(145deg, hsl(40 20% 6% / 0.97), hsl(45 30% 9% / 0.93))", "--passport-border": "hsl(45 100% 55% / 0.4)" }, bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(45 100% 55% / 0.2) 0%, transparent 60%)", description: "VIP золото для обраних" },
+  { id: "purple_haze", name: "Purple Haze", price: 500, preview: "linear-gradient(135deg, hsl(275,80%,60%), hsl(290,70%,50%))", vars: { "--primary": "275 80% 60%", "--secondary": "290 70% 50%", "--accent": "275 80% 60%", "--ring": "275 80% 60%", "--neon-lime": "275 80% 60%", "--passport-bg": "linear-gradient(145deg, hsl(270 25% 6% / 0.97), hsl(290 20% 8% / 0.93))", "--passport-border": "hsl(275 80% 60% / 0.35)" }, bgGradient: "radial-gradient(ellipse 110% 55% at 40% 100%, hsl(275 80% 60% / 0.18) 0%, transparent 60%)", description: "Містичний фіолетовий" },
+  { id: "arctic", name: "Arctic White", price: 400, preview: "linear-gradient(135deg, hsl(195,80%,70%), hsl(185,60%,55%))", vars: { "--primary": "195 80% 70%", "--secondary": "185 60% 55%", "--accent": "195 80% 70%", "--ring": "195 80% 70%", "--neon-lime": "195 80% 70%", "--passport-bg": "linear-gradient(145deg, hsl(200 25% 6% / 0.97), hsl(185 20% 8% / 0.93))", "--passport-border": "hsl(195 80% 70% / 0.3)" }, bgGradient: "radial-gradient(ellipse 100% 50% at 60% 100%, hsl(195 80% 70% / 0.15) 0%, transparent 60%)", description: "Холодний арктичний лід" },
+  { id: "matrix", name: "Matrix Green", price: 600, preview: "linear-gradient(135deg, hsl(120,100%,40%), hsl(140,90%,30%))", vars: { "--primary": "120 100% 40%", "--secondary": "140 90% 30%", "--accent": "120 100% 40%", "--ring": "120 100% 40%", "--neon-lime": "120 100% 40%", "--passport-bg": "linear-gradient(145deg, hsl(130 30% 4% / 0.98), hsl(120 20% 7% / 0.93))", "--passport-border": "hsl(120 100% 40% / 0.4)" }, bgGradient: "radial-gradient(ellipse 100% 50% at 50% 100%, hsl(120 100% 40% / 0.2) 0%, transparent 60%)", description: "Матриця хакера" },
+  { id: "sunset", name: "Sunset Orange", price: 450, preview: "linear-gradient(135deg, hsl(25,100%,55%), hsl(350,90%,55%))", vars: { "--primary": "25 100% 55%", "--secondary": "350 90% 55%", "--accent": "25 100% 55%", "--ring": "25 100% 55%", "--neon-lime": "25 100% 55%", "--passport-bg": "linear-gradient(145deg, hsl(20 25% 6% / 0.97), hsl(350 20% 7% / 0.93))", "--passport-border": "hsl(25 100% 55% / 0.35)" }, bgGradient: "radial-gradient(ellipse 110% 55% at 30% 100%, hsl(25 100% 55% / 0.18) 0%, transparent 60%)", description: "Захід сонця" },
 ];
 
 export const applyTheme = (theme: Theme) => {
@@ -108,47 +44,120 @@ export const applyTheme = (theme: Theme) => {
   localStorage.setItem("crp_theme", theme.id);
 };
 
-// Крок 1: одразу з localStorage (без флашу), Крок 2: синхронізує з Supabase
 export const loadSavedTheme = () => {
   const localTheme = localStorage.getItem("crp_theme") as ThemeId | null;
   if (localTheme) {
     const theme = THEMES.find(t => t.id === localTheme);
     if (theme) applyTheme(theme);
   }
-
   const nick = localStorage.getItem("crp_nick");
   if (!nick) return;
-
-  supabase
-    .from("users")
-    .select("active_theme")
-    .ilike("username", nick)
-    .maybeSingle()
+  supabase.from("users").select("active_theme").ilike("username", nick).maybeSingle()
     .then(({ data }) => {
       if (data?.active_theme && data.active_theme !== localTheme) {
         const dbTheme = THEMES.find(t => t.id === data.active_theme);
         if (dbTheme) applyTheme(dbTheme);
       }
-    })
-    .catch(() => {});
+    }).catch(() => {});
 };
 
-// ─── SHOP PAGE — тільки нагороди ──────────────────────────────────────────────
+// ─── АНІМОВАНИЙ ВОГОНЬ ───────────────────────────────────────────────────────
+const FlameVFX = ({ size = 48, active = true }: { size?: number; active?: boolean }) => {
+  const COLORS = [
+    "#ff4500", "#ff6a00", "#ff8c00", "#ffb300",
+    "#ffdd00", "#84cc16", "#22c55e", "#06b6d4",
+    "#3b82f6", "#a855f7", "#ec4899", "#ef4444",
+  ];
+  const [colorIdx, setColorIdx] = useState(0);
+  const [nextIdx, setNextIdx] = useState(1);
+  const [blend, setBlend] = useState(0);
+  const rafRef = useRef<number>();
+  const startRef = useRef<number>();
+
+  useEffect(() => {
+    if (!active) return;
+    const duration = 900;
+    const animate = (ts: number) => {
+      if (!startRef.current) startRef.current = ts;
+      const elapsed = ts - startRef.current;
+      const t = Math.min(elapsed / duration, 1);
+      setBlend(t);
+      if (t >= 1) {
+        startRef.current = ts;
+        setColorIdx(prev => (prev + 1) % COLORS.length);
+        setNextIdx(prev => (prev + 1) % COLORS.length);
+        setBlend(0);
+      }
+      rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [active]);
+
+  const lerpColor = (a: string, b: string, t: number) => {
+    const h2d = (h: string) => parseInt(h, 16);
+    const parse = (c: string) => ({ r: h2d(c.slice(1,3)), g: h2d(c.slice(3,5)), b: h2d(c.slice(5,7)) });
+    const ca = parse(a), cb = parse(b);
+    const r = Math.round(ca.r + (cb.r - ca.r) * t);
+    const g = Math.round(ca.g + (cb.g - ca.g) * t);
+    const b2 = Math.round(ca.b + (cb.b - ca.b) * t);
+    return `rgb(${r},${g},${b2})`;
+  };
+
+  const color = active ? lerpColor(COLORS[colorIdx], COLORS[nextIdx], blend) : "#444";
+  const glow = active ? `drop-shadow(0 0 ${size * 0.3}px ${color}) drop-shadow(0 0 ${size * 0.15}px ${color})` : "none";
+
+  return (
+    <div style={{ position: "relative", width: size, height: size }}>
+      {active && (
+        <div style={{
+          position: "absolute", inset: "-50%", borderRadius: "50%",
+          background: `radial-gradient(circle, ${color}40 0%, transparent 70%)`,
+          animation: "pulse 1s ease-in-out infinite alternate",
+          pointerEvents: "none",
+        }} />
+      )}
+      <Flame
+        style={{
+          width: size, height: size, color, filter: glow,
+          transition: "color 0.1s linear",
+          animation: active ? "flameWobble 0.4s ease-in-out infinite alternate" : "none",
+          position: "relative", zIndex: 1,
+        }}
+      />
+      <style>{`
+        @keyframes flameWobble {
+          from { transform: scaleY(1) scaleX(1) rotate(-2deg); }
+          to   { transform: scaleY(1.08) scaleX(0.95) rotate(2deg); }
+        }
+        @keyframes pulse {
+          from { opacity: 0.4; transform: scale(0.9); }
+          to   { opacity: 0.8; transform: scale(1.1); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+// ─── SHOP PAGE ────────────────────────────────────────────────────────────────
 const Shop = () => {
   const nick = localStorage.getItem("crp_nick") || "";
   const [balance, setBalanceState] = useState(0);
   const [lastReward, setLastReward] = useState(() => parseInt(localStorage.getItem("crp_last_reward") || "0"));
   const [streak, setStreak] = useState(() => parseInt(localStorage.getItem("crp_streak") || "0"));
   const [loading, setLoading] = useState(false);
+  const [nftGifts, setNftGifts] = useState<{ id: number; name: string; image_url: string; price: number }[]>([]);
 
   useEffect(() => {
-    // Завантажуємо баланс з Supabase — єдине джерело правди
     supabase.from("users").select("balance").ilike("username", nick).maybeSingle().then(({ data }) => {
       if (data?.balance !== undefined) {
         const bal = (data.balance as number) || 0;
         syncBalance(nick, bal);
         setBalanceState(bal);
       }
+    });
+    supabase.from("nft_gifts").select("*").order("created_at", { ascending: false }).then(({ data }) => {
+      if (data) setNftGifts(data as any);
     });
   }, [nick]);
 
@@ -166,105 +175,45 @@ const Shop = () => {
     setLoading(true);
     try {
       const bonus = streak >= 6 ? 200 : streak >= 3 ? 150 : 100;
-
-      // Читаємо свіжий баланс з БД
       const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
       const currentBal = (user?.balance as number) ?? 0;
       const newBal = currentBal + bonus;
-
-      // Оновлюємо баланс в БД
       const { error } = await dbUpdate("users", { balance: newBal }, { username: ilike(nick) });
-      if (error) {
-        toast.error("Помилка нарахування балансу");
-        setLoading(false);
-        return;
-      }
-
-      // Синхронізуємо localStorage і стан
+      if (error) { toast.error("Помилка нарахування балансу"); setLoading(false); return; }
       syncBalance(nick, newBal);
       setBalanceState(newBal);
-
       const now = Date.now();
       const newStreak = streak + 1;
       setLastReward(now);
       setStreak(newStreak);
       localStorage.setItem("crp_last_reward", String(now));
       localStorage.setItem("crp_streak", String(newStreak));
-
       toast.success(`+${bonus} CR нараховано! Серія: ${newStreak} днів`);
-    } catch (e) {
-      toast.error("Щось пішло не так");
-    }
+    } catch { toast.error("Щось пішло не так"); }
     setLoading(false);
   };
 
   const streakDays = [
-    { day: 1,   reward: 100,  icon: "🔥", color: "#facc15",  label: "Д1"   },
-    { day: 2,   reward: 100,  icon: "🔥", color: "#facc15",  label: "Д2"   },
-    { day: 3,   reward: 150,  icon: "🔥", color: "#f97316",  label: "Д3"   },
-    { day: 4,   reward: 150,  icon: "🔥", color: "#ef4444",  label: "Д4"   },
-    { day: 5,   reward: 150,  icon: "🔥", color: "#a855f7",  label: "Д5"   },
-    { day: 6,   reward: 200,  icon: "🔥", color: "#22c55e",  label: "Д6"   },
-    { day: 7,   reward: 200,  icon: "🔥", color: "#3b82f6",  label: "Д7"   },
+    { day: 1, reward: 100, color: "#facc15", label: "Д1" },
+    { day: 2, reward: 100, color: "#facc15", label: "Д2" },
+    { day: 3, reward: 150, color: "#f97316", label: "Д3" },
+    { day: 4, reward: 150, color: "#ef4444", label: "Д4" },
+    { day: 5, reward: 150, color: "#a855f7", label: "Д5" },
+    { day: 6, reward: 200, color: "#22c55e", label: "Д6" },
+    { day: 7, reward: 200, color: "#3b82f6", label: "Д7" },
   ];
 
-  // SVG NFT icons — unique per milestone
-  const NftIcon = ({ type, color, size = 28 }: { type: string; color: string; size?: number }) => {
-    const s = size;
-    if (type === "crystal") return (
-      <svg width={s} height={s} viewBox="0 0 28 28" fill="none">
-        <polygon points="14,2 24,10 20,26 8,26 4,10" fill={color + "30"} stroke={color} strokeWidth="1.2"/>
-        <polygon points="14,2 24,10 14,8" fill={color + "50"}/>
-        <polygon points="14,2 4,10 14,8" fill={color + "80"}/>
-        <line x1="14" y1="2" x2="14" y2="26" stroke={color} strokeWidth="0.6" strokeDasharray="2,2"/>
-        <circle cx="14" cy="8" r="1.5" fill={color}/>
-      </svg>
-    );
-    if (type === "shield") return (
-      <svg width={s} height={s} viewBox="0 0 28 28" fill="none">
-        <path d="M14 3L24 7V14C24 19.5 19.5 23.5 14 25C8.5 23.5 4 19.5 4 14V7L14 3Z" fill={color + "25"} stroke={color} strokeWidth="1.2"/>
-        <path d="M14 7L20 10V14C20 17.5 17.5 20 14 21C10.5 20 8 17.5 8 14V10L14 7Z" fill={color + "40"}/>
-        <path d="M11 14L13 16L17 12" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    );
-    if (type === "crown") return (
-      <svg width={s} height={s} viewBox="0 0 28 28" fill="none">
-        <path d="M4 20H24L22 10L17 15L14 7L11 15L6 10Z" fill={color + "35"} stroke={color} strokeWidth="1.2"/>
-        <rect x="4" y="20" width="20" height="3" rx="1" fill={color + "50"} stroke={color} strokeWidth="0.8"/>
-        <circle cx="14" cy="7" r="1.8" fill={color}/>
-        <circle cx="6" cy="10" r="1.5" fill={color}/>
-        <circle cx="22" cy="10" r="1.5" fill={color}/>
-      </svg>
-    );
-    if (type === "rainbow") return (
-      <svg width={s} height={s} viewBox="0 0 28 28" fill="none">
-        <defs>
-          <linearGradient id="rb1" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#facc15"/>
-            <stop offset="33%" stopColor="#ef4444"/>
-            <stop offset="66%" stopColor="#a855f7"/>
-            <stop offset="100%" stopColor="#3b82f6"/>
-          </linearGradient>
-        </defs>
-        <path d="M4 20C4 12 8.5 6 14 6C19.5 6 24 12 24 20" stroke="url(#rb1)" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-        <path d="M7 20C7 13.5 10 9 14 9C18 9 21 13.5 21 20" stroke="#22c55e" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-        <path d="M10 20C10 15 11.8 12 14 12C16.2 12 18 15 18 20" stroke="#facc15" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-        <circle cx="14" cy="22" r="2" fill="url(#rb1)"/>
-      </svg>
-    );
-    return null;
-  };
-
-  // Milestone NFT rewards
+  // NFT мілстоуни: перший за 15 днів
   const nftMilestones = [
-    { days: 100,  nft: "100–200", label: "100 днів",  color: "#facc15", icon: "crystal", name: "Кристал Удачі"   },
-    { days: 300,  nft: "200–350", label: "300 днів",  color: "#f97316", icon: "shield",  name: "Щит Ветерана"    },
-    { days: 500,  nft: "350–500", label: "500 днів",  color: "#a855f7", icon: "crown",   name: "Корона Майстра"  },
-    { days: 1000, nft: "500+",    label: "1000 днів", color: "#3b82f6", icon: "rainbow", name: "Легенда Серії"   },
+    { days: 15,   label: "15 днів",   color: "#facc15", icon: Star,    bonusCr: "100–200" },
+    { days: 50,   label: "50 днів",   color: "#f97316", icon: Flame,   bonusCr: "200–350" },
+    { days: 150,  label: "150 днів",  color: "#a855f7", icon: Trophy,  bonusCr: "350–500" },
+    { days: 365,  label: "365 днів",  color: "#3b82f6", icon: Sparkles,bonusCr: "500+"    },
   ];
 
   return (
     <div className="min-h-screen pb-20 px-4 pt-4">
+      {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="font-display text-xl font-bold tracking-wider neon-text-lime">НАГОРОДИ</h1>
@@ -277,9 +226,10 @@ const Shop = () => {
         </div>
       </div>
 
+      {/* Серія днів */}
       <div className="liquid-glass-card rounded-2xl p-4 mb-4 animate-fade-in">
         <div className="flex items-center gap-2 mb-3">
-          <span style={{ fontSize: 18 }}>🔥</span>
+          <FlameVFX size={20} active={streak > 0} />
           <span className="text-sm font-semibold text-foreground">Серія: {streak} днів</span>
           {streak >= 3 && (
             <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-orange-400/15 text-orange-400 border border-orange-400/20">
@@ -291,18 +241,18 @@ const Shop = () => {
           {streakDays.map((d) => {
             const isDone = streak >= d.day;
             const isCurrent = streak + 1 === d.day;
-            const fireColor = isDone || isCurrent ? d.color : "#555";
             return (
-              <div key={d.day} className={`flex flex-col items-center gap-1 rounded-xl py-2 transition-all ${
-                isDone ? "border" :
-                isCurrent ? "border" :
-                "bg-muted/10 border border-white/5"
-              }`}
-                style={isDone ? { background: d.color + "22", borderColor: d.color + "55" }
-                  : isCurrent ? { background: d.color + "11", borderColor: d.color + "33" }
-                  : {}}>
-                <span style={{ fontSize: 14, filter: isDone ? `drop-shadow(0 0 4px ${d.color})` : "grayscale(1)", transition: "filter 0.3s" }}>🔥</span>
-                <span className={`text-[8px] font-bold`} style={{ color: isDone ? d.color : isCurrent ? d.color + "99" : "#444" }}>
+              <div key={d.day}
+                className="flex flex-col items-center gap-1 rounded-xl py-2 transition-all border"
+                style={isDone
+                  ? { background: d.color + "22", borderColor: d.color + "55" }
+                  : isCurrent
+                    ? { background: d.color + "11", borderColor: d.color + "33" }
+                    : { background: "hsl(0 0% 100% / 0.03)", borderColor: "hsl(0 0% 100% / 0.07)" }}>
+                <div style={{ filter: isDone ? `drop-shadow(0 0 4px ${d.color})` : "grayscale(1)", transition: "filter 0.3s" }}>
+                  <FlameVFX size={14} active={isDone} />
+                </div>
+                <span className="text-[8px] font-bold" style={{ color: isDone ? d.color : isCurrent ? d.color + "99" : "#444" }}>
                   +{d.reward}
                 </span>
                 <span className="text-[7px]" style={{ color: isDone ? d.color + "aa" : "#333" }}>{d.label}</span>
@@ -310,85 +260,123 @@ const Shop = () => {
             );
           })}
         </div>
-
-        {/* 1000-day rainbow */}
-        {streak >= 1000 && (
-          <div className="mt-3 rounded-xl p-3 text-center animate-fade-in"
-            style={{ background: "linear-gradient(135deg, #facc15, #f97316, #ef4444, #a855f7, #22c55e, #3b82f6)", backgroundClip: "text" }}>
-            <span className="text-sm font-black" style={{ background: "linear-gradient(90deg,#facc15,#f97316,#ef4444,#a855f7,#22c55e,#3b82f6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              🌈 ЛЕГЕНДА • 1000 ДНІВ
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* NFT Milestone Rewards */}
+      {/* NFT Мілстоуни */}
       <div className="liquid-glass-card rounded-2xl p-4 mb-4 animate-fade-in">
         <div className="flex items-center gap-2 mb-3">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1L10 6H15L11 9.5L12.5 15L8 12L3.5 15L5 9.5L1 6H6Z" fill="hsl(var(--primary))" opacity="0.9"/>
-          </svg>
+          <Trophy className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">NFT Нагороди за серію</span>
         </div>
         <div className="space-y-2">
-          {nftMilestones.map(m => {
+          {nftMilestones.map((m, idx) => {
             const reached = streak >= m.days;
-            const locked = !reached;
+            const Icon = m.icon;
+            // Яку NFT показувати для цього мілстоуну
+            const nft = nftGifts[idx] || null;
             return (
               <div key={m.days}
-                className="flex items-center gap-3 px-3 py-3 rounded-2xl border transition-all duration-300"
+                className="rounded-2xl border overflow-hidden transition-all duration-300"
                 style={reached
                   ? { background: m.color + "12", borderColor: m.color + "45", boxShadow: `0 0 20px ${m.color}18` }
                   : { background: "hsl(0 0% 100% / 0.02)", borderColor: "hsl(0 0% 100% / 0.06)" }}>
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 relative"
-                  style={{
-                    background: reached ? m.color + "18" : "hsl(0 0% 100% / 0.04)",
-                    border: `1px solid ${reached ? m.color + "40" : "hsl(0 0% 100% / 0.08)"}`,
-                    filter: locked ? "grayscale(1) opacity(0.3)" : "none",
-                    transition: "filter 0.4s",
-                  }}>
-                  <NftIcon type={m.icon} color={m.color} size={30} />
-                  {locked && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <rect x="2" y="5" width="8" height="6" rx="1" fill="#666"/>
-                        <path d="M4 5V4a2 2 0 014 0v1" stroke="#666" strokeWidth="1.2" fill="none"/>
-                      </svg>
+                <div className="flex items-center gap-3 px-3 py-3">
+                  {/* NFT зображення або іконка */}
+                  <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 relative flex items-center justify-center"
+                    style={{
+                      background: reached ? m.color + "18" : "hsl(0 0% 100% / 0.04)",
+                      border: `1px solid ${reached ? m.color + "40" : "hsl(0 0% 100% / 0.08)"}`,
+                      filter: !reached ? "grayscale(1) opacity(0.35)" : "none",
+                      transition: "filter 0.4s",
+                    }}>
+                    {nft?.image_url ? (
+                      <img src={nft.image_url} alt={nft.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Icon className="w-7 h-7" style={{ color: reached ? m.color : "#444" }} />
+                    )}
+                    {!reached && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl">
+                        <Lock className="w-4 h-4 text-white/40" />
+                      </div>
+                    )}
+                    {reached && (
+                      <div className="absolute inset-0 pointer-events-none"
+                        style={{ boxShadow: `inset 0 0 12px ${m.color}40` }} />
+                    )}
+                  </div>
+
+                  {/* Інфо */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <p className="text-xs font-black truncate" style={{ color: reached ? m.color : "#555" }}>
+                        {nft?.name || `NFT #${idx + 1}`}
+                      </p>
+                      {reached && (
+                        <span className="text-[8px] px-1.5 py-0.5 rounded font-black shrink-0"
+                          style={{ background: m.color + "20", color: m.color, border: `1px solid ${m.color}40` }}>
+                          ОТРИМАНО
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] font-medium mb-1.5" style={{ color: reached ? m.color + "99" : "#333" }}>
+                      {m.label} · {m.bonusCr} CR
+                    </p>
+                    {!reached && (
+                      <div className="h-1 rounded-full overflow-hidden" style={{ background: "hsl(0 0% 100% / 0.06)" }}>
+                        <div className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${Math.min(100, (streak / m.days) * 100)}%`, background: m.color + "80" }} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Права частина */}
+                  {reached ? (
+                    <FlameVFX size={28} active />
+                  ) : (
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] font-black" style={{ color: "#444" }}>{Math.max(0, m.days - streak)}</p>
+                      <p className="text-[8px]" style={{ color: "#333" }}>днів</p>
                     </div>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black" style={{ color: reached ? m.color : "#444" }}>{m.name}</p>
-                  <p className="text-[10px] font-medium" style={{ color: reached ? m.color + "99" : "#333" }}>
-                    {m.label} • {m.nft} CR
-                  </p>
-                  {!reached && (
-                    <div className="mt-1 h-1 rounded-full bg-white/5 overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${Math.min(100, (streak / m.days) * 100)}%`, background: m.color + "60" }} />
-                    </div>
-                  )}
-                </div>
-                {reached ? (
-                  <div className="flex flex-col items-center gap-0.5 shrink-0">
-                    <span className="text-[8px] font-black px-2 py-1 rounded-lg"
-                      style={{ background: m.color + "20", color: m.color, border: `1px solid ${m.color}40` }}>
-                      NFT
-                    </span>
-                    <span className="text-[7px] font-bold" style={{ color: m.color + "99" }}>ВИДАНО</span>
-                  </div>
-                ) : (
-                  <div className="text-right shrink-0">
-                    <p className="text-[9px] font-black text-muted-foreground/40">{Math.max(0, m.days - streak)} днів</p>
-                    <p className="text-[7px] text-muted-foreground/25">залишилось</p>
-                  </div>
-                )}
               </div>
             );
           })}
         </div>
       </div>
 
+      {/* NFT Магазин */}
+      {nftGifts.length > 0 && (
+        <div className="liquid-glass-card rounded-2xl p-4 mb-4 animate-fade-in">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold text-foreground">NFT Подарунки</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {nftGifts.map(gift => (
+              <div key={gift.id}
+                className="rounded-2xl border overflow-hidden transition-all"
+                style={{ background: "hsl(0 0% 100% / 0.03)", borderColor: "hsl(var(--primary) / 0.15)" }}>
+                <div className="w-full h-28 bg-black/30 relative">
+                  <img src={gift.image_url} alt={gift.name}
+                    className="w-full h-full object-cover"
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                </div>
+                <div className="px-3 py-2.5">
+                  <p className="text-xs font-bold text-foreground truncate">{gift.name}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Zap className="w-3 h-3 text-primary" />
+                    <span className="text-[11px] font-black text-primary">{gift.price} CR</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Кнопка щоденної нагороди */}
       <div className="relative overflow-hidden rounded-3xl animate-fade-in"
         style={{
           background: canClaim
@@ -398,12 +386,10 @@ const Shop = () => {
           boxShadow: canClaim ? "0 0 40px hsl(var(--primary) / 0.2), 0 0 80px hsl(var(--primary) / 0.06)" : "none",
           backdropFilter: "blur(20px)",
         }}>
-
         {canClaim && (
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full pointer-events-none"
             style={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 70%)" }} />
         )}
-
         <div className="relative p-6">
           <div className="flex justify-center mb-5">
             <div className="relative">
@@ -423,11 +409,10 @@ const Shop = () => {
                   border: canClaim ? "2px solid hsl(var(--primary) / 0.5)" : "1px solid hsl(0 0% 100% / 0.1)",
                   boxShadow: canClaim ? "0 0 30px hsl(var(--primary) / 0.4), inset 0 1px 0 hsl(0 0% 100% / 0.1)" : "none",
                 }}>
-                <Gift className="w-12 h-12"
-                  style={{
-                    color: canClaim ? "hsl(var(--primary))" : "hsl(0 0% 40%)",
-                    filter: canClaim ? "drop-shadow(0 0 12px hsl(var(--primary)))" : "none",
-                  }} />
+                {canClaim
+                  ? <FlameVFX size={48} active />
+                  : <Gift className="w-12 h-12" style={{ color: "hsl(0 0% 40%)" }} />
+                }
               </div>
               {canClaim && (
                 <div className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-[9px] font-black text-black animate-bounce"
@@ -437,12 +422,10 @@ const Shop = () => {
               )}
             </div>
           </div>
-
           <div className="text-center mb-4">
             <h3 className="text-lg font-black text-foreground mb-1">Щоденна нагорода</h3>
             <p className="text-xs text-muted-foreground">Заходь кожного дня і отримуй CR</p>
           </div>
-
           <div className="flex items-center justify-center gap-3 mb-5">
             <div className="flex items-center gap-2 px-5 py-2.5 rounded-2xl"
               style={{
@@ -451,16 +434,12 @@ const Shop = () => {
               }}>
               <Zap className="w-5 h-5" style={{ color: canClaim ? "hsl(var(--primary))" : "hsl(0 0% 40%)" }} />
               <span className="text-3xl font-black"
-                style={{
-                  color: canClaim ? "hsl(var(--primary))" : "hsl(0 0% 40%)",
-                  textShadow: canClaim ? "0 0 20px hsl(var(--primary) / 0.7)" : "none",
-                }}>
+                style={{ color: canClaim ? "hsl(var(--primary))" : "hsl(0 0% 40%)", textShadow: canClaim ? "0 0 20px hsl(var(--primary) / 0.7)" : "none" }}>
                 +{streak >= 6 ? 200 : streak >= 3 ? 150 : 100}
               </span>
               <span className="text-sm font-bold" style={{ color: canClaim ? "hsl(var(--primary))" : "hsl(0 0% 40%)" }}>CR</span>
             </div>
           </div>
-
           {canClaim ? (
             <GradientButton variant="green" className="w-full text-base py-3.5" onClick={claimReward} disabled={loading}>
               {loading
@@ -489,6 +468,7 @@ const Shop = () => {
         </div>
       </div>
 
+      {/* Таблиця бонусів */}
       <div className="mt-4 space-y-2 animate-fade-in">
         {[
           { label: "1-2 дні поспіль", bonus: "+100 CR", color: "text-primary", bg: "bg-primary/8 border-primary/15" },
