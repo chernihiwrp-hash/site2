@@ -7,33 +7,29 @@ import { toast } from "sonner";
 import { store } from "../lib/store";
 import type { MayorCandidate } from "../lib/store";
 
+const VOTE_KEY = "crp_mayor_voted";
+
 const MayorElection = () => {
   const [candidates, setCandidates] = useState<MayorCandidate[]>([]);
-  const [voted, setVoted] = useState<number | null>(null);
+  const [voted, setVoted] = useState<number | null>(() => {
+    const v = localStorage.getItem(VOTE_KEY);
+    return v ? Number(v) : null;
+  });
   const [showBio, setShowBio] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    store.getCandidates().then(data => { 
-      setCandidates(data); 
-      setLoading(false); 
-      const nick = localStorage.getItem("crp_nick") || "";
-      const savedVote = localStorage.getItem(`crp_voted_mayor_${nick}`);
-      if (savedVote) setVoted(Number(savedVote));
-    });
+    store.getCandidates().then(data => { setCandidates(data); setLoading(false); });
   }, []);
 
   const totalVotes = candidates.reduce((s, c) => s + c.votes, 0);
 
   const handleVote = async (id: number) => {
-    const nick = localStorage.getItem("crp_nick") || "";
-    if (voted !== null || localStorage.getItem(`crp_voted_mayor_${nick}`)) return toast.error("Ви вже проголосували!");
-    const success = await store.voteCandidate(id);
-    if (!success) return toast.error("Помилка або ви вже голосували");
-    
+    if (voted !== null) return toast.error("Ви вже проголосували!");
+    await store.voteCandidate(id);
     setCandidates(prev => prev.map(c => c.id === id ? { ...c, votes: c.votes + 1 } : c));
     setVoted(id);
-    localStorage.setItem(`crp_voted_mayor_${nick}`, String(id));
+    localStorage.setItem(VOTE_KEY, String(id));
     toast.success("Ваш голос враховано!");
   };
 
@@ -45,7 +41,7 @@ const MayorElection = () => {
         style={{ borderColor: "hsl(45 100% 55% / 0.2)", boxShadow: "0 0 20px hsl(45 100% 55% / 0.08)" }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Crown className="w-5 h-5 text-yellow-500" />
+            <Crown className="w-5 h-5" style={{ color: "hsl(45 100% 55%)" }} />
             <span className="text-sm font-semibold text-foreground">Вибори мера</span>
           </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
@@ -70,37 +66,42 @@ const MayorElection = () => {
           {candidates.map((c, i) => {
             const pct = totalVotes > 0 ? Math.round((c.votes / totalVotes) * 100) : 0;
             const isVoted = voted === c.id;
-            const isWinner = pct >= 75 && totalVotes > 5; // Highlight if clear leader
-            
+            const isMayor = pct >= 75;
             return (
               <div key={c.id} className="animate-slide-up" style={{ animationDelay: `${i * 80}ms` }}>
-                <NeonCard glowColor={isWinner ? "amber" : "green"}>
-                  <div className="flex items-center gap-3 mb-3 relative">
-                    {isWinner && (
-                      <div className="absolute -top-6 -left-2 rotate-[-15deg] animate-bounce">
-                        <Crown className="w-8 h-8 text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
-                      </div>
-                    )}
-                    <div className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 ${isWinner ? 'bg-yellow-400/15 border-yellow-400/30' : 'bg-primary/10 border-primary/20'}`}>
-                      <User className={`w-6 h-6 ${isWinner ? 'text-yellow-400' : 'text-primary'}`} />
+                <NeonCard glowColor={isMayor ? "yellow" : "green"}>
+                  {isMayor && (
+                    <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl"
+                      style={{ background: "hsl(45 100% 55% / 0.12)", border: "1px solid hsl(45 100% 55% / 0.3)", boxShadow: "0 0 20px hsl(45 100% 55% / 0.15)" }}>
+                      <Crown className="w-4 h-4 animate-bounce" style={{ color: "hsl(45 100% 55%)" }} />
+                      <span className="text-xs font-black uppercase tracking-wider" style={{ color: "hsl(45 100% 55%)" }}>
+                        МЕР МІСТА
+                      </span>
+                      <div className="ml-auto w-2 h-2 rounded-full animate-pulse" style={{ background: "hsl(45 100% 55%)" }} />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-xl border flex items-center justify-center shrink-0"
+                      style={isMayor ? { background: "hsl(45 100% 55% / 0.15)", borderColor: "hsl(45 100% 55% / 0.4)", boxShadow: "0 0 16px hsl(45 100% 55% / 0.3)" } : { background: "hsl(var(--primary) / 0.1)", borderColor: "hsl(var(--primary) / 0.2)" }}>
+                      {isMayor ? <Crown className="w-6 h-6" style={{ color: "hsl(45 100% 55%)" }} /> : <User className="w-6 h-6 text-primary" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <h3 className={`text-sm font-semibold ${isWinner ? 'text-yellow-400' : 'text-foreground'}`}>{c.name}</h3>
-                        {isWinner && <span className="text-[8px] font-black bg-yellow-400 text-black px-1.5 py-0.5 rounded uppercase tracking-tighter">Переможець</span>}
-                      </div>
+                      <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                        {c.name}
+                        {isMayor && <span className="text-[9px] px-1.5 py-0.5 rounded-md font-black" style={{ background: "hsl(45 100% 55% / 0.2)", color: "hsl(45 100% 55%)", border: "1px solid hsl(45 100% 55% / 0.3)" }}>МЕР</span>}
+                      </h3>
                       <p className="text-[10px] text-muted-foreground line-clamp-1">{c.program}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className={`font-bold text-sm ${isWinner ? 'text-yellow-400' : 'text-primary'}`}>{c.votes}</span>
+                      <span className="font-bold text-sm" style={{ color: isMayor ? "hsl(45 100% 55%)" : "hsl(var(--primary))" }}>{c.votes}</span>
                       <p className="text-[9px] text-muted-foreground">{pct}%</p>
                     </div>
                   </div>
 
                   {/* Progress bar */}
                   <div className="w-full h-1.5 rounded-full bg-muted mb-3 overflow-hidden">
-                    <div className={`h-full rounded-full transition-all duration-1000 ${isWinner ? 'bg-gradient-to-r from-yellow-400 to-orange-500 shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'bg-gradient-to-r from-primary to-secondary'}`}
-                      style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%`, background: isMayor ? "linear-gradient(90deg, hsl(45 100% 55%), hsl(38 100% 60%))" : "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--secondary)))" }} />
                   </div>
 
                   <div className="flex gap-2 items-center">
