@@ -40,7 +40,7 @@ const Factions = () => {
       // 1. DB фракції з Supabase (з усіма кастомними полями)
       const { data: dbFactions } = await supabase
         .from("factions")
-        .select("id, name, color, gradient, bg_image, description, icon_name, dangerous, questions, section")
+        .select("id, name, color, gradient, description, icon_name, dangerous, questions, section")
         .order("created_at", { ascending: true });
 
       // 2. Рахуємо учасників
@@ -62,26 +62,7 @@ const Factions = () => {
       const dbNames = new Set<string>();
 
       // 3. DB фракції — беремо всі кастомні поля
-      if (dbFactions && dbFactions.length > 0) {
-        for (const f of dbFactions as Record<string, unknown>[]) {
-          const color = (f.color as string) || "hsl(84,81%,44%)";
-          const name = f.name as string;
-          dbNames.add(name.toLowerCase());
-          result.push({
-            id: String(f.id),
-            name,
-            desc: (f.description as string) || "Фракція сервера",
-            iconName: (f.icon_name as string) || "Shield",
-            color,
-            gradient: (f.gradient as string) || `linear-gradient(135deg,${color}22,${color}08)`,
-            bgImage: (f.bg_image as string) || "",
-            dangerous: (f.dangerous as boolean) || false,
-            memberCount: countById[String(f.id)] || countByName[name.toLowerCase()] || 0,
-          });
-        }
-      }
-
-      // 4. Статичні фракції — читаємо overrides з Supabase faction_overrides
+      // First load all overrides so DB factions can also use bg_image/banner_image
       const { data: overrides } = await supabase
         .from("faction_overrides")
         .select("*");
@@ -90,6 +71,28 @@ const Factions = () => {
         overrideMap[o.faction_slug as string] = o;
       });
 
+      if (dbFactions && dbFactions.length > 0) {
+        for (const f of dbFactions as Record<string, unknown>[]) {
+          const color = (f.color as string) || "hsl(84,81%,44%)";
+          const name = f.name as string;
+          const slug = name.toLowerCase().replace(/\s+/g, "_");
+          const ov = overrideMap[slug];
+          dbNames.add(name.toLowerCase());
+          result.push({
+            id: String(f.id),
+            name,
+            desc: (f.description as string) || "Фракція сервера",
+            iconName: (f.icon_name as string) || "Shield",
+            color,
+            gradient: (f.gradient as string) || `linear-gradient(135deg,${color}22,${color}08)`,
+            bgImage: (ov?.bg_image as string) || "",
+            dangerous: (f.dangerous as boolean) || false,
+            memberCount: countById[String(f.id)] || countByName[name.toLowerCase()] || 0,
+          });
+        }
+      }
+
+      // 4. Статичні фракції — читаємо overrides з Supabase faction_overrides
       for (const sf of STATIC_BASE) {
         if (dbNames.has(sf.name.toLowerCase())) continue;
         const slug = sf.name.toLowerCase().replace(/\s+/g, "_");
