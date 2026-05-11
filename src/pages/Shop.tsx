@@ -72,84 +72,82 @@ const hsl = (c: { h: number; s: number; l: number }, a = 1) => `hsla(${c.h.toFix
 import React, { useMemo } from "react";
 
 const StreakFlame = ({ streak, size = 140 }: { streak: number; size?: number }) => {
-  // Имитация функции цвета (замените на свою streakColor)
-  const c = { h: 35, s: 100, l: 55 }; 
+  // Настройка цветов на основе streak (пример)
+  const c = { h: 35, s: 100, l: 60 }; // Яркий золотистый/оранжевый
   const hsl = ({ h, s, l }: any, a: number) => `hsla(${h}, ${s}%, ${l}%, ${a})`;
   
   const base = hsl(c, 1);
-  const light = hsl({ ...c, l: Math.min(90, c.l + 25) }, 1);
-  const dark  = hsl({ ...c, l: Math.max(25, c.l - 20) }, 1);
-  const glow  = hsl(c, 0.55);
+  const light = hsl({ ...c, l: Math.min(90, c.l + 18) }, 1);
+  const dark  = hsl({ ...c, l: Math.max(25, c.l - 12) }, 1);
+  const glow  = hsl(c, 0.4);
 
   return (
     <div style={{ position: "relative", width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* Свечение */}
+      {/* Мягкое свечение сзади */}
       <div style={{
         position: "absolute", inset: -10, borderRadius: "50%",
         background: `radial-gradient(circle, ${glow} 0%, transparent 70%)`,
-        filter: "blur(15px)", animation: "flameGlow 2.4s ease-in-out infinite",
+        filter: "blur(14px)", animation: "flameGlow 3s ease-in-out infinite",
       }} />
       
-      <svg viewBox="0 0 100 110" width={size} height={size}
-           style={{ position: "relative", animation: "flameWobble 2.6s ease-in-out infinite", transformOrigin: "50% 85%" }}>
+      <svg viewBox="0 0 100 120" width={size} height={size}
+           style={{ position: "relative", animation: "flameWobble 3.5s ease-in-out infinite", transformOrigin: "50% 90%" }}>
         <defs>
           <linearGradient id="bodyG" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={light} />
-            <stop offset="100%" stopColor={base} />
+            <stop offset="60%" stopColor={base} />
+            <stop offset="100%" stopColor={hsl(c, 0.6)} /> {/* Полупрозрачный низ */}
           </linearGradient>
-          
-          <radialGradient id="eyeG" cx="50%" cy="50%" r="50%">
+
+          {/* Градиент для радужки, чтобы глаза не были просто черными */}
+          <radialGradient id="irisG" cx="50%" cy="50%" r="50%">
             <stop offset="85%" stopColor="#2D1B00" />
             <stop offset="100%" stopColor="#000" />
           </radialGradient>
-
-          <filter id="fuzz">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur" />
-            <feOffset in="blur" dx="0" dy="1" result="offsetBlur" />
-            <feMerge>
-              <feMergeNode in="offsetBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
 
-        {/* Тело (форма капли с ушками) */}
-        <path d="M50 5 C 65 5, 85 20, 88 50 C 92 85, 75 105, 50 105 C 25 105, 8 85, 12 50 C 15 20, 35 5, 50 5 Z"
+        {/* Тело (перерисовано, чтобы быть пухлым и с "ушками") */}
+        <path d="M50 8 C 65 8, 85 20, 88 45 Q 92 65 90 80 C 88 100, 65 112, 50 112 C 35 112, 12 100, 10 80 Q 8 65 12 45 C 15 20, 35 8, 50 8 Z"
               fill="url(#bodyG)" />
         
-        {/* Оранжевый низ (градиент к животику) */}
-        <path d="M15 70 Q 50 115 85 70" fill="none" stroke="#FF782F" strokeWidth="8" strokeLinecap="round" opacity="0.4" />
+        {/* Нижний оранжевый акцент (мягкая дуга) */}
+        <path d="M15 80 Q 50 118 85 80" fill="none" stroke="#FF8A3D" strokeWidth="10" strokeLinecap="round" opacity="0.35" />
+
+        {/* Лапки (добавлены!) */}
+        <ellipse cx="40" cy="108" rx="5" ry="3" fill="#D35400" />
+        <ellipse cx="60" cy="108" rx="5" ry="3" fill="#D35400" />
 
         {/* Брови */}
-        <path d="M28 38 Q 35 32 42 35" fill="none" stroke="#D35400" strokeWidth="3" strokeLinecap="round" />
-        <path d="M58 35 Q 65 32 72 38" fill="none" stroke="#D35400" strokeWidth="3" strokeLinecap="round" />
+        <path d="M28 35 Q 35 29 42 32" fill="none" stroke="#A94000" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M58 32 Q 65 29 72 35" fill="none" stroke="#A94000" strokeWidth="2.5" strokeLinecap="round" />
 
-        {/* Глаза */}
-        <g style={{ animation: "blink 5s infinite", transformOrigin: "50% 55%" }}>
-          {/* Левый глаз */}
-          <circle cx="36" cy="58" r="14" fill="white" />
-          <circle cx="36" cy="58" r="11" fill="url(#eyeG)" />
-          <path d="M32 52 A 5 5 0 0 1 40 52" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />
-          <circle cx="34" cy="63" r="1.5" fill="white" opacity="0.6" />
+        {/* Детализированные глаза */}
+        <g style={{ animation: "blink 6s infinite", transformOrigin: "50% 60%" }}>
+          {/* Левый */}
+          <ellipse cx="36" cy="58" rx="15" ry="17" fill="white" />
+          <ellipse cx="36" cy="58" rx="11" ry="13" fill="url(#irisG)" />
+          {/* Блики (слезливые) */}
+          <path d="M30 52 A 7 7 0 0 1 42 52" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.9" />
+          <ellipse cx="34" cy="65" rx="2.5" ry="1.5" fill="white" opacity="0.6" />
 
-          {/* Правый глаз */}
-          <circle cx="64" cy="58" r="14" fill="white" />
-          <circle cx="64" cy="58" r="11" fill="url(#eyeG)" />
-          <path d="M60 52 A 5 5 0 0 1 68 52" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />
-          <circle cx="62" cy="63" r="1.5" fill="white" opacity="0.6" />
+          {/* Правый */}
+          <ellipse cx="64" cy="58" rx="15" ry="17" fill="white" />
+          <ellipse cx="64" cy="58" rx="11" ry="13" fill="url(#irisG)" />
+          {/* Блики (слезливые) */}
+          <path d="M58 52 A 7 7 0 0 1 70 52" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.9" />
+          <ellipse cx="62" cy="65" rx="2.5" ry="1.5" fill="white" opacity="0.6" />
         </g>
 
-        {/* Клюв */}
-        <path d="M44 68 L 56 68 L 50 78 Z" fill="#FF9600" />
-        <path d="M44 68 Q 50 71 56 68" fill="none" stroke="#D35400" strokeWidth="0.5" />
+        {/* Клюв (точный треугольник с легким скруглением) */}
+        <path d="M46 72 Q 50 78 54 72 Q 50 71 46 72 Z" fill="#FF9600" stroke="#B84A00" strokeWidth="0.5" />
       </svg>
 
       <style>{`
         @keyframes flameWobble { 
-          0%, 100% { transform: rotate(-1deg) scale(1); } 
-          50% { transform: rotate(1.5deg) scale(1.02); } 
+          0%, 100% { transform: rotate(-1.5deg) translateY(0); } 
+          50% { transform: rotate(1.5deg) translateY(-2px); } 
         }
-        @keyframes flameGlow { 0%, 100% { opacity: 0.6; } 50% { opacity: 0.9; } }
+        @keyframes flameGlow { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.8; } }
         @keyframes blink { 
           0%, 90%, 94%, 100% { transform: scaleY(1); } 
           92% { transform: scaleY(0.1); } 
