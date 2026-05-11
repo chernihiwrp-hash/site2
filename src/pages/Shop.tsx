@@ -127,7 +127,6 @@ const FrozenStreakFlame = ({ size = 200 }: { size?: number }) => {
             <img src="https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" style={layerStyle} alt="eyes" />
           </div>
 
-          {/* 5. Брови */}
           <img src="https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" style={layerStyle} alt="brows" />
 
           {/* 6. Рот */}
