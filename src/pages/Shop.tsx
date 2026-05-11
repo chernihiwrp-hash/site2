@@ -1,313 +1,276 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { Gift, Clock, Sparkles, Star, Flame, Trophy, Lock, Coins, Check } from "lucide-react";
-import StreakFlame, { getStreakColor } from "@/components/StreakFlame";
-export const Route = createFileRoute("/shop")({
-  component: ShopPage,
-});
-// ── mock data (replace with your store / supabase calls when wired up) ──
-const NICK_KEY = "crp_nick";
-const BAL_KEY = "crp_balance";
-const STREAK_KEY = "crp_streak";
-const LAST_KEY = "crp_last_reward";
-interface NftGift {
-  id: number;
-  name: string;
-  image_url: string;
-  /** Стан / стан рідкости (НЕ ціна). */
-  condition: "Mint" | "Rare" | "Epic" | "Legendary";
-}
-const MOCK_NFTS: NftGift[] = [
-  { id: 1, name: "Lime Spark",     image_url: "", condition: "Mint" },
-  { id: 2, name: "Crimson Ember",  image_url: "", condition: "Rare" },
-  { id: 3, name: "Violet Pulse",   image_url: "", condition: "Epic" },
-  { id: 4, name: "Azure Crown",    image_url: "", condition: "Legendary" },
-];
-const CONDITION_STYLES: Record<NftGift["condition"], { bg: string; text: string; ring: string }> = {
-  Mint:      { bg: "rgba(132,204,22,0.12)",  text: "#a3e635", ring: "rgba(132,204,22,0.45)" },
-  Rare:      { bg: "rgba(59,130,246,0.12)",  text: "#60a5fa", ring: "rgba(59,130,246,0.45)" },
-  Epic:      { bg: "rgba(168,85,247,0.14)",  text: "#c084fc", ring: "rgba(168,85,247,0.5)"  },
-  Legendary: { bg: "rgba(250,204,21,0.14)",  text: "#fbbf24", ring: "rgba(250,204,21,0.55)" },
+import { useState, useEffect, useRef } from "react";
+import { Gift, Clock, Zap, Star, Flame, Trophy, Sparkles, Lock } from "lucide-react";
+import GradientButton from "../components/GradientButton";
+import { toast } from "sonner";
+import { setBalance as syncBalance, supabase } from "../lib/store";
+import { dbUpdate, ilike } from "../lib/db";
+
+// ─── FlameVFX (оновлений) ─────────────────────────────────────
+const FlameVFX = ({ size = 72, active = true, streak = 0 }: { size?: number; active?: boolean; streak?: number }) => {
+  const getTargetColor = (s: number): string => {
+    if (s >= 365) return "#3b82f6";      // Blue
+    if (s >= 150) return "#22c55e";      // Green
+    if (s >= 50) return "#a855f7";       // Purple
+    if (s >= 15) return "#ef4444";       // Red
+    return "#facc15";                    // Yellow
+  };
+
+  const targetColor = getTargetColor(streak);
+  const glow = active ? `drop-shadow(0 0 25px ${targetColor}) drop-shadow(0 0 40px ${targetColor}) drop-shadow(0 0 60px ${targetColor})` : "none";
+
+  return (
+    <div className="relative flex items-center justify-center">
+      <div
+        className="transition-all duration-700"
+        style={{
+          filter: glow,
+          animation: active ? "flameWobble 1.2s ease-in-out infinite alternate, flamePulse 2s ease-in-out infinite" : "none"
+        }}
+      >
+        <span className="text-[72px] drop-shadow-xl">🔥</span>
+      </div>
+      <style jsx>{`
+        @keyframes flameWobble {
+          from { transform: scale(1) rotate(-8deg); }
+          to   { transform: scale(1.12) rotate(8deg); }
+        }
+        @keyframes flamePulse {
+          0%, 100% { opacity: 0.95; }
+          50% { opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
 };
-const STREAK_DAYS = [
-  { day: 1, reward: 100 },
-  { day: 2, reward: 100 },
-  { day: 3, reward: 150 },
-  { day: 4, reward: 150 },
-  { day: 5, reward: 150 },
-  { day: 6, reward: 200 },
-  { day: 7, reward: 200 },
-];
-const NFT_MILESTONES = [
-  { days: 15,  bonus: 200, icon: Star },
-  { days: 50,  bonus: 350, icon: Flame },
-  { days: 150, bonus: 500, icon: Trophy },
-  { days: 365, bonus: 800, icon: Sparkles },
-];
-function ShopPage() {
-  const [balance, setBalance] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [lastReward, setLastReward] = useState(0);
-  const [now, setNow] = useState(Date.now());
+
+// ─── SHOP COMPONENT ───────────────────────────────────────────
+const Shop = () => {
+  const nick = localStorage.getItem("crp_nick") || "";
+  const [balance, setBalanceState] = useState(0);
+  const [lastReward, setLastReward] = useState(() => parseInt(localStorage.getItem("crp_last_reward") || "0"));
+  const [streak, setStreak] = useState(() => parseInt(localStorage.getItem("crp_streak") || "0"));
+  const [loading, setLoading] = useState(false);
+  const [nftGifts, setNftGifts] = useState<any[]>([]);
+
   useEffect(() => {
-    setBalance(parseInt(localStorage.getItem(BAL_KEY) || "0", 10));
-    setStreak(parseInt(localStorage.getItem(STREAK_KEY) || "0", 10));
-    setLastReward(parseInt(localStorage.getItem(LAST_KEY) || "0", 10));
-    const t = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(t);
-  }, []);
-  const DAY = 24 * 60 * 60 * 1000;
-  const canClaim = now - lastReward > DAY;
-  const progress = Math.min(100, ((now - lastReward) / DAY) * 100);
-  const nextBonus = streak >= 6 ? 200 : streak >= 3 ? 150 : 100;
-  const flameColor = useMemo(() => getStreakColor(streak), [streak]);
+    supabase.from("users").select("balance").ilike("username", nick).maybeSingle().then(({ data }) => {
+      if (data?.balance !== undefined) {
+        const bal = (data.balance as number) || 0;
+        syncBalance(nick, bal);
+        setBalanceState(bal);
+      }
+    });
+
+    supabase.from("nft_gifts").select("*").order("price", { ascending: true }).then(({ data }) => {
+      if (data) setNftGifts(data);
+    });
+  }, [nick]);
+
+  const canClaim = Date.now() - lastReward > 24 * 60 * 60 * 1000;
   const timeLeft = () => {
-    const diff = Math.max(0, DAY - (now - lastReward));
+    const diff = 24 * 60 * 60 * 1000 - (Date.now() - lastReward);
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     return `${h}г ${m}хв`;
   };
-  const claim = () => {
-    if (!canClaim) return;
-    const newBal = balance + nextBonus;
-    const newStreak = streak + 1;
-    setBalance(newBal);
-    setStreak(newStreak);
-    setLastReward(Date.now());
-    localStorage.setItem(BAL_KEY, String(newBal));
-    localStorage.setItem(STREAK_KEY, String(newStreak));
-    localStorage.setItem(LAST_KEY, String(Date.now()));
+
+  const progress = Math.min(100, ((Date.now() - lastReward) / (24 * 60 * 60 * 1000)) * 100);
+
+  const claimReward = async () => {
+    if (!canClaim || loading) return;
+    setLoading(true);
+    try {
+      const bonus = streak >= 6 ? 200 : streak >= 3 ? 150 : 100;
+      const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
+      const currentBal = (user?.balance as number) ?? 0;
+      const newBal = currentBal + bonus;
+
+      const { error } = await dbUpdate("users", { balance: newBal }, { username: ilike(nick) });
+      if (error) throw error;
+
+      syncBalance(nick, newBal);
+      setBalanceState(newBal);
+
+      const now = Date.now();
+      const newStreak = streak + 1;
+      setLastReward(now);
+      setStreak(newStreak);
+      localStorage.setItem("crp_last_reward", String(now));
+      localStorage.setItem("crp_streak", String(newStreak));
+
+      toast.success(`+${bonus} CR! Серія: ${newStreak} днів 🔥`);
+    } catch {
+      toast.error("Помилка нарахування");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const streakDays = [
+    { day: 1, reward: 100, label: "Д1" },
+    { day: 2, reward: 100, label: "Д2" },
+    { day: 3, reward: 150, label: "Д3" },
+    { day: 4, reward: 150, label: "Д4" },
+    { day: 5, reward: 150, label: "Д5" },
+    { day: 6, reward: 200, label: "Д6" },
+    { day: 7, reward: 200, label: "Д7" },
+  ];
+
+  const nftMilestones = [
+    { days: 15, label: "15 днів", bonusCr: "200", icon: Star },
+    { days: 50, label: "50 днів", bonusCr: "350", icon: Flame },
+    { days: 150, label: "150 днів", bonusCr: "500", icon: Trophy },
+    { days: 365, label: "365 днів", bonusCr: "800", icon: Sparkles },
+  ];
+
   return (
-    <div
-      className="min-h-screen text-foreground"
-      style={{
-        background: `radial-gradient(ellipse 80% 50% at 50% -10%, ${flameColor.main}22 0%, transparent 60%), radial-gradient(ellipse 100% 60% at 50% 110%, ${flameColor.main}1c 0%, transparent 65%), #0a0a0f`,
-        transition: "background 800ms ease",
-      }}
-    >
-      <div className="mx-auto max-w-3xl px-4 py-8 space-y-8">
-        {/* ─── Header ─── */}
-        <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight">Нагороди</h1>
-            <p className="text-sm text-muted-foreground mt-1">Заходь щодня — серія росте, бонуси теж</p>
+    <div className="min-h-screen bg-black/95 text-white pb-12">
+      {/* Header */}
+      <div className="flex justify-between items-center p-6 border-b border-white/10">
+        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent">
+          НАГОРОДИ
+        </h1>
+        <div className="flex items-center gap-3 bg-zinc-900 px-6 py-3 rounded-2xl border border-white/10">
+          <Zap className="w-6 h-6 text-yellow-400" />
+          <span className="text-2xl font-bold">{balance} <span className="text-sm text-zinc-400">CR</span></span>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 pt-8 space-y-12">
+        {/* СТREAK SECTION */}
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <FlameVFX size={80} active={true} streak={streak} />
           </div>
-          <div
-            className="flex items-center gap-2 rounded-full border bg-white/5 backdrop-blur px-4 py-2"
-            style={{ borderColor: `${flameColor.main}55` }}
-          >
-            <Coins size={18} style={{ color: flameColor.main }} />
-            <span className="font-bold tabular-nums">{balance}</span>
-            <span className="text-xs text-muted-foreground">CR</span>
-          </div>
-        </header>
-        {/* ─── Серія днів ─── */}
-        <section
-          className="rounded-3xl border p-6 backdrop-blur-sm"
-          style={{
-            background: `linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))`,
-            borderColor: `${flameColor.main}33`,
-            boxShadow: `0 30px 80px -40px ${flameColor.main}55`,
-          }}
-        >
-          {/* 7 days strip */}
-          <div className="grid grid-cols-7 gap-2 mb-6">
-            {STREAK_DAYS.map((d) => {
-              const done = streak >= d.day;
-              const current = streak + 1 === d.day && canClaim;
+          <h2 className="text-5xl font-bold mb-2 tracking-tighter">Серія: <span className="text-orange-400">{streak}</span> днів</h2>
+          {streak >= 3 && <p className="text-green-400 text-xl">Бонус активний 🔥</p>}
+        </div>
+
+        {/* Daily Rewards Grid */}
+        <div>
+          <h3 className="text-xl font-semibold mb-6 text-center text-zinc-400">ЩОДЕННІ НАГОРОДИ</h3>
+          <div className="grid grid-cols-7 gap-3">
+            {streakDays.map((d) => {
+              const isDone = streak >= d.day;
+              const isCurrent = streak + 1 === d.day;
               return (
-                <div key={d.day} className="flex flex-col items-center gap-1">
-                  <div
-                    className="w-full aspect-square rounded-2xl flex items-center justify-center text-xs font-bold transition-all"
-                    style={{
-                      background: done
-                        ? `linear-gradient(135deg, ${flameColor.light}, ${flameColor.main})`
-                        : current
-                        ? `${flameColor.main}22`
-                        : "rgba(255,255,255,0.04)",
-                      border: `1px solid ${done ? flameColor.main : current ? flameColor.main + "88" : "rgba(255,255,255,0.06)"}`,
-                      boxShadow: current ? `0 0 24px ${flameColor.main}66` : "none",
-                      color: done ? "#0a0a0f" : "rgba(255,255,255,0.7)",
-                    }}
-                  >
-                    {done ? <Check size={16} strokeWidth={3} /> : `Д${d.day}`}
-                  </div>
-                  <span className="text-[10px] text-muted-foreground tabular-nums">+{d.reward}</span>
+                <div
+                  key={d.day}
+                  className={`relative p-4 rounded-2xl text-center transition-all duration-300 border ${
+                    isDone ? "bg-green-900/30 border-green-500/50" : isCurrent ? "bg-orange-500/20 border-orange-400 scale-105" : "bg-zinc-900/80 border-white/10"
+                  }`}
+                >
+                  {isDone && <div className="absolute -top-2 -right-2 bg-green-500 text-black text-xs px-2 py-0.5 rounded-full">✓</div>}
+                  <div className="text-3xl mb-2">🔥</div>
+                  <div className="font-bold text-lg">+{d.reward}</div>
+                  <div className="text-xs text-zinc-400">{d.label}</div>
                 </div>
               );
             })}
           </div>
-          {/* ── ОГОНЁК серии под колонками ── */}
-          <div className="flex flex-col items-center pt-2 pb-1">
-            <StreakFlame streak={streak} size={96} />
-          </div>
-          {/* Daily reward CTA */}
-          <div className="mt-6">
-            {canClaim ? (
-              <button
-                onClick={claim}
-                className="group relative w-full overflow-hidden rounded-2xl py-4 font-bold text-base transition-transform active:scale-[0.99]"
-                style={{
-                  background: `linear-gradient(135deg, ${flameColor.light}, ${flameColor.main}, ${flameColor.dark})`,
-                  color: "#0a0a0f",
-                  boxShadow: `0 20px 50px -15px ${flameColor.main}aa`,
-                }}
-              >
-                <span className="relative z-10 inline-flex items-center gap-2">
-                  <Gift size={18} /> Забрати +{nextBonus} CR
-                </span>
-                <span
-                  className="absolute inset-y-0 -left-1/3 w-1/3 bg-white/40 blur-md"
-                  style={{ animation: "shine 2.4s ease-in-out infinite" }}
-                />
-              </button>
-            ) : (
-              <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="inline-flex items-center gap-2 text-muted-foreground">
-                    <Clock size={14} /> Наступна нагорода
-                  </span>
-                  <span className="font-mono font-semibold tabular-nums" style={{ color: flameColor.main }}>
-                    {timeLeft()}
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${progress}%`,
-                      background: `linear-gradient(90deg, ${flameColor.dark}, ${flameColor.main}, ${flameColor.light})`,
-                      boxShadow: `0 0 12px ${flameColor.main}`,
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-        {/* ─── Бонусна шкала ─── */}
-        <section className="grid grid-cols-3 gap-2">
-          {[
-            { label: "Дні 1–2", bonus: "+100", c: "#facc15" },
-            { label: "Дні 3–5", bonus: "+150", c: "#fb923c" },
-            { label: "Дні 6+",  bonus: "+200", c: "#ef4444" },
-          ].map((b) => (
-            <div
-              key={b.label}
-              className="rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-3 text-center"
-            >
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{b.label}</div>
-              <div className="mt-1 text-lg font-black" style={{ color: b.c }}>{b.bonus} CR</div>
-            </div>
-          ))}
-        </section>
-        {/* ─── NFT Мілстоуни ─── */}
-        <section>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <Sparkles size={18} style={{ color: flameColor.main }} />
-            <h2 className="text-lg font-bold">NFT за серію</h2>
-          </div>
-          <div className="space-y-2">
-            {NFT_MILESTONES.map((m, idx) => {
+        </div>
+
+        {/* NFT Milestones */}
+        <div>
+          <h3 className="text-xl font-semibold mb-6 flex items-center gap-3 justify-center">
+            <Trophy className="text-yellow-400" /> NFT НАГОРОДИ ЗА СЕРІЮ
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {nftMilestones.map((m, idx) => {
               const reached = streak >= m.days;
               const Icon = m.icon;
-              const left = Math.max(0, m.days - streak);
               return (
                 <div
-                  key={m.days}
-                  className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.03] p-3"
+                  key={idx}
+                  className={`p-6 rounded-3xl border transition-all ${reached ? "border-yellow-400/50 bg-gradient-to-br from-yellow-900/20 to-transparent" : "border-white/10 bg-zinc-900/80"}`}
                 >
-                  <div
-                    className="relative w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-                    style={{
-                      background: reached
-                        ? `linear-gradient(135deg, ${flameColor.light}, ${flameColor.main})`
-                        : "rgba(255,255,255,0.04)",
-                      border: `1px solid ${reached ? flameColor.main : "rgba(255,255,255,0.06)"}`,
-                    }}
-                  >
-                    <Icon size={22} className={reached ? "text-black" : "text-muted-foreground"} />
-                    {!reached && (
-                      <div className="absolute inset-0 rounded-xl bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
-                        <Lock size={14} className="text-white/70" />
+                  <div className="flex justify-center mb-4">
+                    <Icon className={`w-12 h-12 ${reached ? "text-yellow-400" : "text-zinc-500"}`} />
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold text-2xl mb-1">{m.label}</div>
+                    <div className="text-emerald-400 font-medium">+{m.bonusCr} CR + NFT</div>
+                    {reached ? (
+                      <div className="mt-4 text-green-400 font-bold flex items-center justify-center gap-2">
+                        ОТРИМАНО <span>✅</span>
+                      </div>
+                    ) : (
+                      <div className="mt-4 text-xs text-zinc-500">
+                        Ще {m.days - streak} днів
                       </div>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm">NFT · {m.days} днів</div>
-                    <div className="text-xs text-muted-foreground">Бонус +{m.bonus} CR</div>
-                  </div>
-                  {reached ? (
-                    <span
-                      className="text-[10px] font-bold uppercase tracking-wider rounded-full px-2.5 py-1"
-                      style={{ background: `${flameColor.main}22`, color: flameColor.main }}
-                    >
-                      Отримано
-                    </span>
-                  ) : (
-                    <div className="text-right">
-                      <div className="text-base font-black tabular-nums">{left}</div>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">днів</div>
-                    </div>
-                  )}
                 </div>
               );
             })}
           </div>
-        </section>
-        {/* ─── NFT Подарунки (без ціни — показуємо стан) ─── */}
-        <section>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <Gift size={18} style={{ color: flameColor.main }} />
-            <h2 className="text-lg font-bold">NFT Подарунки</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {MOCK_NFTS.map((g) => {
-              const c = CONDITION_STYLES[g.condition];
-              return (
+        </div>
+
+        {/* NFT Shop */}
+        {nftGifts.length > 0 && (
+          <div>
+            <h3 className="text-xl font-semibold mb-6 flex items-center gap-3">
+              <Gift className="text-purple-400" /> NFT МАГАЗИН
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {nftGifts.map((gift) => (
                 <div
-                  key={g.id}
-                  className="group rounded-2xl border border-white/5 bg-white/[0.03] overflow-hidden transition-all hover:-translate-y-0.5"
-                  style={{ boxShadow: `0 0 0 1px transparent` }}
+                  key={gift.id}
+                  className="bg-zinc-900/90 border border-white/10 rounded-3xl overflow-hidden hover:border-purple-500/50 transition-all group"
                 >
-                  <div
-                    className="aspect-square flex items-center justify-center text-4xl"
-                    style={{
-                      background: `radial-gradient(circle at 30% 20%, ${c.text}33, transparent 60%), linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0))`,
-                    }}
-                  >
-                    {g.image_url ? (
-                      <img
-                        src={g.image_url}
-                        alt={g.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                      />
-                    ) : (
-                      <Sparkles size={42} style={{ color: c.text }} />
-                    )}
+                  <div className="aspect-square bg-black/60 flex items-center justify-center p-6">
+                    <img
+                      src={gift.image_url}
+                      alt={gift.name}
+                      className="w-full h-full object-contain transition-transform group-hover:scale-110"
+                      onError={(e) => (e.currentTarget.style.display = "none")}
+                    />
                   </div>
-                  <div className="p-3">
-                    <div className="font-semibold text-sm truncate">{g.name}</div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Стан</span>
-                      <span
-                        className="text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 border"
-                        style={{ background: c.bg, color: c.text, borderColor: c.ring }}
-                      >
-                        {g.condition}
-                      </span>
-                    </div>
+                  <div className="p-4">
+                    <div className="font-semibold text-lg">{gift.name}</div>
+                    <div className="text-purple-400 font-bold mt-2">{gift.price} CR</div>
+                    <GradientButton className="mt-4 w-full">Купити</GradientButton>
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </section>
+        )}
+
+        {/* Daily Claim */}
+        <div className="bg-gradient-to-br from-zinc-900 to-black border border-white/10 rounded-3xl p-8 text-center">
+          <div className="flex justify-center mb-6">
+            {canClaim ? (
+              <div className="text-6xl animate-bounce">🎁</div>
+            ) : (
+              <Clock className="w-20 h-20 text-zinc-500" />
+            )}
+          </div>
+
+          <h3 className="text-3xl font-bold mb-2">Щоденна нагорода</h3>
+          <p className="text-zinc-400 mb-6">Заходь кожен день — отримуй CR</p>
+
+          <div className="text-5xl font-bold text-orange-400 mb-8">
+            +{streak >= 6 ? 200 : streak >= 3 ? 150 : 100} CR
+          </div>
+
+          {canClaim ? (
+            <GradientButton onClick={claimReward} disabled={loading} className="text-xl py-4 px-12">
+              {loading ? "Нараховую..." : "ЗАБРАТИ НАГОРОДУ"}
+            </GradientButton>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-lg text-zinc-400">Наступна нагорода через</div>
+              <div className="text-4xl font-bold text-white">{timeLeft()}</div>
+              <div className="h-2.5 bg-zinc-800 rounded-full overflow-hidden w-80 mx-auto">
+                <div className="h-full bg-gradient-to-r from-orange-400 to-yellow-400 transition-all" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
-}
+};
 
 export default Shop;
