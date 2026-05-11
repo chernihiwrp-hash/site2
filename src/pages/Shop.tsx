@@ -69,7 +69,7 @@ const streakColor = (s: number) => {
 const hsl = (c: { h: number; s: number; l: number }, a = 1) => `hsla(${c.h.toFixed(1)},${c.s.toFixed(1)}%,${c.l.toFixed(1)}%,${a})`;
 
 /* ───────────── ЗАМОРОЖЕННЫЙ ОГОНЬ (ЗАМЕНА) ───────────── */
-const StreakFlame = ({ size = 200 }: { size?: number, streak?: number }) => {
+const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) => {
   const layerStyle: React.CSSProperties = {
     position: "absolute",
     top: 0,
@@ -89,55 +89,125 @@ const StreakFlame = ({ size = 200 }: { size?: number, streak?: number }) => {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
+      overflow: "visible", // Чтобы детали не обрезались при увеличении
     }}>
-      {/* Свечение */}
+      {/* Холодное свечение */}
       <div style={{
         position: "absolute", 
         width: "100%", height: "100%", 
-        background: `radial-gradient(circle, rgba(135, 206, 250, 0.4) 0%, transparent 70%)`,
+        background: `radial-gradient(circle, rgba(135, 206, 250, 0.5) 0%, transparent 70%)`,
         filter: "blur(20px)",
         animation: "iceGlow 4s ease-in-out infinite",
       }} />
 
+      {/* Основной контейнер (Неподвижен!) */}
       <div style={{ 
         position: "relative", 
         width: "100%", height: "100%",
-        animation: "iceShiver 4s ease-in-out infinite",
-        transformOrigin: "50% 80%"
+        transformOrigin: "50% 80%",
+        // iceShiver удалён
       }}>
         
-        {/* Порядок слоев строго по твоим ссылкам */}
+        {/* === Глубина глыбы (задние слои) === */}
         <img src="https://i.ibb.co/1JmdZ0Q4/Untitled190-20260511164205.png" style={{ ...layerStyle, zIndex: 1 }} alt="1" />
-        <img src="https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" style={{ ...layerStyle, zIndex: 2 }} alt="2" />
-        <img src="https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" style={{ ...layerStyle, zIndex: 3, animation: "innerFloat 4s ease-in-out infinite" }} alt="3" />
 
-        <div style={{ position: "absolute", inset: 0, zIndex: 4 }}>
-          <div style={{ position: "absolute", inset: 0, animation: "iceBlink 10s infinite", transformOrigin: "50% 55%" }}>
-            <img src="https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" style={layerStyle} alt="4" />
-          </div>
-          <img src="https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" style={layerStyle} alt="5" />
-          <img src="https://i.ibb.co/KjSFLxFf/Untitled190-20260511164236.png" style={layerStyle} alt="6" />
+        {/* === ТЕЛО (УВЕЛИЧЕНО) === */}
+        <div style={{ position: "absolute", inset: 0, transform: "scale(1.1)", transformOrigin: "50% 60%", zIndex: 2 }}>
+          <img src="https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" style={layerStyle} alt="2" />
         </div>
 
-        <div style={{ position: "absolute", inset: 0, zIndex: 5, animation: "snotSwing 3s ease-in-out infinite", transformOrigin: "50% 50%" }}>
+        {/* Внутренний эффект (плавает) */}
+        <div style={{ position: "absolute", inset: 0, transform: "scale(1.15)", transformOrigin: "50% 60%", zIndex: 3 }}>
+          <img 
+            src="https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" 
+            style={{ ...layerStyle, animation: "innerFloatFrozen 4s ease-in-out infinite" }} 
+            alt="3" 
+          />
+        </div>
+
+        {/* === ЛИЦО (ВСЕ ДЕТАЛИ УВЕЛИЧЕНЫ И АНИМИРОВАНЫ) === */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 4, transform: "scale(1.12)", transformOrigin: "50% 60%" }}>
+          {/* Глаза (моргают редко и "застывше") */}
+          <div style={{ position: "absolute", inset: 0, animation: "blinkFrozen 10s infinite", transformOrigin: "50% 55%" }}>
+            <img src="https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" style={layerStyle} alt="4" />
+          </div>
+
+          {/* Брови (НОВОЕ: Анимация "Паники" - поднимаются высоко) */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            animation: "scaredBrows 4s ease-in-out infinite",
+            transformOrigin: "50% 35%"
+          }}>
+            <img src="https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" style={layerStyle} alt="5" />
+          </div>
+
+          {/* Рот (НОВОЕ: Дрожит мелко) */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            animation: "mouthTremble 4s linear infinite",
+            transformOrigin: "50% 65%"
+          }}>
+            <img src="https://i.ibb.co/KjSFLxFf/Untitled190-20260511164236.png" style={layerStyle} alt="6" />
+          </div>
+        </div>
+
+        {/* СОПЛЯ (НОВОЕ: Растягивается вниз и возвращается пружинисто) */}
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 5,
+          transform: "scale(1.15)", // Увеличена
+          animation: "snotPanic 6s ease-in-out infinite", // Дольше анимация
+          transformOrigin: "50% 50%"
+        }}>
           <img src="https://i.ibb.co/zVbT4TTR/Untitled190-20260511164441.png" style={layerStyle} alt="7" />
         </div>
 
-        <img src="https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" style={{ ...layerStyle, zIndex: 6 }} alt="8" />
+        {/* Руки (поверх тела) */}
+        <div style={{ position: "absolute", inset: 0, transform: "scale(1.1)", zIndex: 6 }}>
+          <img src="https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" style={layerStyle} alt="8" />
+        </div>
+
+        {/* === ОКРУЖЕНИЕ ГЛЫБЫ (передние слои) === */}
         <img src="https://i.ibb.co/zW5DhzsJ/Untitled190-20260511164252.png" style={{ ...layerStyle, zIndex: 7 }} alt="9" />
         <img src="https://i.ibb.co/2YyJrLF2/Untitled190-20260511164352.png" style={{ ...layerStyle, zIndex: 8, opacity: 0.6 }} alt="10" />
       </div>
 
       <style>{`
-        @keyframes iceShiver {
-          0%, 100% { transform: rotate(-0.5deg); }
-          10%, 30%, 50%, 70%, 90% { transform: rotate(0.5deg) translate(1px, -0.5px); }
-          20%, 40%, 60%, 80% { transform: rotate(-0.5deg) translate(-1px, 0.5px); }
+        /* Пульсация свечения */
+        @keyframes iceGlow { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+
+        /* Внутренний эффект плавает медленно */
+        @keyframes innerFloatFrozen {
+          0%, 100% { transform: translateY(0); opacity: 0.7; }
+          50% { transform: translateY(-7px); opacity: 1; }
         }
-        @keyframes iceBlink { 0%, 94%, 100% { transform: scaleY(1); } 96%, 98% { transform: scaleY(0); } }
-        @keyframes snotSwing { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(2px) rotate(1deg); } }
-        @keyframes innerFloat { 0%, 100% { transform: translateY(0); opacity: 0.7; } 50% { transform: translateY(-5px); opacity: 1; } }
-        @keyframes iceGlow { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.7; } }
+
+        /* Замедленное моргание (глаза "примерзли") */
+        @keyframes blinkFrozen { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0); } }
+
+        /* НОВОЕ: Брови взлетают от ужаса */
+        @keyframes scaredBrows {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-7px) scaleX(1.03); }
+        }
+
+        /* НОВОЕ: Рот дрожит мелко и быстро (имитация стука зубов) */
+        @keyframes mouthTremble {
+          0%, 100% { transform: translateX(0); }
+          15%, 45%, 75% { transform: translateX(-1px); }
+          30%, 60%, 90% { transform: translateX(1px); }
+        }
+
+        /* НОВОЕ: Сопля вытягивается вниз и пружинисто возвращается */
+        @keyframes snotPanic {
+          0%, 100% { transform: translateY(0) scaleY(1); animation-timing-function: ease-out; }
+          40% { transform: translateY(6px) scaleY(1.3); animation-timing-function: ease-in; }
+          60% { transform: translateY(-2px) scaleY(0.9); animation-timing-function: ease-out; }
+          80% { transform: translateY(1px) scaleY(1.02); animation-timing-function: ease-in; }
+        }
       `}</style>
     </div>
   );
