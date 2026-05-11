@@ -69,77 +69,95 @@ const streakColor = (s: number) => {
 const hsl = (c: { h: number; s: number; l: number }, a = 1) => `hsla(${c.h.toFixed(1)},${c.s.toFixed(1)}%,${c.l.toFixed(1)}%,${a})`;
 
 /* ───────────── БОЛЬШОЙ ОГОНЬ СЕРИИ ───────────── */
+import React, { useMemo } from "react";
+
 const StreakFlame = ({ streak, size = 140 }: { streak: number; size?: number }) => {
-  const c = useMemo(() => streakColor(streak), [streak]);
+  // Имитация функции цвета (замените на свою streakColor)
+  const c = { h: 35, s: 100, l: 55 }; 
+  const hsl = ({ h, s, l }: any, a: number) => `hsla(${h}, ${s}%, ${l}%, ${a})`;
+  
   const base = hsl(c, 1);
   const light = hsl({ ...c, l: Math.min(90, c.l + 25) }, 1);
   const dark  = hsl({ ...c, l: Math.max(25, c.l - 20) }, 1);
   const glow  = hsl(c, 0.55);
 
   return (
-    <div style={{ position: "relative", width: size, height: size }}>
-      {/* свечение */}
+    <div style={{ position: "relative", width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Свечение */}
       <div style={{
-        position: "absolute", inset: -20, borderRadius: "50%",
-        background: `radial-gradient(circle, ${glow} 0%, transparent 65%)`,
-        filter: "blur(14px)", animation: "flameGlow 2.4s ease-in-out infinite",
+        position: "absolute", inset: -10, borderRadius: "50%",
+        background: `radial-gradient(circle, ${glow} 0%, transparent 70%)`,
+        filter: "blur(15px)", animation: "flameGlow 2.4s ease-in-out infinite",
       }} />
-      <svg viewBox="0 0 100 120" width={size} height={size}
-           style={{ position: "relative", animation: "flameWobble 2.6s ease-in-out infinite", transformOrigin: "50% 90%" }}>
+      
+      <svg viewBox="0 0 100 110" width={size} height={size}
+           style={{ position: "relative", animation: "flameWobble 2.6s ease-in-out infinite", transformOrigin: "50% 85%" }}>
         <defs>
-          <radialGradient id="bodyG" cx="50%" cy="65%" r="60%">
-            <stop offset="0%"  stopColor={light} />
-            <stop offset="60%" stopColor={base} />
-            <stop offset="100%" stopColor={dark} />
+          <linearGradient id="bodyG" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={light} />
+            <stop offset="100%" stopColor={base} />
+          </linearGradient>
+          
+          <radialGradient id="eyeG" cx="50%" cy="50%" r="50%">
+            <stop offset="85%" stopColor="#2D1B00" />
+            <stop offset="100%" stopColor="#000" />
           </radialGradient>
-          <radialGradient id="cheekG" cx="50%" cy="50%" r="50%">
-            <stop offset="0%"  stopColor="rgba(255,120,120,.55)" />
-            <stop offset="100%" stopColor="rgba(255,120,120,0)" />
-          </radialGradient>
+
+          <filter id="fuzz">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur" />
+            <feOffset in="blur" dx="0" dy="1" result="offsetBlur" />
+            <feMerge>
+              <feMergeNode in="offsetBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
         </defs>
 
-        {/* пухлая капля-маскот */}
-        <path d="M50 8 C 22 38, 14 64, 22 86 C 30 108, 70 108, 78 86 C 86 64, 78 38, 50 8 Z"
-              fill="url(#bodyG)" stroke={dark} strokeWidth="1.5" strokeOpacity=".35"/>
-        {/* блик */}
-        <path d="M34 30 C 28 45, 28 60, 34 70 C 28 60, 28 42, 34 30 Z" fill="rgba(255,255,255,.55)"/>
-        {/* щёчки */}
-        <ellipse cx="33" cy="74" rx="7" ry="4" fill="url(#cheekG)"/>
-        <ellipse cx="67" cy="74" rx="7" ry="4" fill="url(#cheekG)"/>
-        {/* глаза */}
-        <g style={{ animation: "blink 4.5s infinite", transformOrigin: "50% 65%" }}>
-          <ellipse cx="40" cy="65" rx="7" ry="9" fill="#1a1a1a"/>
-          <ellipse cx="60" cy="65" rx="7" ry="9" fill="#1a1a1a"/>
-          <circle cx="42" cy="62" r="2.6" fill="#fff"/>
-          <circle cx="62" cy="62" r="2.6" fill="#fff"/>
-          <circle cx="38" cy="68" r="1.3" fill="#fff" opacity=".8"/>
-          <circle cx="58" cy="68" r="1.3" fill="#fff" opacity=".8"/>
+        {/* Тело (форма капли с ушками) */}
+        <path d="M50 5 C 65 5, 85 20, 88 50 C 92 85, 75 105, 50 105 C 25 105, 8 85, 12 50 C 15 20, 35 5, 50 5 Z"
+              fill="url(#bodyG)" />
+        
+        {/* Оранжевый низ (градиент к животику) */}
+        <path d="M15 70 Q 50 115 85 70" fill="none" stroke="#FF782F" strokeWidth="8" strokeLinecap="round" opacity="0.4" />
+
+        {/* Брови */}
+        <path d="M28 38 Q 35 32 42 35" fill="none" stroke="#D35400" strokeWidth="3" strokeLinecap="round" />
+        <path d="M58 35 Q 65 32 72 38" fill="none" stroke="#D35400" strokeWidth="3" strokeLinecap="round" />
+
+        {/* Глаза */}
+        <g style={{ animation: "blink 5s infinite", transformOrigin: "50% 55%" }}>
+          {/* Левый глаз */}
+          <circle cx="36" cy="58" r="14" fill="white" />
+          <circle cx="36" cy="58" r="11" fill="url(#eyeG)" />
+          <path d="M32 52 A 5 5 0 0 1 40 52" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />
+          <circle cx="34" cy="63" r="1.5" fill="white" opacity="0.6" />
+
+          {/* Правый глаз */}
+          <circle cx="64" cy="58" r="14" fill="white" />
+          <circle cx="64" cy="58" r="11" fill="url(#eyeG)" />
+          <path d="M60 52 A 5 5 0 0 1 68 52" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />
+          <circle cx="62" cy="63" r="1.5" fill="white" opacity="0.6" />
         </g>
-        {/* клюв */}
-        <path d="M46 80 Q50 86 54 80 Q50 83 46 80 Z" fill="#ff9a1f" stroke="#c46a00" strokeWidth=".6"/>
+
+        {/* Клюв */}
+        <path d="M44 68 L 56 68 L 50 78 Z" fill="#FF9600" />
+        <path d="M44 68 Q 50 71 56 68" fill="none" stroke="#D35400" strokeWidth="0.5" />
       </svg>
 
-      {/* искры */}
-      {[0,1,2].map(i => (
-        <span key={i} style={{
-          position: "absolute", left: `${30 + i*18}%`, top: -4,
-          width: 6, height: 6, borderRadius: "50%", background: light,
-          boxShadow: `0 0 8px ${base}`,
-          animation: `spark 1.8s ${i*0.4}s ease-out infinite`,
-        }} />
-      ))}
-
       <style>{`
-        @keyframes flameWobble { 0%,100%{transform:rotate(-2deg) scale(1)} 50%{transform:rotate(2deg) scale(1.04)} }
-        @keyframes flameGlow   { 0%,100%{opacity:.7} 50%{opacity:1} }
-        @keyframes blink       { 0%,92%,100%{transform:scaleY(1)} 95%{transform:scaleY(.1)} }
-        @keyframes spark       { 0%{transform:translateY(0) scale(1);opacity:.9} 100%{transform:translateY(-40px) scale(.2);opacity:0} }
+        @keyframes flameWobble { 
+          0%, 100% { transform: rotate(-1deg) scale(1); } 
+          50% { transform: rotate(1.5deg) scale(1.02); } 
+        }
+        @keyframes flameGlow { 0%, 100% { opacity: 0.6; } 50% { opacity: 0.9; } }
+        @keyframes blink { 
+          0%, 90%, 94%, 100% { transform: scaleY(1); } 
+          92% { transform: scaleY(0.1); } 
+        }
       `}</style>
     </div>
   );
 };
-
-
 /* ───────────── SHOP ───────────── */
 const Shop = () => {
   const nick = localStorage.getItem("crp_nick") || "";
