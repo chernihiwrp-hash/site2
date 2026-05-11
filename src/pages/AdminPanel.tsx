@@ -2377,7 +2377,7 @@ useEffect(() => {
     const faction = factions.find(f => f.id === editingId);
     
     if (editingId > 0) {
-      // DB faction — update all fields in Supabase
+      // DB faction — update fields in factions table (no bg_image/banner_image — stored in faction_overrides)
       const { error } = await dbUpdate("factions", {
         name: editName.trim(),
         color: editColor,
@@ -2386,11 +2386,17 @@ useEffect(() => {
         icon_name: editIcon,
         dangerous: editDangerous,
         gradient: editGradient || null,
-        bg_image: editBgImage || null,
-        banner_image: editBannerImage || null,
         questions: editQuestions,
       }, { id: eq(editingId) });
       if (error) return toast.error("Помилка збереження: " + error.message);
+      // Also save bg_image/banner_image to faction_overrides
+      const slug = editName.trim().toLowerCase().replace(/\s+/g, "_");
+      await dbUpsert("faction_overrides", {
+        faction_slug: slug,
+        bg_image: editBgImage || null,
+        banner_image: editBannerImage || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "faction_slug" });
     }
     
     // Static faction — save to Supabase faction_overrides
