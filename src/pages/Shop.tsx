@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { Gift, Clock, Zap, Star, Trophy, Sparkles, Lock, Flame } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Gift, Clock, Zap, Trophy, Sparkles, Lock, Flame } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
 import { setBalance as syncBalance, supabase } from "../lib/store";
 import { dbUpdate, ilike } from "../lib/db";
 
-/* ───────────── ТЕМЫ (без изменений по сути) ───────────── */
+/* ───────────── ТЕМИ ───────────── */
 export type ThemeId = "lime" | "neon_blue" | "cyber_red" | "gold_vip" | "purple_haze" | "arctic" | "matrix" | "sunset";
 export interface Theme { id: ThemeId; name: string; price: number; preview: string; vars: Record<string,string>; bgGradient: string; description: string; }
 export const THEMES: Theme[] = [
@@ -38,17 +38,17 @@ export const loadSavedTheme = () => {
     .then(({data}:any)=>{ if (data?.active_theme && data.active_theme !== localTheme) { const t = THEMES.find(x=>x.id===data.active_theme); if (t) applyTheme(t); } }).catch(()=>{});
 };
 
-/* ───────────── ЦВЕТ ОГНЯ ОТ СТРИКА (плавная HSL-интерполяция) ───────────── */
-// 0→жёлтый, 15→красный, 30→фиолетовый, 60→зелёный, 100+→синий
+/* ───────────── ЦВЕТ ОГНЯ ОТ СТРИКА ─────────────
+   ≤10 жёлтый, 15 красный, 25 фиолетовый, 50 синий, 90 зелёный, 100+ RGB-радуга */
 const STREAK_STOPS: { at: number; h: number; s: number; l: number }[] = [
   { at: 0,   h: 50,  s: 100, l: 55 }, // жёлтый
+  { at: 10,  h: 50,  s: 100, l: 55 }, // жёлтый (плато до 10)
   { at: 15,  h: 0,   s: 90,  l: 55 }, // красный
-  { at: 30,  h: 280, s: 85,  l: 60 }, // фиолетовый
-  { at: 60,  h: 135, s: 85,  l: 50 }, // зелёный
-  { at: 100, h: 215, s: 100, l: 55 }, // синий
+  { at: 25,  h: 280, s: 85,  l: 60 }, // фиолетовый
+  { at: 50,  h: 215, s: 100, l: 55 }, // синий
+  { at: 90,  h: 135, s: 85,  l: 50 }, // зелёный
 ];
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-// корректная интерполяция оттенка по короткой дуге
 const lerpHue = (a: number, b: number, t: number) => {
   let d = b - a;
   if (d > 180) d -= 360; else if (d < -180) d += 360;
@@ -67,127 +67,111 @@ const streakColor = (s: number) => {
   return STREAK_STOPS[0];
 };
 const hsl = (c: { h: number; s: number; l: number }, a = 1) => `hsla(${c.h.toFixed(1)},${c.s.toFixed(1)}%,${c.l.toFixed(1)}%,${a})`;
+const isRgbStreak = (s: number) => s >= 100;
 
-/* ───────────── ЗАМОРОЖЕННЫЙ (ЗАМЕНА) ───────────── */
-const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) => {
-  const layerStyle: React.CSSProperties = {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "contain",
-    display: "block",
-    pointerEvents: "none",
-  };
-
+/* ───────────── ЗАМОРОЖЕННЫЙ ОГОНЁК ───────────── */
+const FrozenFlame = ({ size = 140 }: { size?: number }) => {
+  const layerStyle: React.CSSProperties = { position:"absolute", top:0, left:0, width:"100%", height:"100%", objectFit:"contain", display:"block", pointerEvents:"none" };
   return (
-    <div style={{ 
-      position: "relative", 
-      width: size, 
-      height: size,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      overflow: "visible",
-    }}>
-      {/* 1. Свечение */}
-      <div style={{
-        position: "absolute", 
-        width: "90%", 
-        height: "90%", 
-        borderRadius: "50%",
-        background: `radial-gradient(circle, rgba(135,206,250,0.5) 0%, transparent 75%)`,
-        filter: `blur(18px)`,
-        animation: "flameGlow 3s ease-in-out infinite",
-      }} />
-
-      {/* --- Основной контейнер (ГЛЫБА СТОИТ НЕПОДВИЖНО) --- */}
-      <div style={{ 
-        position: "relative", 
-        width: "100%", 
-        height: "100%",
-        transform: "scale(1.25)", // Твой увеличенный размер
-        transformOrigin: "50% 90%",
-      }}>
-        
-        {/* === Задний фон льда === */}
-        <img src="https://i.ibb.co/1JmdZ0Q4/Untitled190-20260511164205.png" style={{ ...layerStyle, zIndex: 1 }} alt="1" />
-
-        {/* 2. Тело (Добавил ему внутреннее дрожание) */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 2, animation: "innerShudder 0.8s linear infinite" }}>
-          <img src="https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" style={layerStyle} alt="2" />
+    <div style={{ position:"relative", width:size, height:size, display:"flex", alignItems:"center", justifyContent:"center", overflow:"visible" }}>
+      <div style={{ position:"absolute", width:"90%", height:"90%", borderRadius:"50%", background:"radial-gradient(circle, rgba(135,206,250,0.5) 0%, transparent 75%)", filter:"blur(18px)", animation:"flameGlow 3s ease-in-out infinite" }} />
+      <div style={{ position:"relative", width:"100%", height:"100%", transform:"scale(1.25)", transformOrigin:"50% 90%" }}>
+        <img src="https://i.ibb.co/1JmdZ0Q4/Untitled190-20260511164205.png" style={{ ...layerStyle, zIndex:1 }} alt="" />
+        <div style={{ position:"absolute", inset:0, zIndex:2, animation:"innerShudder 0.8s linear infinite" }}>
+          <img src="https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" style={layerStyle} alt="" />
         </div>
-
-        {/* 3. Внутренний эффект */}
-        <img 
-          src="https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" 
-          style={{ ...layerStyle, zIndex: 3, animation: "innerFloat 3s infinite ease-in-out" }} 
-          alt="3" 
-        />
-
-        {/* --- Группа ЛИЦА --- */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 4, animation: "innerShudder 0.8s linear infinite" }}>
-          <div style={{ position: "absolute", inset: 0, animation: "blinkFrozen 6s infinite", transformOrigin: "50% 55%" }}>
-            <img src="https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" style={layerStyle} alt="4" />
+        <img src="https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" style={{ ...layerStyle, zIndex:3, animation:"innerFloat 3s infinite ease-in-out" }} alt="" />
+        <div style={{ position:"absolute", inset:0, zIndex:4, animation:"innerShudder 0.8s linear infinite" }}>
+          <div style={{ position:"absolute", inset:0, animation:"blinkFrozen 6s infinite", transformOrigin:"50% 55%" }}>
+            <img src="https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" style={layerStyle} alt="" />
           </div>
-          <div style={{ position: "absolute", inset: 0, animation: "browsShudder 1s linear infinite", transformOrigin: "50% 35%" }}>
-            <img src="https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" style={layerStyle} alt="5" />
+          <div style={{ position:"absolute", inset:0, animation:"browsShudder 1s linear infinite", transformOrigin:"50% 35%" }}>
+            <img src="https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" style={layerStyle} alt="" />
           </div>
-          <div style={{ position: "absolute", inset: 0, animation: "mouthVibrate 1s linear infinite", transformOrigin: "50% 65%" }}>
-            <img src="https://i.ibb.co/KjSFLxFf/Untitled190-20260511164236.png" style={layerStyle} alt="6" />
+          <div style={{ position:"absolute", inset:0, animation:"mouthVibrate 1s linear infinite", transformOrigin:"50% 65%" }}>
+            <img src="https://i.ibb.co/KjSFLxFf/Untitled190-20260511164236.png" style={layerStyle} alt="" />
           </div>
         </div>
-
-        {/* 7. СОПЛЯ (Спокойная анимация) */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 5, animation: "snotDripSoft 4s ease-in-out infinite", transformOrigin: "50% 50%" }}>
-          <img src="https://i.ibb.co/zVbT4TTR/Untitled190-20260511164441.png" style={layerStyle} alt="7" />
+        <div style={{ position:"absolute", inset:0, zIndex:5, animation:"snotDripSoft 4s ease-in-out infinite", transformOrigin:"50% 50%" }}>
+          <img src="https://i.ibb.co/zVbT4TTR/Untitled190-20260511164441.png" style={layerStyle} alt="" />
         </div>
-
-        {/* 8. РУЧКИ (НОВОЕ: Анимация дрожания рук) */}
-        <div style={{ 
-          position: "absolute", 
-          inset: 0, 
-          zIndex: 6, 
-          animation: "handsShiver 0.6s linear infinite", 
-          transformOrigin: "50% 60%" 
-        }}>
-          <img src="https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" style={layerStyle} alt="8" />
+        <div style={{ position:"absolute", inset:0, zIndex:6, animation:"handsShiver 0.6s linear infinite", transformOrigin:"50% 60%" }}>
+          <img src="https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" style={layerStyle} alt="" />
         </div>
-
-        {/* === ПЕРЕДНЯЯ ГЛЫБА (НЕПОДВИЖНО) === */}
-        <img src="https://i.ibb.co/zW5DhzsJ/Untitled190-20260511164252.png" style={{ ...layerStyle, zIndex: 7 }} alt="9" />
-        <img src="https://i.ibb.co/2YyJrLF2/Untitled190-20260511164352.png" style={{ ...layerStyle, zIndex: 8, opacity: 0.6 }} alt="10" />
+        <img src="https://i.ibb.co/zW5DhzsJ/Untitled190-20260511164252.png" style={{ ...layerStyle, zIndex:7 }} alt="" />
+        <img src="https://i.ibb.co/2YyJrLF2/Untitled190-20260511164352.png" style={{ ...layerStyle, zIndex:8, opacity:0.6 }} alt="" />
       </div>
-
       <style>{`
-        /* Дрожание огонька ВНУТРИ льда */
-        @keyframes innerShudder {
-          0%, 100% { transform: translate(0, 0); }
-          25% { transform: translate(-0.3px, 0.3px); }
-          50% { transform: translate(0.3px, -0.3px); }
-          75% { transform: translate(-0.3px, -0.3px); }
-        }
-
-        /* Анимация дрожащих рук */
-        @keyframes handsShiver {
-          0%, 100% { transform: translateX(0) scale(1); }
-          20% { transform: translateX(-1px) scale(1.01); }
-          40% { transform: translateX(1px) translateY(-0.5px); }
-          60% { transform: translateX(-1px) translateY(0.5px); }
-          80% { transform: translateX(1px) scale(0.99); }
-        }
-
-        @keyframes blinkFrozen { 0%, 94%, 96%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.01); } }
-        @keyframes flameGlow { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.8; } }
-        @keyframes innerFloat { 0%, 100% { transform: translateY(0); opacity: 0.7; } 50% { transform: translateY(-7px); opacity: 1; } }
-        @keyframes browsShudder { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
-        @keyframes mouthVibrate { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(0.5px); } }
-        @keyframes snotDripSoft { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(3px) scaleY(1.05); } }
+        @keyframes innerShudder { 0%,100%{transform:translate(0,0);} 25%{transform:translate(-0.3px,0.3px);} 50%{transform:translate(0.3px,-0.3px);} 75%{transform:translate(-0.3px,-0.3px);} }
+        @keyframes handsShiver { 0%,100%{transform:translateX(0) scale(1);} 20%{transform:translateX(-1px) scale(1.01);} 40%{transform:translateX(1px) translateY(-0.5px);} 60%{transform:translateX(-1px) translateY(0.5px);} 80%{transform:translateX(1px) scale(0.99);} }
+        @keyframes blinkFrozen { 0%,94%,96%,100%{transform:scaleY(1);} 95%{transform:scaleY(0.01);} }
+        @keyframes flameGlow { 0%,100%{opacity:0.5;} 50%{opacity:0.8;} }
+        @keyframes innerFloat { 0%,100%{transform:translateY(0);opacity:0.7;} 50%{transform:translateY(-7px);opacity:1;} }
+        @keyframes browsShudder { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-1.5px);} }
+        @keyframes mouthVibrate { 0%,100%{transform:translateX(0);} 50%{transform:translateX(0.5px);} }
+        @keyframes snotDripSoft { 0%,100%{transform:translateY(0) scaleY(1);} 50%{transform:translateY(3px) scaleY(1.05);} }
       `}</style>
     </div>
   );
 };
+
+/* ───────────── ЖИВОЙ ОГОНЁК ───────────── */
+const StreakFlame = ({ streak, size = 140 }: { streak: number, size?: number }) => {
+  const rgb = isRgbStreak(streak);
+  const hueShift = streak >= 90 ? 80 : streak >= 50 ? 165 : streak >= 25 ? 240 : streak >= 15 ? -25 : 0;
+  const layerStyle: React.CSSProperties = { position:"absolute", top:0, left:0, width:"100%", height:"100%", objectFit:"contain", display:"block", pointerEvents:"none" };
+  const filterFx = rgb ? "hue-rotate(var(--rgb-hue, 0deg)) saturate(1.3)" : `hue-rotate(${hueShift}deg)`;
+
+  return (
+    <div style={{ position:"relative", width:size, height:size, display:"flex", alignItems:"center", justifyContent:"center", overflow:"visible", animation: rgb ? "rgbCycle 4s linear infinite" : undefined } as any}>
+      <div style={{ position:"absolute", width:"90%", height:"90%", borderRadius:"50%", background:"radial-gradient(circle, rgba(255,140,0,0.5) 0%, transparent 70%)", filter:`blur(15px) ${filterFx}`, animation:"flameGlow 4s ease-in-out infinite" }} />
+      <div style={{ position:"relative", width:"100%", height:"100%", animation:"flameWobble 4s ease-in-out infinite", transformOrigin:"50% 90%" }}>
+        <img src="https://i.ibb.co/3mg4dWt4/Untitled190-20260511153855.png" style={{ ...layerStyle, filter:filterFx }} alt="" />
+        <img src="https://i.ibb.co/WvBJRvQc/Untitled190-20260511153903.png" style={{ ...layerStyle, filter:filterFx, animation:"effectFloat 4s infinite ease-in-out" }} alt="" />
+        <div style={{ position:"absolute", inset:0 }}>
+          <div style={{ position:"absolute", inset:0, animation:"mouthBreathActive 4s ease-in-out infinite", transformOrigin:"50% 65%" }}>
+            <img src="https://i.ibb.co/MDJnjp7k/image-2.png" style={layerStyle} alt="" />
+          </div>
+          <div style={{ position:"absolute", inset:0, animation:"browsFloatActive 4s ease-in-out infinite", transformOrigin:"50% 35%" }}>
+            <img src="https://i.ibb.co/wF1TRzYX/image-3.png" style={layerStyle} alt="" />
+          </div>
+          <div style={{ position:"absolute", inset:0, animation:"blinkSlow 7s infinite", transformOrigin:"50% 55%" }}>
+            <img src="https://i.ibb.co/3mqZW48Y/image-1.png" style={layerStyle} alt="" />
+          </div>
+        </div>
+        <div style={{ position:"absolute", inset:0, animation:"handsWiggleActive 4s ease-in-out infinite", transformOrigin:"50% 60%" }}>
+          <img src="https://i.ibb.co/JRntLWBQ/Untitled190-20260511155448.png" style={{ ...layerStyle, filter:filterFx }} alt="" />
+          <img src="https://i.ibb.co/jZbBtPmB/Untitled190-20260511155454.png" style={{ ...layerStyle, filter:filterFx }} alt="" />
+        </div>
+      </div>
+      <style>{`
+        @keyframes flameWobble { 0%,100%{transform:rotate(-2.5deg) translateY(0);} 50%{transform:rotate(2.5deg) translateY(-2px);} }
+        @keyframes blinkSlow { 0%,91%,95%,100%{transform:scaleY(1);} 93%{transform:scaleY(0.02);} }
+        @keyframes flameGlow { 0%,100%{opacity:0.5;} 50%{opacity:0.8;} }
+        @keyframes effectFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
+        @keyframes handsWiggleActive { 0%,100%{transform:translateY(0) rotate(-1deg);} 50%{transform:translateY(-4px) rotate(1deg);} }
+        @keyframes browsFloatActive { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px) scaleX(1.02);} }
+        @keyframes mouthBreathActive { 0%,100%{transform:scale(1) translateY(0);} 50%{transform:scaleX(1.06) scaleY(0.94) translateY(1.5px);} }
+        @property --rgb-hue { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        @keyframes rgbCycle { from { --rgb-hue: 0deg; } to { --rgb-hue: 360deg; } }
+      `}</style>
+    </div>
+  );
+};
+
+/* ───────────── МИНИ ОГОНЁК ДЛЯ ДНЕЙ ───────────── */
+const MiniFlame = ({ color, dim, rgb }: { color: string; dim?: boolean; rgb?: boolean }) => (
+  <span style={{
+    display:"inline-flex", alignItems:"center", justifyContent:"center",
+    filter: rgb ? "drop-shadow(0 0 6px hsl(var(--mf-hue,0) 100% 60%))" : `drop-shadow(0 0 6px ${color})`,
+    opacity: dim ? 0.35 : 1,
+    animation: rgb ? "mfRgb 3s linear infinite" : undefined,
+  } as any}>
+    <Flame size={20} style={{ color: rgb ? "hsl(var(--mf-hue,0) 100% 60%)" : color, fill: rgb ? "hsl(var(--mf-hue,0) 100% 60%)" : color, fillOpacity: dim ? 0.15 : 0.25 }} />
+    <style>{`@property --mf-hue{syntax:'<number>';initial-value:0;inherits:false;} @keyframes mfRgb{from{--mf-hue:0;}to{--mf-hue:360;}}`}</style>
+  </span>
+);
+
 /* ───────────── SHOP ───────────── */
 const Shop = () => {
   const nick = localStorage.getItem("crp_nick") || "";
@@ -195,20 +179,30 @@ const Shop = () => {
   const [lastReward, setLastReward] = useState(() => parseInt(localStorage.getItem("crp_last_reward") || "0"));
   const [streak, setStreak] = useState(() => parseInt(localStorage.getItem("crp_streak") || "0"));
   const [loading, setLoading] = useState(false);
+  const [claimingNft, setClaimingNft] = useState<number | null>(null);
   const [nftGifts, setNftGifts] = useState<{ id:number; name:string; image_url:string; price:number }[]>([]);
+  const [claimedNfts, setClaimedNfts] = useState<Set<number>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("crp_claimed_nfts") || "[]")); } catch { return new Set(); }
+  });
 
   useEffect(() => {
-    supabase.from("users").select("balance").ilike("username", nick).maybeSingle().then(({ data }:any) => {
+    supabase.from("users").select("balance").ilike("username", nick).maybeSingle().then(({ data }: any) => {
       if (data?.balance !== undefined) {
         const bal = (data.balance as number) || 0;
         syncBalance(nick, bal); setBalanceState(bal);
       }
     });
-    supabase  .from("nft_gifts")
-  .select("*")
-  .order("price", { ascending: true })   // ← сортируем по цене
-  .limit(4)
-  .then(({ data }: any) => { if (data) setNftGifts(data); });
+    supabase.from("nft_gifts").select("*").order("price", { ascending: true }).limit(4)
+      .then(({ data }: any) => { if (data) setNftGifts(data); });
+    // подтягиваем уже забранные NFT за серию
+    supabase.from("user_nft_claims").select("nft_id").ilike("username", nick)
+      .then(({ data }: any) => {
+        if (Array.isArray(data)) {
+          const ids = new Set<number>(data.map((r: any) => r.nft_id));
+          setClaimedNfts(ids);
+          localStorage.setItem("crp_claimed_nfts", JSON.stringify([...ids]));
+        }
+      }).catch(() => {});
   }, [nick]);
 
   const canClaim = Date.now() - lastReward > 24*60*60*1000;
@@ -239,6 +233,41 @@ const Shop = () => {
     setLoading(false);
   };
 
+  /* ── Получение NFT за серию ── */
+  const claimNftMilestone = async (nft: { id:number; name:string; image_url:string; price:number }) => {
+    if (claimingNft !== null) return;
+    if (claimedNfts.has(nft.id)) return;
+    setClaimingNft(nft.id);
+    try {
+      // 1) пробуем записать в user_nft_claims (не обязательная таблица)
+      let dbOk = false;
+      try {
+        const { error } = await supabase.from("user_nft_claims").insert({
+          username: nick, nft_id: nft.id, source: "streak", claimed_at: new Date().toISOString(),
+        });
+        dbOk = !error;
+      } catch { dbOk = false; }
+
+      // 2) пробуем добавить в инвентарь пользователя (если есть user_inventory)
+      try {
+        await supabase.from("user_inventory").insert({
+          username: nick, nft_id: nft.id, source: "streak_reward",
+        });
+      } catch { /* игнор */ }
+
+      // 3) локальный fallback всегда
+      const next = new Set(claimedNfts); next.add(nft.id);
+      setClaimedNfts(next);
+      localStorage.setItem("crp_claimed_nfts", JSON.stringify([...next]));
+
+      toast.success(`🎁 Отримано: ${nft.name}${dbOk ? "" : " (локально)"}`);
+    } catch (e) {
+      toast.error("Не вдалося отримати NFT");
+    } finally {
+      setClaimingNft(null);
+    }
+  };
+
   const streakDays = [
     { day:1, reward:100, label:"Д1" }, { day:2, reward:100, label:"Д2" },
     { day:3, reward:150, label:"Д3" }, { day:4, reward:150, label:"Д4" },
@@ -246,10 +275,11 @@ const Shop = () => {
     { day:7, reward:200, label:"Д7" },
   ];
 
-  // милстоуны NFT — тянем из БД (имя + цена)
   const milestoneDays = [15, 50, 150, 365];
   const flameC = streakColor(streak);
-  const flameCss = hsl(flameC, 1);
+  const flameCss = isRgbStreak(streak) ? "hsl(var(--rgb-hue,0deg) 100% 60%)" : hsl(flameC, 1);
+  const borderCss = isRgbStreak(streak) ? "hsla(0,0%,100%,0.3)" : hsl(flameC, 0.25);
+  const showFrozen = canClaim && streak > 0; // не забрали — заморожен
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
@@ -267,23 +297,24 @@ const Shop = () => {
       </div>
 
       {/* STREAK CARD */}
-      <section className="rounded-2xl p-5"
-               style={{ background:"linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))", border:`1px solid ${hsl(flameC,0.25)}`, boxShadow:`0 0 40px -10px ${hsl(flameC,0.35)} inset` }}>
-        {/* колонки дней */}
-        <div className="grid grid-cols-7 gap-2">
+      <section className="rounded-2xl p-5 relative overflow-hidden"
+               style={{ background:"linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015))", border:`1px solid ${borderCss}`, boxShadow:`0 0 50px -12px ${hsl(flameC,0.4)} inset` }}>
+        {/* Дни — иконки огонька вместо точек */}
+        <div className="grid grid-cols-7 gap-2 relative z-10">
           {streakDays.map(d => {
             const done = streak >= d.day;
-            const current = streak + 1 === d.day;
-            const dotColor = hsl(streakColor(d.day), done ? 1 : 0.35);
+            const current = streak + 1 === d.day && canClaim;
+            const c = streakColor(d.day);
+            const dotColor = hsl(c, done ? 1 : 0.4);
             return (
               <div key={d.day} className="flex flex-col items-center gap-1.5">
-                <div className="w-full aspect-square rounded-xl flex items-center justify-center"
+                <div className="w-full aspect-square rounded-xl flex items-center justify-center transition-all"
                      style={{
-                       background: done ? `linear-gradient(180deg, ${hsl(streakColor(d.day),0.25)}, ${hsl(streakColor(d.day),0.08)})` : "rgba(255,255,255,0.03)",
-                       border: `1px solid ${current ? hsl(flameC,0.6) : done ? hsl(streakColor(d.day),0.5) : "rgba(255,255,255,0.06)"}`,
-                       boxShadow: current ? `0 0 18px ${hsl(flameC,0.4)}` : "none",
+                       background: done ? `linear-gradient(180deg, ${hsl(c,0.28)}, ${hsl(c,0.08)})` : "rgba(255,255,255,0.03)",
+                       border: `1px solid ${current ? hsl(flameC,0.7) : done ? hsl(c,0.55) : "rgba(255,255,255,0.06)"}`,
+                       boxShadow: current ? `0 0 22px ${hsl(flameC,0.5)}` : done ? `0 0 10px ${hsl(c,0.25)} inset` : "none",
                      }}>
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: dotColor, boxShadow: done ? `0 0 8px ${dotColor}` : "none" }} />
+                  <MiniFlame color={dotColor} dim={!done} />
                 </div>
                 <div className="text-[10px] text-white/50 tabular-nums">+{d.reward}</div>
                 <div className="text-[10px] text-white/70 font-medium">{d.label}</div>
@@ -292,14 +323,20 @@ const Shop = () => {
           })}
         </div>
 
-        {/* БОЛЬШОЙ ОГОНЬ + ЛЕЙБЛ */}
-        <div className="mt-6 flex flex-col items-center">
-          <StreakFlame streak={streak} size={140} />
-          <div className="mt-1 text-center">
-            <div className="text-3xl font-extrabold tracking-tight" style={{ color: flameCss, textShadow: `0 0 20px ${hsl(flameC,0.6)}` }}>
+        {/* БОЛЬШОЙ ОГОНЬ */}
+        <div className="mt-6 flex flex-col items-center relative z-10">
+          {showFrozen ? <FrozenFlame size={150} /> : <StreakFlame streak={streak} size={150} />}
+          <div className="mt-2 text-center">
+            <div className="text-4xl font-extrabold tracking-tight" style={{ color: showFrozen ? "#bfeaff" : flameCss, textShadow: `0 0 22px ${showFrozen ? "rgba(135,206,250,0.7)" : hsl(flameC,0.7)}` }}>
               {streak}
             </div>
-            <div className="text-xs uppercase tracking-[0.2em] text-white/60">днів поспіль</div>
+            <div className="text-[11px] uppercase tracking-[0.25em] text-white/60 mt-1">днів поспіль</div>
+            {showFrozen && (
+              <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full"
+                   style={{ background:"rgba(135,206,250,0.12)", border:"1px solid rgba(135,206,250,0.35)", color:"#bfeaff" }}>
+                ❄ Серія замерзне — забери нагороду
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -332,7 +369,7 @@ const Shop = () => {
                 <span className="tabular-nums">{timeLeft()}</span>
               </div>
               <div className="h-2 rounded-full overflow-hidden" style={{ background:"rgba(255,255,255,0.06)" }}>
-                <div className="h-full rounded-full transition-all" style={{ width:`${progress}%`, background:`linear-gradient(90deg, ${hsl(flameC,0.8)}, ${hsl({...flameC, h:(flameC.h+30)%360},0.8)})` }} />
+                <div className="h-full rounded-full transition-all" style={{ width:`${progress}%`, background:`linear-gradient(90deg, ${hsl(flameC,0.85)}, ${hsl({...flameC, h:(flameC.h+30)%360},0.85)})` }} />
               </div>
               <div className="text-[11px] text-white/50 text-right">{Math.round(progress)}% до нагороди</div>
             </div>
@@ -340,7 +377,7 @@ const Shop = () => {
         </div>
       </section>
 
-      {/* NFT MILESTONES (только из БД) */}
+      {/* NFT MILESTONES */}
       <section className="rounded-2xl p-5" style={{ background:"linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))", border:"1px solid rgba(255,255,255,0.08)" }}>
         <div className="flex items-center gap-2 mb-4">
           <Gift size={18} className="text-white/80" />
@@ -351,28 +388,45 @@ const Shop = () => {
             const reached = streak >= days;
             const nft = nftGifts[idx];
             const c = streakColor(days);
+            const claimed = nft ? claimedNfts.has(nft.id) : false;
+            const isClaiming = nft ? claimingNft === nft.id : false;
             return (
-              <div key={days} className="flex items-center gap-3 rounded-xl p-3"
-                   style={{ background:"rgba(255,255,255,0.02)", border:`1px solid ${reached ? hsl(c,0.5) : "rgba(255,255,255,0.06)"}` }}>
+              <div key={days} className="flex items-center gap-3 rounded-xl p-3 transition-all"
+                   style={{
+                     background: reached ? `linear-gradient(135deg, ${hsl(c,0.10)}, rgba(255,255,255,0.02))` : "rgba(255,255,255,0.02)",
+                     border:`1px solid ${reached ? hsl(c,0.5) : "rgba(255,255,255,0.06)"}`,
+                     boxShadow: reached && !claimed ? `0 0 24px -8px ${hsl(c,0.6)}` : "none",
+                   }}>
                 <div className="relative w-16 h-16 rounded-lg overflow-hidden flex items-center justify-center shrink-0"
-                     style={{ background:`linear-gradient(135deg, ${hsl(c,0.2)}, ${hsl(c,0.05)})`, border:`1px solid ${hsl(c,0.3)}` }}>
+                     style={{ background:`linear-gradient(135deg, ${hsl(c,0.25)}, ${hsl(c,0.05)})`, border:`1px solid ${hsl(c,0.35)}` }}>
                   {nft?.image_url
                     ? <img src={nft.image_url} alt={nft.name} className="w-full h-full object-cover" onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display="none";}} />
-                    : <Trophy size={24} style={{ color: hsl(c,0.8) }} />}
+                    : <Trophy size={24} style={{ color: hsl(c,0.85) }} />}
                   {!reached && (
-                    <div className="absolute inset-0 flex items-center justify-center" style={{ background:"rgba(0,0,0,0.55)", backdropFilter:"blur(2px)" }}>
-                      <Lock size={18} className="text-white/80" />
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background:"rgba(0,0,0,0.6)", backdropFilter:"blur(2px)" }}>
+                      <Lock size={18} className="text-white/85" />
                     </div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <div className="font-semibold truncate">{nft?.name ?? `NFT #${idx+1}`}</div>
-                    {reached && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: hsl(c,0.2), color: hsl(c,1), border:`1px solid ${hsl(c,0.5)}` }}>ОТРИМАНО</span>}
+                    {claimed && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background:hsl(c,0.2), color:hsl(c,1), border:`1px solid ${hsl(c,0.5)}` }}>ОТРИМАНО</span>}
                   </div>
-                  <div className="text-xs text-white/60 mt-0.5">
+                  <div className="text-xs text-white/60 mt-0.5 flex items-center gap-1">
+                    <Flame size={10} style={{ color: hsl(c,1) }} />
                     {days} днів{nft?.price != null && <> · <span className="text-white/80 tabular-nums">{nft.price} CR</span></>}
                   </div>
+                  {reached && nft && !claimed && (
+                    <button
+                      onClick={() => claimNftMilestone(nft)}
+                      disabled={isClaiming}
+                      className="mt-2 w-full text-xs font-bold py-1.5 px-3 rounded-lg transition-all active:scale-[0.98] disabled:opacity-60"
+                      style={{ background:`linear-gradient(135deg, ${hsl(c,0.9)}, ${hsl({...c,h:(c.h+30)%360},0.9)})`, color:"#0b0b0b", boxShadow:`0 6px 20px -6px ${hsl(c,0.7)}` }}
+                    >
+                      {isClaiming ? "Отримую..." : "Отримати NFT"}
+                    </button>
+                  )}
                 </div>
                 {!reached && (
                   <div className="text-right shrink-0">
@@ -386,7 +440,7 @@ const Shop = () => {
         </div>
       </section>
 
-      {/* ТАБЛИЦА БОНУСОВ */}
+      {/* ТАБЛИЦЯ БОНУСІВ */}
       <section className="grid grid-cols-3 gap-2">
         {[
           { label:"1–2 дні", bonus:"+100", c: streakColor(1) },
