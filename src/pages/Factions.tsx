@@ -126,9 +126,11 @@ const Factions = () => {
 
   const renderFaction = (f: FactionItem, i: number) => {
     const Icon = ICON_MAP[f.iconName] || Shield;
-    const bgStyle = f.bgImage
-      ? { backgroundImage: `url(${f.bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }
-      : { background: f.gradient };
+    const bgStyle = f.bannerImage
+      ? { backgroundImage: `url(${f.bannerImage})`, backgroundSize: "cover", backgroundPosition: "center" }
+      : f.bgImage
+        ? { backgroundImage: `url(${f.bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }
+        : { background: f.gradient };
     return (
       <button key={f.id} onClick={() => navigate(`/factions/${f.id}`)}
         className="w-full animate-slide-up text-left"
@@ -137,17 +139,10 @@ const Factions = () => {
           style={{ borderColor: f.color + "30" }}
           onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 16px ${f.color}28`; }}
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
-          {/* Banner image on top */}
-          {f.bannerImage && (
-            <div className="w-full h-28 relative">
-              <img src={f.bannerImage} alt={f.name} className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = "none")} />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-            </div>
-          )}
           {/* Card row */}
           <div className="px-4 py-3.5 flex items-center gap-3 relative overflow-hidden"
-            style={{ ...(!f.bannerImage ? bgStyle : { background: f.gradient }), }}>
-            {f.bgImage && !f.bannerImage && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
+            style={{ ...bgStyle }}>
+            {(f.bannerImage || f.bgImage) && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
             <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 relative z-10"
               style={{ backgroundColor: f.color + "18", border: `1px solid ${f.color}35`, boxShadow: `0 0 10px ${f.color}18` }}>
               <Icon className="w-5 h-5" style={{ color: f.color }} />
