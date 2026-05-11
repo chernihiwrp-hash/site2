@@ -68,7 +68,7 @@ const streakColor = (s: number) => {
 };
 const hsl = (c: { h: number; s: number; l: number }, a = 1) => `hsla(${c.h.toFixed(1)},${c.s.toFixed(1)}%,${c.l.toFixed(1)}%,${a})`;
 
-/* ───────────── ЗАМОРОЖЕННЫЙ ОГОНЬ (ЗАМЕНА) ───────────── */
+/* ───────────── ЗАМОРОЖЕННЫЙ (ЗАМЕНА) ───────────── */
 const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) => {
   const layerStyle: React.CSSProperties = {
     position: "absolute",
