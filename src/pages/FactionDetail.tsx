@@ -321,10 +321,10 @@ const handleResign = async () => {
             </div>
           )}
           <div className="p-5"
-            style={faction.bgImage
+            style={faction.bgImage && !faction.bannerImage
               ? { backgroundImage: `url(${faction.bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }
               : { background: faction.gradient }}>
-            {faction.bgImage && <div className="absolute inset-0 bg-black/50" />}
+            {faction.bgImage && !faction.bannerImage && <div className="absolute inset-0 bg-black/50" />}
             <div className="flex items-center gap-4 relative z-10">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold"
                 style={{ backgroundColor: faction.color + "22", border: `1px solid ${faction.color}55`, color: faction.color }}>
