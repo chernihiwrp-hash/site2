@@ -306,7 +306,7 @@ const Shop = () => {
       if (streakFrozen) {
         toast.info(`Серія відновлена! Починаємо заново з 1 дня. +${bonus} CR`);
       } else {
-        toast.success(`+${bonus} CR нараховано! Серія: ${newStreak} днів 🔥`);
+        toast.success(`+${bonus} CR нараховано! Серія: ${newStreak} днів`);
       }
     } catch { toast.error("Щось пішло не так"); }
     setLoading(false);
@@ -330,7 +330,7 @@ const Shop = () => {
       newClaimed.add(nft.id);
       setClaimedNfts(newClaimed);
       localStorage.setItem("crp_claimed_nfts", JSON.stringify([...newClaimed]));
-      toast.success(`🎁 NFT «${nft.name}» отримано і додано до профілю!`);
+      toast.success(`NFT «${nft.name}» отримано і додано до профілю!`);
     } catch (e) {
       toast.error("Помилка отримання NFT");
     }
@@ -455,11 +455,26 @@ const Shop = () => {
 
           {/* ── FLAME DISPLAY + STREAK NUMBER ── */}
           <div className="flex flex-col items-center py-2">
-            {(streakFrozen || streakAtRisk) ? (
-              <FrozenFlame size={140} />
-            ) : (
-              <StreakFlame streak={streak} size={140} />
-            )}
+            <div style={{ position: "relative", width: 140, height: 140 }}>
+              {/* FrozenFlame — показывается при риске или заморозке */}
+              <div style={{
+                position: "absolute", inset: 0,
+                opacity: (streakFrozen || streakAtRisk) ? 1 : 0,
+                transition: "opacity 0.8s ease",
+                pointerEvents: (streakFrozen || streakAtRisk) ? "auto" : "none",
+              }}>
+                <FrozenFlame size={140} />
+              </div>
+              {/* StreakFlame — показывается в нормальном состоянии */}
+              <div style={{
+                position: "absolute", inset: 0,
+                opacity: (streakFrozen || streakAtRisk) ? 0 : 1,
+                transition: "opacity 0.8s ease",
+                pointerEvents: (streakFrozen || streakAtRisk) ? "none" : "auto",
+              }}>
+                <StreakFlame streak={streak} size={140} />
+              </div>
+            </div>
             <div className="mt-1 text-center">
               <div className="text-4xl font-extrabold tabular-nums tracking-tight"
                 style={{
@@ -468,11 +483,13 @@ const Shop = () => {
                     ? "0 0 20px rgba(100,180,255,0.6)"
                     : `0 0 20px ${hsl(flameC, 0.6)}`,
                   animation: isRgb ? "rgbText 2s linear infinite" : undefined,
+                  transition: "color 0.8s ease, text-shadow 0.8s ease",
                 }}>
                 {streak}
               </div>
-              <div className="text-xs uppercase tracking-[0.2em] text-white/50 mt-0.5">
-                {streakFrozen ? "🧊 серія заморожена" : streakAtRisk ? "⚠️ серія під загрозою" : "днів поспіль"}
+              <div className="text-xs uppercase tracking-[0.2em] text-white/50 mt-0.5"
+                style={{ transition: "color 0.8s ease" }}>
+                {streakFrozen ? "серія заморожена" : streakAtRisk ? "серія під загрозою" : "днів поспіль"}
               </div>
             </div>
           </div>
@@ -503,7 +520,7 @@ const Shop = () => {
         <div className="mt-4">
           {canClaim ? (
             <GradientButton onClick={claimReward} disabled={loading} className="w-full">
-              {loading ? "Нараховую..." : streakFrozen ? "🧊 Розморозити серію" : "🔥 Забрати нагороду"}
+              {loading ? "Нараховую..." : streakFrozen ? "Розморозити серію" : "Забрати нагороду"}
             </GradientButton>
           ) : (
             <div className="space-y-2">
@@ -522,7 +539,7 @@ const Shop = () => {
                 <span>{Math.round(progress)}% до нагороди</span>
                 {timeUntilFreeze < 24 * 60 * 60 * 1000 && (
                   <span style={{ color: "rgba(255,180,80,0.8)" }}>
-                    ⚠ серія згасне через {hoursUntilFreeze}г {minsUntilFreeze}хв
+                    серія згасне через {hoursUntilFreeze}г {minsUntilFreeze}хв
                   </span>
                 )}
               </div>
@@ -615,7 +632,7 @@ const Shop = () => {
                       cursor: isClaiming ? "wait" : "pointer",
                       opacity: isClaiming ? 0.7 : 1,
                     }}>
-                    {isClaiming ? "Отримую..." : "🎁 Отримати NFT"}
+                    {isClaiming ? "Отримую..." : "Отримати NFT"}
                   </button>
                 )}
               </div>
