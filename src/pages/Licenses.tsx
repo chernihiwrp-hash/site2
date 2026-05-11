@@ -84,7 +84,6 @@ const Licenses = () => {
       const licenseData = `${selected.join(", ")} | Roblox: ${roblox}`;
       await store.submitLicense(nick, licenseData, telegram);
       setSubmitted(true);
-      toast.success("Заявку надіслано!");
     } catch (err) {
       toast.error("Помилка");
     } finally {
@@ -92,27 +91,25 @@ const Licenses = () => {
     }
   };
 
+  // ── Full-screen success ──
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#050505] pb-24 px-4 pt-4 text-white">
-        <PageHeader title="ЛІЦЕНЗІЇ" subtitle="Заявка" backTo="/" />
-        <div className="flex flex-col items-center justify-center py-12 animate-in fade-in zoom-in duration-500">
-          <div className="w-24 h-24 rounded-3xl bg-secondary/10 border border-secondary/30 flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(34,197,94,0.15)]">
-            <CheckCircle className="w-12 h-12 text-secondary" style={{ filter: "drop-shadow(0 0 10px rgba(34,197,94,0.5))" }} />
-          </div>
-          <h2 className="text-xl font-black italic tracking-widest text-center mb-2">ЗАЯВКУ ПРИЙНЯТО</h2>
-          <p className="text-[10px] text-white/40 text-center mb-8 uppercase tracking-widest leading-relaxed">
-            Ваша анкета на оформлення ліцензії успішно надіслана в МВС. <br/> Очікуйте підтвердження в реєстрі.
-          </p>
-          
-          <div className="w-full space-y-2">
-            <GradientButton onClick={() => setSubmitted(false)} variant="green" className="w-full py-4 text-[10px] font-black tracking-[0.2em]">
-              ПОВЕРНУТИСЬ ДО РЕЄСТРУ
-            </GradientButton>
-            <button onClick={() => navigate("/")} className="w-full py-3 text-[9px] font-bold text-white/30 hover:text-white/60 transition-colors tracking-widest">
-              НА ГОЛОВНУ
-            </button>
-          </div>
+      <div className="min-h-screen bg-[#050505] pb-24 px-4 pt-4 text-white flex flex-col items-center justify-center animate-fade-in">
+        <div className="w-28 h-28 rounded-3xl flex items-center justify-center mb-6"
+          style={{ background: "hsl(142 71% 45% / 0.12)", border: "2px solid hsl(142 71% 45% / 0.4)", boxShadow: "0 0 60px hsl(142 71% 45% / 0.25)" }}>
+          <CheckCircle className="w-14 h-14" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 12px hsl(142 71% 45%))" }} />
+        </div>
+        <h2 className="font-display text-2xl font-black text-white mb-2 text-center tracking-wide">ЗАЯВКУ ВІДПРАВЛЕНО</h2>
+        <p className="text-xs text-white/40 text-center mb-6 max-w-xs">Адміністрація перевірить оплату і оформить ліцензію. Очікуйте повідомлення в профілі.</p>
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 w-full max-w-xs space-y-2 mb-6">
+          <div className="flex justify-between text-xs"><span className="text-white/40">Нік</span><span className="font-semibold">{nick}</span></div>
+          <div className="flex justify-between text-xs"><span className="text-white/40">Roblox</span><span className="font-semibold">{roblox}</span></div>
+          <div className="flex justify-between text-xs"><span className="text-white/40">Telegram</span><span className="font-semibold">{telegram}</span></div>
+          <div className="flex justify-between text-xs"><span className="text-white/40">Ліцензії</span><span className="font-semibold text-primary">{selected.join(", ")}</span></div>
+        </div>
+        <div className="flex items-center gap-2 px-5 py-3 rounded-2xl" style={{ background: "hsl(142 71% 45% / 0.08)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
+          <Clock className="w-4 h-4" style={{ color: "hsl(142 71% 45%)" }} />
+          <span className="text-xs font-medium" style={{ color: "hsl(142 71% 45%)" }}>Очікуйте підтвердження в профілі</span>
         </div>
       </div>
     );
