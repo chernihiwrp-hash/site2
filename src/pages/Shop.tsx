@@ -68,8 +68,8 @@ const streakColor = (s: number) => {
 };
 const hsl = (c: { h: number; s: number; l: number }, a = 1) => `hsla(${c.h.toFixed(1)},${c.s.toFixed(1)}%,${c.l.toFixed(1)}%,${a})`;
 
-/* ───────────── БОЛЬШОЙ ОГОНЬ СЕРИИ ───────────── */
-const FrozenStreakFlame = ({ size = 200 }: { size?: number }) => {
+/* ───────────── ЗАМОРОЖЕННЫЙ ОГОНЬ (ЗАМЕНА) ───────────── */
+const StreakFlame = ({ size = 200 }: { size?: number, streak?: number }) => {
   const layerStyle: React.CSSProperties = {
     position: "absolute",
     top: 0,
@@ -90,7 +90,7 @@ const FrozenStreakFlame = ({ size = 200 }: { size?: number }) => {
       alignItems: "center",
       justifyContent: "center",
     }}>
-      {/* Холодное свечение под глыбой */}
+      {/* Свечение */}
       <div style={{
         position: "absolute", 
         width: "100%", height: "100%", 
@@ -99,7 +99,6 @@ const FrozenStreakFlame = ({ size = 200 }: { size?: number }) => {
         animation: "iceGlow 4s ease-in-out infinite",
       }} />
 
-      {/* Основной контейнер с эффектом дрожи от холода */}
       <div style={{ 
         position: "relative", 
         width: "100%", height: "100%",
@@ -107,78 +106,38 @@ const FrozenStreakFlame = ({ size = 200 }: { size?: number }) => {
         transformOrigin: "50% 80%"
       }}>
         
-        {/* 1. Задний фон: Глыба (самый нижний слой) */}
-        <img src="https://i.ibb.co/1JmdZ0Q4/Untitled190-20260511164205.png" style={{ ...layerStyle, zIndex: 1 }} alt="bg-ice" />
+        {/* Порядок слоев строго по твоим ссылкам */}
+        <img src="https://i.ibb.co/1JmdZ0Q4/Untitled190-20260511164205.png" style={{ ...layerStyle, zIndex: 1 }} alt="1" />
+        <img src="https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" style={{ ...layerStyle, zIndex: 2 }} alt="2" />
+        <img src="https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" style={{ ...layerStyle, zIndex: 3, animation: "innerFloat 4s ease-in-out infinite" }} alt="3" />
 
-        {/* 2. Основное тело огонька */}
-        <img src="https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" style={{ ...layerStyle, zIndex: 2 }} alt="body" />
-
-        {/* 3. Второстепенное тело (эффект внутри) */}
-        <img 
-          src="https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" 
-          style={{ ...layerStyle, zIndex: 3, animation: "innerFloat 4s ease-in-out infinite" }} 
-          alt="inner-body" 
-        />
-
-        {/* --- Группа ЛИЦА --- */}
         <div style={{ position: "absolute", inset: 0, zIndex: 4 }}>
-          {/* 4. Глаза (редкое, "замерзшее" моргание) */}
           <div style={{ position: "absolute", inset: 0, animation: "iceBlink 10s infinite", transformOrigin: "50% 55%" }}>
-            <img src="https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" style={layerStyle} alt="eyes" />
+            <img src="https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" style={layerStyle} alt="4" />
           </div>
-
-          <img src="https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" style={layerStyle} alt="brows" />
-
-          {/* 6. Рот */}
-          <img src="https://i.ibb.co/KjSFLxFf/Untitled190-20260511164236.png" style={layerStyle} alt="mouth" />
+          <img src="https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" style={layerStyle} alt="5" />
+          <img src="https://i.ibb.co/KjSFLxFf/Untitled190-20260511164236.png" style={layerStyle} alt="6" />
         </div>
 
-        {/* 7. Сопля (качается отдельно) */}
         <div style={{ position: "absolute", inset: 0, zIndex: 5, animation: "snotSwing 3s ease-in-out infinite", transformOrigin: "50% 50%" }}>
-          <img src="https://i.ibb.co/zVbT4TTR/Untitled190-20260511164441.png" style={layerStyle} alt="snot" />
+          <img src="https://i.ibb.co/zVbT4TTR/Untitled190-20260511164441.png" style={layerStyle} alt="7" />
         </div>
 
-        {/* 8. Руки (поверх тела и лица) */}
-        <img src="https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" style={{ ...layerStyle, zIndex: 6 }} alt="hands" />
-
-        {/* 9. Основная глыба (передний слой) */}
-        <img src="https://i.ibb.co/zW5DhzsJ/Untitled190-20260511164252.png" style={{ ...layerStyle, zIndex: 7 }} alt="ice-front" />
-
-        {/* 10. Оверлей глыбы (блики и текстура поверх всего) */}
-        <img src="https://i.ibb.co/2YyJrLF2/Untitled190-20260511164352.png" style={{ ...layerStyle, zIndex: 8, opacity: 0.6 }} alt="ice-overlay" />
+        <img src="https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" style={{ ...layerStyle, zIndex: 6 }} alt="8" />
+        <img src="https://i.ibb.co/zW5DhzsJ/Untitled190-20260511164252.png" style={{ ...layerStyle, zIndex: 7 }} alt="9" />
+        <img src="https://i.ibb.co/2YyJrLF2/Untitled190-20260511164352.png" style={{ ...layerStyle, zIndex: 8, opacity: 0.6 }} alt="10" />
       </div>
 
       <style>{`
-        /* Мелкая дрожь от холода */
         @keyframes iceShiver {
-          0%, 100% { transform: rotate(-0.5deg) translate(0, 0); }
+          0%, 100% { transform: rotate(-0.5deg); }
           10%, 30%, 50%, 70%, 90% { transform: rotate(0.5deg) translate(1px, -0.5px); }
           20%, 40%, 60%, 80% { transform: rotate(-0.5deg) translate(-1px, 0.5px); }
         }
-
-        /* Замедленное моргание (глаза прикрываются на дольше) */
-        @keyframes iceBlink {
-          0%, 94%, 100% { transform: scaleY(1); }
-          96%, 98% { transform: scaleY(0); }
-        }
-
-        /* Покачивание сопли */
-        @keyframes snotSwing {
-          0%, 100% { transform: translateY(0) rotate(-1deg); }
-          50% { transform: translateY(2px) rotate(1deg); }
-        }
-
-        /* Медленное плавание эффекта внутри */
-        @keyframes innerFloat {
-          0%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
-          50% { transform: translateY(-5px) scale(1.05); opacity: 1; }
-        }
-
-        /* Пульсация свечения льда */
-        @keyframes iceGlow {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50% { opacity: 0.7; transform: scale(1.1); }
-        }
+        @keyframes iceBlink { 0%, 94%, 100% { transform: scaleY(1); } 96%, 98% { transform: scaleY(0); } }
+        @keyframes snotSwing { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(2px) rotate(1deg); } }
+        @keyframes innerFloat { 0%, 100% { transform: translateY(0); opacity: 0.7; } 50% { transform: translateY(-5px); opacity: 1; } }
+        @keyframes iceGlow { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.7; } }
       `}</style>
     </div>
   );
