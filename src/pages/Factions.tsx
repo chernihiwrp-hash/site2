@@ -133,27 +133,37 @@ const Factions = () => {
       <button key={f.id} onClick={() => navigate(`/factions/${f.id}`)}
         className="w-full animate-slide-up text-left"
         style={{ animationDelay: `${i * 50}ms` }}>
-        <div className="rounded-2xl px-4 py-3.5 flex items-center gap-3 border transition-all duration-200 hover:scale-[1.01] active:scale-[0.98] relative overflow-hidden"
-          style={{ ...bgStyle, borderColor: f.color + "30" }}
+        <div className="rounded-2xl border overflow-hidden transition-all duration-200 hover:scale-[1.01] active:scale-[0.98]"
+          style={{ borderColor: f.color + "30" }}
           onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 16px ${f.color}28`; }}
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
-          {/* Dark overlay when using image bg */}
-          {f.bgImage && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 relative z-10"
-            style={{ backgroundColor: f.color + "18", border: `1px solid ${f.color}35`, boxShadow: `0 0 10px ${f.color}18` }}>
-            <Icon className="w-5 h-5" style={{ color: f.color }} />
-          </div>
-          <div className="flex-1 min-w-0 relative z-10">
-            <h3 className="text-sm font-semibold text-foreground">{f.name}</h3>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{f.desc}</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 relative z-10">
-            <div className="flex items-center gap-1 px-2 py-1 rounded-lg"
-              style={{ backgroundColor: f.color + "15", border: `1px solid ${f.color}25` }}>
-              <Users className="w-3 h-3" style={{ color: f.color }} />
-              <span className="text-[10px] font-semibold" style={{ color: f.color }}>{f.memberCount}</span>
+          {/* Banner image on top */}
+          {f.bannerImage && (
+            <div className="w-full h-28 relative">
+              <img src={f.bannerImage} alt={f.name} className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = "none")} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
             </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          )}
+          {/* Card row */}
+          <div className="px-4 py-3.5 flex items-center gap-3 relative overflow-hidden"
+            style={{ ...(!f.bannerImage ? bgStyle : { background: f.gradient }), }}>
+            {f.bgImage && !f.bannerImage && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 relative z-10"
+              style={{ backgroundColor: f.color + "18", border: `1px solid ${f.color}35`, boxShadow: `0 0 10px ${f.color}18` }}>
+              <Icon className="w-5 h-5" style={{ color: f.color }} />
+            </div>
+            <div className="flex-1 min-w-0 relative z-10">
+              <h3 className="text-sm font-semibold text-foreground">{f.name}</h3>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{f.desc}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 relative z-10">
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg"
+                style={{ backgroundColor: f.color + "15", border: `1px solid ${f.color}25` }}>
+                <Users className="w-3 h-3" style={{ color: f.color }} />
+                <span className="text-[10px] font-semibold" style={{ color: f.color }}>{f.memberCount}</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </div>
           </div>
         </div>
       </button>
