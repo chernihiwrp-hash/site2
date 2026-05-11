@@ -94,23 +94,23 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
       justifyContent: "center",
       overflow: "visible",
     }}>
-      {/* 1. Заднее свечение (интенсивнее) */}
+      {/* 1. Заднее свечение (мягкое) */}
       <div style={{
         position: "absolute", 
-        width: "95%", 
-        height: "95%", 
+        width: "90%", 
+        height: "90%", 
         borderRadius: "50%",
-        background: `radial-gradient(circle, rgba(255,140,0,0.6) 0%, transparent 75%)`,
-        filter: `blur(18px) hue-rotate(${hueShift}deg)`,
-        animation: "flameGlow 3.5s ease-in-out infinite",
+        background: `radial-gradient(circle, rgba(255,140,0,0.5) 0%, transparent 70%)`,
+        filter: `blur(15px) hue-rotate(${hueShift}deg)`,
+        animation: "flameGlow 4s ease-in-out infinite",
       }} />
 
-      {/* --- Основной контейнер ДЫХАНИЯ (пульсирует весь маскот) --- */}
+      {/* --- Основной контейнер ПОКАЧИВАНИЯ (плавное движение) --- */}
       <div style={{ 
         position: "relative", 
         width: "100%", 
         height: "100%",
-        animation: "flameWobble 3.5s ease-in-out infinite", // Теперь это пульсация
+        animation: "flameWobble 4s ease-in-out infinite", // Только покачивание
         transformOrigin: "50% 90%"
       }}>
         
@@ -121,11 +121,41 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
           alt="body"
         />
 
-        {/* 3. Ручки (Добавлены!) */}
+        {/* 3. Внутренний эффект (плавно плавает вверх-вниз) */}
+        <img 
+          src="https://i.ibb.co/WvBJRvQc/Untitled190-20260511153903.png" 
+          style={{ ...layerStyle, filter: `hue-rotate(${hueShift}deg)`, animation: "effectFloat 4s infinite ease-in-out" }} 
+          alt="internal effect"
+        />
+
+        {/* --- Группа ЛИЦА --- */}
+        <div style={{ position: "absolute", inset: 0 }}>
+          {/* 4. Рот (микро-движение) */}
+          <div style={{ position: "absolute", inset: 0, animation: "mouthBreath 4s ease-in-out infinite", transformOrigin: "50% 65%" }}>
+            <img src="https://i.ibb.co/MDJnjp7k/image-2.png" style={layerStyle} alt="mouth" />
+          </div>
+
+          {/* 5. Брови (микро-движение) */}
+          <div style={{ position: "absolute", inset: 0, animation: "browsFloat 4s ease-in-out infinite", transformOrigin: "50% 35%" }}>
+            <img src="https://i.ibb.co/wF1TRzYX/image-3.png" style={layerStyle} alt="brows" />
+          </div>
+
+          {/* 6. Глаза (БЫСТРОЕ И ЗАМЕТНОЕ МОРГАНИЕ) */}
+          <div style={{ 
+            position: "absolute", 
+            inset: 0, 
+            animation: "blink 5s infinite", // Чаще моргает
+            transformOrigin: "50% 55%" 
+          }}>
+            <img src="https://i.ibb.co/3mqZW48Y/image-1.png" style={layerStyle} alt="eyes" />
+          </div>
+        </div>
+
+        {/* 7. РУЧКИ НА САМЫЙ ВЕРХНИЙ СЛОЙ (Добавлены в конце!) */}
         <div style={{
           position: "absolute",
           inset: 0,
-          animation: "handsWiggle 3.5s ease-in-out infinite",
+          animation: "handsWiggle 4s ease-in-out infinite",
           transformOrigin: "50% 60%"
         }}>
           {/* Слой ручек */}
@@ -134,92 +164,56 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
             style={{ ...layerStyle, filter: `hue-rotate(${hueShift}deg)` }} 
             alt="hands"
           />
-          {/* Внутренний эффект ручек (ярче) */}
+          {/* Внутренний эффект ручек */}
           <img 
             src="https://i.ibb.co/jZbBtPmB/Untitled190-20260511155454.png" 
-            style={{ ...layerStyle, filter: `hue-rotate(${hueShift}deg) saturate(1.4)` }} 
+            style={{ ...layerStyle, filter: `hue-rotate(${hueShift}deg)` }} 
             alt="hands inner"
           />
-        </div>
-
-        {/* 4. Внутренний эффект (теперь имитирует движение кончиков) */}
-        <img 
-          src="https://i.ibb.co/WvBJRvQc/Untitled190-20260511153903.png" 
-          style={{ ...layerStyle, filter: `hue-rotate(${hueShift}deg) saturate(1.2)`, animation: "effectFloat 3.5s infinite ease-in-out" }} 
-          alt="internal effect"
-        />
-
-        {/* --- Группа ЛИЦА (плавает на лице) --- */}
-        <div style={{ 
-          position: "absolute", 
-          inset: 0, 
-          animation: "faceParallax 3.5s ease-in-out infinite",
-          transformOrigin: "50% 60%"
-        }}>
-          {/* 5. Рот */}
-          <div style={{ position: "absolute", inset: 0, animation: "mouthBreath 3.5s ease-in-out infinite", transformOrigin: "50% 65%" }}>
-            <img src="https://i.ibb.co/MDJnjp7k/image-2.png" style={layerStyle} alt="mouth" />
-          </div>
-
-          {/* 6. Брови */}
-          <div style={{ position: "absolute", inset: 0, animation: "browsFloat 3.5s ease-in-out infinite", transformOrigin: "50% 35%" }}>
-            <img src="https://i.ibb.co/wF1TRzYX/image-3.png" style={layerStyle} alt="brows" />
-          </div>
-
-          {/* 7. Глаза (моргание) */}
-          <div style={{ position: "absolute", inset: 0, animation: "blink 7s infinite", transformOrigin: "50% 55%" }}>
-            <img src="https://i.ibb.co/3mqZW48Y/image-1.png" style={layerStyle} alt="eyes" />
-          </div>
         </div>
       </div>
 
       <style>{`
-        /* Основное ДЫХАНИЕ (пульсация масштабом) */
+        /* Основное плавное ПОКАЧИВАНИЕ (без пульсации) */
         @keyframes flameWobble {
-          0%, 100% { transform: scale(1) translateY(0); }
-          50% { transform: scale(1.06) scaleX(1.02) translateY(-2px); }
+          0%, 100% { transform: rotate(-2deg) translateY(0); }
+          50% { transform: rotate(2deg) translateY(-1px); }
         }
 
-        /* Моргание */
+        /* НОВОЕ: Быстрое и Хлёсткое моргание (веки схлопываются мгновенно) */
         @keyframes blink {
-          0%, 93%, 97%, 100% { transform: scaleY(1); }
-          95% { transform: scaleY(0.1); }
+          0%, 93%, 95%, 100% { transform: scaleY(1); }
+          94% { transform: scaleY(0); } // Схлопывание в ноль
         }
 
         /* Пульсация свечения */
         @keyframes flameGlow {
-          0%, 100% { opacity: 0.5; transform: scale(1); }
-          50% { opacity: 0.9; transform: scale(1.2); }
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 0.8; }
         }
 
-        /* Анимация внутреннего эффекта (движение вверх-вниз для кончиков) */
+        /* Плавание внутреннего эффекта (для кончиков) */
         @keyframes effectFloat {
-          0%, 100% { transform: translateY(0); opacity: 0.7; }
-          50% { transform: translateY(-8px); opacity: 1; }
-        }
-
-        /* НОВОЕ: Покачивание ручек */
-        @keyframes handsWiggle {
-          0%, 100% { transform: translateY(0) rotate(-1deg); }
-          50% { transform: translateY(-2px) rotate(1deg); }
-        }
-
-        /* НОВОЕ: Параллакс лица (отставание от тела) */
-        @keyframes faceParallax {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(1px); }
+          50% { transform: translateY(-5px); }
         }
 
-        /* Анимация бровей */
+        /* Покачивание ручек */
+        @keyframes handsWiggle {
+          0%, 100% { transform: translateY(0) rotate(-0.5deg); }
+          50% { transform: translateY(-1px) rotate(0.5deg); }
+        }
+
+        /* Брови */
         @keyframes browsFloat {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-2px) scaleX(1.02); }
+          50% { transform: translateY(-1.5px); }
         }
 
-        /* Анимация рта */
+        /* Рот */
         @keyframes mouthBreath {
-          0%, 100% { transform: scale(1) translateY(0); }
-          50% { transform: scaleX(1.03) scaleY(0.97) translateY(0.5px); }
+          0%, 100% { transform: scale(1); }
+          50% { transform: scaleX(1.02) scaleY(0.98); }
         }
       `}</style>
     </div>
