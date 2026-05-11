@@ -40,7 +40,7 @@ export type CityVoiceItem = {
   likes: number; dislikes: number; status: "active" | "approved" | "rejected";
 };
 export type MayorCandidate = { id: number; name: string; program: string; bio: string; votes: number };
-export type DocumentItem = { id: number; title: string; content: string };
+export type DocumentItem = { id: number; title: string; content: string; button_text?: string; button_url?: string };
 export type CarRecord = { plate: string; model: string; owner: string };
 export type SosMessage = {
   id: number; reason: string; description: string; date: string; type?: string;
@@ -53,6 +53,8 @@ export type LicenseApplication = {
 export type HousePurchaseRequest = {
   id: number; house_id: number; username: string;
   house_name?: string; house_price?: number;
+  house_image?: string; house_desc?: string;
+  rental_days?: number;
   status: "pending" | "approved" | "rejected"; created_at: string;
 };
 export type FactionDB = {
@@ -211,7 +213,31 @@ export const store = {
   setNews: (_: NewsItem[]) => {},
 
   // ── HOUSES ────────────────────────────────────────────────────────────────
+  // Автоматически освобождает дома, у которых истёк срок аренды.
+  // Помечает запись в house_purchase_requests как expired и возвращает дом в продажу.
+  releaseExpiredHouses: async (): Promise<void> => {
+    try {
+      const { data } = await supabase
+        .from("house_purchase_requests")
+        .select("id, house_id, created_at, rental_days, status")
+        .eq("status", "approved");
+      if (!data || data.length === 0) return;
+      const now = Date.now();
+      const expired = data.filter((r: any) => {
+        const days = (r.rental_days as number) || 7;
+        const start = new Date(r.created_at as string).getTime();
+        return start + days * 86400000 < now;
+      });
+      for (const r of expired) {
+        await dbUpdate("house_purchase_requests", { status: "expired" }, { id: eq(r.id as number) });
+        await dbUpdate("houses", { owner_username: null, is_for_sale: true }, { id: eq(r.house_id as number) });
+      }
+    } catch (e) { console.error("releaseExpiredHouses:", e); }
+  },
+
   getHouses: async (username?: string): Promise<HouseItem[]> => {
+    // Подчищаем просроченные аренды перед чтением, чтобы дом не висел "занятым".
+    await (store as any).releaseExpiredHouses?.();
     const { data: housesData } = await supabase.from("houses").select("*").order("created_at", { ascending: false });
     if (!housesData) return [];
     const allHouses = housesData.map((r: Record<string, unknown>) => ({
@@ -248,7 +274,12 @@ export const store = {
     });
   },
 
-  deleteHouse: async (id: number) => { await dbDelete("houses", { id: eq(id) }); },
+  deleteHouse: async (id: number) => {
+    // First clean up any linked purchase requests
+    await supabase.from("house_purchase_requests").delete().eq("house_id", id);
+    const { error } = await dbDelete("houses", { id: eq(id) });
+    if (error) throw error;
+  },
 
   updateHouse: async (id: number, updates: { name?: string; price?: number; desc?: string; imageUrl?: string }) => {
     await dbUpdate("houses", {
@@ -277,12 +308,25 @@ export const store = {
   getHousePurchaseRequests: async (): Promise<HousePurchaseRequest[]> => {
     const { data } = await supabase.from("house_purchase_requests").select("*").order("created_at", { ascending: false });
     if (!data) return [];
-    return data.map((r: Record<string, unknown>) => ({
-      id: r.id as number, house_id: r.house_id as number, username: r.username as string,
-      house_name: (r.house_name as string) || "", house_price: (r.house_price as number) || 0,
-      status: r.status as "pending" | "approved" | "rejected",
-      created_at: r.created_at as string, rental_days: (r.rental_days as number) || 7,
-    }));
+    // Fetch house details to get image, description
+    const houseIds = [...new Set(data.map((r: Record<string, unknown>) => r.house_id as number).filter(Boolean))];
+    let housesMap: Record<number, Record<string, unknown>> = {};
+    if (houseIds.length > 0) {
+      const { data: houses } = await supabase.from("houses").select("id, name, description, price, image_url").in("id", houseIds);
+      if (houses) houses.forEach((h: Record<string, unknown>) => { housesMap[h.id as number] = h; });
+    }
+    return data.map((r: Record<string, unknown>) => {
+      const h = housesMap[r.house_id as number] || {};
+      return {
+        id: r.id as number, house_id: r.house_id as number, username: r.username as string,
+        house_name: (r.house_name as string) || (h.name as string) || "",
+        house_price: (r.house_price as number) || (h.price as number) || 0,
+        house_image: (h.image_url as string) || undefined,
+        house_desc: (h.description as string) || "",
+        status: r.status as "pending" | "approved" | "rejected",
+        created_at: r.created_at as string, rental_days: (r.rental_days as number) || 7,
+      };
+    });
   },
 
   updateHousePurchaseStatus: async (id: number, status: "approved" | "rejected", houseId?: number, username?: string) => {
@@ -353,10 +397,48 @@ export const store = {
     const { error } = await dbUpdate(
       "faction_applications",
       { status: "rejected" },
-      { username: eq(nick), faction_name: ilike(dbFactionName), status: eq("approved") },
+      { username: ilike(nick), faction_name: ilike(dbFactionName), status: eq("approved") },
     );
     if (error) { console.error("❌ Помилка Supabase при оновленні:", error.message); return false; }
     return true;
+  },
+
+  // Игрок сам уходит из фракции — то же, что kickFromFaction, но семантически отдельный метод.
+  resignFromFaction: async (nick: string, factionName: string): Promise<boolean> => {
+    const dbFactionName = factionName.replace(/^фракція\s*/i, "").trim();
+    const { error } = await dbUpdate(
+      "faction_applications",
+      { status: "rejected" },
+      { username: ilike(nick), faction_name: ilike(dbFactionName), status: eq("approved") },
+    );
+    if (error) { console.error("❌ resignFromFaction:", error.message); return false; }
+    return true;
+  },
+
+  // ── WANTED ────────────────────────────────────────────────────────────────
+  getWanted: async (): Promise<WantedPerson[]> => {
+    const { data, error } = await supabase
+      .from("wanted")
+      .select("*")
+      .order("stars", { ascending: false });
+    if (error) { console.error("getWanted:", error.message); return []; }
+    return (data || []).map((r: Record<string, unknown>) => ({
+      id: r.id as number,
+      name: (r.name as string) || (r.username as string) || "",
+      reason: (r.reason as string) || "",
+      stars: Math.max(0, Math.min(5, (r.stars as number) || 0)),
+    }));
+  },
+
+  addWanted: async (name: string, reason: string, stars: number): Promise<boolean> => {
+    try {
+      await secureInsert("wanted", { name, reason, stars: Math.max(0, Math.min(5, stars)) });
+      return true;
+    } catch (e) { console.error("addWanted:", e); return false; }
+  },
+
+  removeWanted: async (id: number): Promise<void> => {
+    await dbDelete("wanted", { id: eq(id) });
   },
 
   // ── ADMIN APPLICATIONS ────────────────────────────────────────────────────
@@ -488,12 +570,12 @@ export const store = {
     ];
     return data as DocumentItem[];
   },
-  addDoc: async (title: string, content: string) => {
+  addDoc: async (title: string, content: string, button_text?: string, button_url?: string) => {
     // ✅ БЕЗОПАСНО: INSERT через сервер
-    await secureInsert("documents", { title, content });
+    await secureInsert("documents", { title, content, button_text: button_text || null, button_url: button_url || null });
   },
-  updateDoc: async (id: number, title: string, content: string) => {
-    await dbUpdate("documents", { title, content }, { id: eq(id) });
+  updateDoc: async (id: number, title: string, content: string, button_text?: string, button_url?: string) => {
+    await dbUpdate("documents", { title, content, button_text: button_text || null, button_url: button_url || null }, { id: eq(id) });
   },
   deleteDoc: async (id: number) => { await dbDelete("documents", { id: eq(id) }); },
   setDocs: (_: DocumentItem[]) => {},
@@ -599,6 +681,8 @@ export const store = {
 
   // ── PROFILE DATA ──────────────────────────────────────────────────────────
   getPlayerProfile: async (nick: string) => {
+    // Перед чтением профиля чистим просроченные дома, чтобы их не показывало в "моих".
+    await (store as any).releaseExpiredHouses?.();
     const [houseRes, factionRes, licRes, platesRes] = await Promise.all([
       supabase.from("house_purchase_requests").select("id, rental_days, created_at, house_id").eq("username", nick).eq("status", "approved"),
       supabase.from("faction_applications").select("faction_name, status").ilike("username", nick).order("created_at", { ascending: false }),
