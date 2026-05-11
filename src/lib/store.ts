@@ -60,8 +60,6 @@ export type HousePurchaseRequest = {
 export type FactionDB = {
   id: number; name: string; color: string; logo_url?: string;
   gradient?: string; section: "main" | "separate"; created_at: string;
-  bg_image?: string; banner_image?: string; questions?: string[];
-  description?: string; dangerous?: boolean; leader_username?: string | null;
 };
 
 // СТАЛО — всі операції з балансом через Supabase
@@ -278,7 +276,12 @@ export const store = {
     });
   },
 
-  deleteHouse: async (id: number) => { await dbDelete("houses", { id: eq(id) }); },
+  deleteHouse: async (id: number) => {
+    // First clean up any linked purchase requests
+    await supabase.from("house_purchase_requests").delete().eq("house_id", id);
+    const { error } = await dbDelete("houses", { id: eq(id) });
+    if (error) throw error;
+  },
 
   updateHouse: async (id: number, updates: { name?: string; price?: number; desc?: string; imageUrl?: string }) => {
     await dbUpdate("houses", {
@@ -554,14 +557,8 @@ export const store = {
   },
   deleteCandidate: async (id: number) => { await dbDelete("mayor_election", { id: eq(id) }); },
   voteCandidate: async (id: number) => {
-    const nick = localStorage.getItem("crp_nick") || "anonymous";
-    const { data: voted } = await supabase.from("mayor_election_votes").select("*").eq("id", id).eq("username", nick).maybeSingle();
-    if (voted) return false;
-    
     const { data } = await supabase.from("mayor_election").select("votes").eq("id", id).single();
     await dbUpdate("mayor_election", { votes: ((data?.votes as number) || 0) + 1 }, { id: eq(id) });
-    await secureInsert("mayor_election_votes", { id, username: nick });
-    return true;
   },
   setCandidates: (_: MayorCandidate[]) => {},
 
@@ -575,12 +572,12 @@ export const store = {
     ];
     return data as DocumentItem[];
   },
-  addDoc: async (title: string, content: string) => {
+  addDoc: async (title: string, content: string, button_text?: string, button_url?: string) => {
     // ✅ БЕЗОПАСНО: INSERT через сервер
-    await secureInsert("documents", { title, content });
+    await secureInsert("documents", { title, content, button_text: button_text || null, button_url: button_url || null });
   },
-  updateDoc: async (id: number, title: string, content: string) => {
-    await dbUpdate("documents", { title, content }, { id: eq(id) });
+  updateDoc: async (id: number, title: string, content: string, button_text?: string, button_url?: string) => {
+    await dbUpdate("documents", { title, content, button_text: button_text || null, button_url: button_url || null }, { id: eq(id) });
   },
   deleteDoc: async (id: number) => { await dbDelete("documents", { id: eq(id) }); },
   setDocs: (_: DocumentItem[]) => {},
