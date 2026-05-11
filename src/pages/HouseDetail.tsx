@@ -114,7 +114,7 @@ const HouseDetail = () => {
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Сума</span>
-              <span className="text-yellow-400 font-bold">{selectedPrice}€</span>
+              <span className="text-yellow-400 font-bold">{selectedPrice.toLocaleString()}€</span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Оплата на</span>
@@ -220,7 +220,7 @@ const HouseDetail = () => {
                   <span className="text-xs font-bold text-foreground">Оплата</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Переведи <span className="text-yellow-400 font-bold text-sm">{selectedPrice}€</span> на акаунт нижче і натисни "Підтвердити оплату". Адміністратор перевірить і активує оренду.
+                  Переведи <span className="text-yellow-400 font-bold text-sm">{selectedPrice.toLocaleString()}€</span> на акаунт нижче і натисни "Підтвердити оплату". Адміністратор перевірить і активує оренду.
                 </p>
                 <div className="flex items-center gap-2 liquid-glass rounded-xl px-3 py-2.5">
                   <span className="text-xs text-muted-foreground">Перевести на:</span>
@@ -243,7 +243,7 @@ const HouseDetail = () => {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Euro className="w-3.5 h-3.5 text-yellow-400" />
-                  <span className="text-sm font-black text-yellow-400">{selectedPrice}€</span>
+                  <span className="text-sm font-black text-yellow-400">{selectedPrice.toLocaleString()}€</span>
                 </div>
               </div>
 
