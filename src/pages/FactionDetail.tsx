@@ -52,6 +52,7 @@ const FactionDetail = () => {
   const { id } = useParams();
   const [faction, setFaction] = useState<{
     name: string; color: string; gradient: string; desc: string; dangerous?: boolean; leaderUsername?: string;
+    bgImage?: string; bannerImage?: string;
   } | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
@@ -91,6 +92,8 @@ const FactionDetail = () => {
             desc: (dbFaction.description as string) || "Фракція сервера",
             dangerous: (dbFaction.dangerous as boolean) || false,
             leaderUsername: (dbFaction.leader_username as string) || null,
+            bgImage: (dbFaction.bg_image as string) || undefined,
+            bannerImage: (dbFaction.banner_image as string) || undefined,
           };
           return setFaction(found);
         }
@@ -116,9 +119,11 @@ const FactionDetail = () => {
             desc: (ov.description as string) || staticF.desc,
             dangerous: (ov.dangerous as boolean) ?? staticF.dangerous ?? false,
             leaderUsername: undefined,
+            bgImage: (ov.bg_image as string) || undefined,
+            bannerImage: (ov.banner_image as string) || undefined,
           };
         } else {
-          found = { ...staticF, leaderUsername: undefined };
+          found = { ...staticF, leaderUsername: undefined, bgImage: undefined, bannerImage: undefined };
         }
       }
       setFaction(found);
@@ -306,23 +311,37 @@ const handleResign = async () => {
       <div className="animate-fade-in">
 
         {/* Banner */}
-        <div className="rounded-2xl p-5 mb-4 border" style={{ background: faction.gradient, borderColor: faction.color + "22" }}>
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold"
-              style={{ backgroundColor: faction.color + "22", border: `1px solid ${faction.color}55`, color: faction.color }}>
-              {faction.name.charAt(0)}
+        <div className="rounded-2xl mb-4 border overflow-hidden"
+          style={{ borderColor: faction.color + "22" }}>
+          {/* Banner image if set */}
+          {faction.bannerImage && (
+            <div className="w-full h-32 relative">
+              <img src={faction.bannerImage} alt={faction.name} className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = "none")} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-foreground">{faction.name}</h2>
-              <p className="text-xs text-muted-foreground mt-1">{faction.desc}</p>
-              <p className="text-xs text-muted-foreground">
-                Учасників: {membersLoading ? "..." : members.length}
-                {faction.leaderUsername && (
-                  <span className="ml-2 text-yellow-400">
-                    · Лідер: {faction.leaderUsername}
-                  </span>
-                )}
-              </p>
+          )}
+          <div className="p-5"
+            style={faction.bgImage
+              ? { backgroundImage: `url(${faction.bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }
+              : { background: faction.gradient }}>
+            {faction.bgImage && <div className="absolute inset-0 bg-black/50" />}
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold"
+                style={{ backgroundColor: faction.color + "22", border: `1px solid ${faction.color}55`, color: faction.color }}>
+                {faction.name.charAt(0)}
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">{faction.name}</h2>
+                <p className="text-xs text-muted-foreground mt-1">{faction.desc}</p>
+                <p className="text-xs text-muted-foreground">
+                  Учасників: {membersLoading ? "..." : members.length}
+                  {faction.leaderUsername && (
+                    <span className="ml-2 text-yellow-400">
+                      · Лідер: {faction.leaderUsername}
+                    </span>
+                  )}
+                </p>
+              </div>
             </div>
           </div>
         </div>
