@@ -70,8 +70,10 @@ const hsl = (c: { h: number; s: number; l: number }, a = 1) => `hsla(${c.h.toFix
 
 /* ───────────── БОЛЬШОЙ ОГОНЬ СЕРИИ ───────────── */
 const StreakFlame = ({ streak, size = 180, isFrozen = false }: { streak: number, size?: number, isFrozen?: boolean }) => {
+  // Вычисляем сдвиг цвета для свечения (0 - оранжевый, -25 - красный, 240 - фиолетовый)
   const hueShift = streak > 50 ? 240 : (streak > 10 ? -25 : 0);
 
+  // Общий стиль для всех слоев-картинок
   const layerStyle: React.CSSProperties = {
     position: "absolute",
     top: 0,
@@ -91,11 +93,13 @@ const StreakFlame = ({ streak, size = 180, isFrozen = false }: { streak: number,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
+      overflow: "visible", 
     }}>
-      {/* 1. Свечение (синее или цветное) */}
+      {/* 1. Свечение (Синее для льда, Оранжевое для огня) */}
       <div style={{
         position: "absolute", 
-        width: "90%", height: "90%", 
+        width: "90%", 
+        height: "90%", 
         borderRadius: "50%",
         background: isFrozen 
           ? `radial-gradient(circle, rgba(0,191,255,0.4) 0%, transparent 70%)`
@@ -104,51 +108,83 @@ const StreakFlame = ({ streak, size = 180, isFrozen = false }: { streak: number,
         animation: "flameGlow 4s ease-in-out infinite",
       }} />
 
+      {/* --- Основной контейнер анимации --- */}
       <div style={{ 
         position: "relative", 
-        width: "100%", height: "100%",
+        width: "100%", 
+        height: "100%",
+        // Если заморожен - дрожит, если нет - плавно покачивается
         animation: isFrozen ? "iceShiver 5s ease-in-out infinite" : "flameWobble 4s ease-in-out infinite",
         transformOrigin: "50% 90%"
       }}>
         
-        {/* === СЛОИ ЗАМОРОЗКИ (ЗАДНИЙ ПЛАН) === */}
+        {/* === ЗАДНИЙ ПЛАН ЛЬДА === */}
         {isFrozen && (
-          <img src="https://i.ibb.co/1JmdZ0Q4/Untitled190-20260511164205.png" style={{ ...layerStyle, zIndex: 1 }} alt="ice-bg" />
+          <img 
+            src="https://i.ibb.co/1JmdZ0Q4/Untitled190-20260511164205.png" // Глыба задний фон
+            style={{ ...layerStyle, zIndex: 1 }} 
+            alt="ice-bg" 
+          />
         )}
 
-        {/* === ТЕЛО === */}
+        {/* === ТЕЛО ОГОНЬКА === */}
+        {/* 2. Основное тело (заменяем в горячем режиме) */}
         <img 
-          src={isFrozen ? "https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" : "https://i.ibb.co/3mg4dWt4/Untitled190-20260511153855.png"} 
+          src={isFrozen 
+            ? "https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" // Замерзшее тело
+            : "https://i.ibb.co/3mg4dWt4/Untitled190-20260511153855.png" // Обычное тело
+          } 
           style={{ ...layerStyle, zIndex: 2, filter: isFrozen ? "none" : `hue-rotate(${hueShift}deg)` }} 
           alt="body"
         />
 
-        {/* Внутренний эффект (плавает всегда) */}
+        {/* 3. Внутреннее тело / эффект (заменяем в горячем режиме) */}
         <img 
-          src={isFrozen ? "https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" : "https://i.ibb.co/WvBJRvQc/Untitled190-20260511153903.png"} 
-          style={{ ...layerStyle, zIndex: 3, filter: isFrozen ? "none" : `hue-rotate(${hueShift}deg)`, animation: "effectFloat 4s infinite ease-in-out" }} 
-          alt="effect"
+          src={isFrozen 
+            ? "https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" // Замерзший внутренний
+            : "https://i.ibb.co/WvBJRvQc/Untitled190-20260511153903.png" // Обычный внутренний
+          } 
+          style={{ 
+            ...layerStyle, 
+            zIndex: 3, 
+            filter: isFrozen ? "none" : `hue-rotate(${hueShift}deg)`, 
+            animation: "effectFloat 4s infinite ease-in-out" 
+          }} 
+          alt="secondary-body"
         />
 
-        {/* === ЛИЦО === */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 4, opacity: isFrozen ? 0.8 : 1 }}>
-          {/* Брови */}
-          <div style={{ position: "absolute", inset: 0, animation: isFrozen ? "none" : "browsFloatActive 4s ease-in-out infinite", transformOrigin: "50% 35%" }}>
-            <img src={isFrozen ? "https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" : "https://i.ibb.co/wF1TRzYX/image-3.png"} style={layerStyle} alt="brows" />
-          </div>
-          
-          {/* Рот */}
+        {/* === ЛИЦО (Брови, Рот, Глаза) === */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 4, opacity: isFrozen ? 0.7 : 1 }}>
+          {/* 4. Рот (НОВЫЙ: Испуганный) */}
           <div style={{ position: "absolute", inset: 0, animation: isFrozen ? "none" : "mouthBreathActive 4s ease-in-out infinite", transformOrigin: "50% 65%" }}>
-            <img src={isFrozen ? "https://i.ibb.co/KjSFLxFf/Untitled190-20260511164236.png" : "https://i.ibb.co/MDJnjp7k/image-2.png"} style={layerStyle} alt="mouth" />
+            <img 
+              src="https://i.ibb.co/KjSFLxFf/Untitled190-20260511164236.png" // НОВЫЙ Испуганный рот
+              style={layerStyle} 
+              alt="mouth" 
+            />
           </div>
 
-          {/* Глаза (моргание) */}
-          <div style={{ position: "absolute", inset: 0, animation: isFrozen ? "blinkFrozen 10s infinite" : "blinkSlow 7s infinite", transformOrigin: "50% 55%" }}>
-            <img src={isFrozen ? "https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" : "https://i.ibb.co/3mqZW48Y/image-1.png"} style={layerStyle} alt="eyes" />
+          {/* 5. Брови (НОВЫЕ: Грустные) */}
+          <div style={{ position: "absolute", inset: 0, animation: isFrozen ? "none" : "browsFloatActive 4s ease-in-out infinite", transformOrigin: "50% 35%" }}>
+            <img 
+              src="https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" // НОВЫЕ Грустные брови
+              style={layerStyle} 
+              alt="brows" 
+            />
+          </div>
+
+          {/* 6. Глаза (НОВЫЕ: Испуганные) */}
+          <div style={{ position: "absolute", inset: 0, animation: isFrozen ? "blinkFrozen 12s infinite" : "blinkSlow 7s infinite", transformOrigin: "50% 55%" }}>
+            <img 
+              src="https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" // НОВЫЕ Испуганные глаза
+              style={layerStyle} 
+              alt="eyes" 
+            />
           </div>
         </div>
 
-        {/* СОПЛЯ (над лицом, под руками) */}
+        {/* === СПЕЦЭФФЕКТЫ ЛЬДА === */}
+        {/* 7. Сопля (только замерзший) */}
         {isFrozen && (
           <img 
             src="https://i.ibb.co/zVbT4TTR/Untitled190-20260511164441.png" 
@@ -158,40 +194,48 @@ const StreakFlame = ({ streak, size = 180, isFrozen = false }: { streak: number,
         )}
 
         {/* === РУКИ === */}
+        {/* 8. Руки (заменяем в горячем режиме) */}
         <div style={{ position: "absolute", inset: 0, zIndex: 6, animation: isFrozen ? "none" : "handsWiggleActive 4s ease-in-out infinite", transformOrigin: "50% 60%" }}>
-          <img src={isFrozen ? "https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" : "https://i.ibb.co/JRntLWBQ/Untitled190-20260511155448.png"} style={layerStyle} alt="hands" />
+          <img 
+            src={isFrozen 
+              ? "https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" // Замерзшие руки
+              : "https://i.ibb.co/JRntLWBQ/Untitled190-20260511155448.png" // Обычные руки
+            } 
+            style={layerStyle} 
+            alt="hands" 
+          />
         </div>
 
-        {/* === ГЛЫБА (САМЫЙ ВЕРХНИЙ ПЛАН) === */}
+        {/* === ОКРУЖЕНИЕ ЛЬДА === */}
         {isFrozen && (
           <>
-            <img src="https://i.ibb.co/zW5DhzsJ/Untitled190-20260511164252.png" style={{ ...layerStyle, zIndex: 7 }} alt="ice-front" />
-            <img src="https://i.ibb.co/2YyJrLF2/Untitled190-20260511164352.png" style={{ ...layerStyle, zIndex: 8, opacity: 0.5 }} alt="ice-overlay" />
+            {/* 9. Основная глыба */}
+            <img 
+              src="https://i.ibb.co/zW5DhzsJ/Untitled190-20260511164252.png" 
+              style={{ ...layerStyle, zIndex: 7 }} 
+              alt="ice-block" 
+            />
+            {/* 10. Оверлей глыбы */}
+            <img 
+              src="https://i.ibb.co/2YyJrLF2/Untitled190-20260511164352.png" 
+              style={{ ...layerStyle, zIndex: 8, opacity: 0.5 }} 
+              alt="ice-overlay" 
+            />
           </>
         )}
       </div>
 
       <style>{`
-        @keyframes flameWobble {
-          0%, 100% { transform: rotate(-2.5deg) translateY(0); }
-          50% { transform: rotate(2.5deg) translateY(-4px); }
-        }
-        @keyframes iceShiver {
-          0%, 100% { transform: rotate(-0.5deg) translateX(0); }
-          25% { transform: rotate(0.5deg) translateX(1px); }
-          75% { transform: rotate(-0.5deg) translateX(-1px); }
-        }
-        @keyframes snotDrip {
-          0%, 100% { transform: translateY(0) scaleY(1); }
-          50% { transform: translateY(3px) scaleY(1.1); }
-        }
+        @keyframes flameWobble { 0%, 100% { transform: rotate(-2.5deg) translateY(0); } 50% { transform: rotate(2.5deg) translateY(-3px); } }
+        @keyframes iceShiver { 0%, 100% { transform: rotate(-0.5deg) translateX(0); } 25% { transform: rotate(0.5deg) translateX(1px); } 75% { transform: rotate(-0.5deg) translateX(-1px); } }
+        @keyframes snotDrip { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(2px) scaleY(1.1); } }
         @keyframes blinkFrozen { 0%, 96%, 100% { transform: scaleY(1); } 98% { transform: scaleY(0); } }
         @keyframes blinkSlow { 0%, 91%, 95%, 100% { transform: scaleY(1); } 93% { transform: scaleY(0.02); } }
-        @keyframes effectFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
-        @keyframes handsWiggleActive { 0%, 100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-5px) rotate(1.5deg); } }
-        @keyframes browsFloatActive { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-        @keyframes mouthBreathActive { 0%, 100% { transform: scale(1); } 50% { transform: scaleX(1.08) scaleY(0.92); } }
         @keyframes flameGlow { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.8; } }
+        @keyframes effectFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+        @keyframes handsWiggleActive { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-4px) rotate(1deg); } }
+        @keyframes browsFloatActive { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes mouthBreathActive { 0%, 100% { transform: scale(1); } 50% { transform: scaleX(1.06) scaleY(0.94); } }
       `}</style>
     </div>
   );
