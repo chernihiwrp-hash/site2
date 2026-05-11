@@ -668,7 +668,7 @@ const HousesTab = () => {
             </div>
             <div className="flex items-center gap-2">
               <span className={`text-[9px] px-2 py-0.5 rounded-md font-bold ${h.owner ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary"}`}>{h.owner ? "ПРОДАНО" : "ВІЛЬНО"}</span>
-              <button onClick={async () => { await store.deleteHouse(h.id); setHouses(prev => prev.filter(x => x.id !== h.id)); toast.success("Видалено"); }} className="p-1.5 rounded-lg liquid-glass text-destructive active:scale-95"><Trash2 className="w-3.5 h-3.5" /></button>
+              <button onClick={async () => { try { await store.deleteHouse(h.id); setHouses(prev => prev.filter(x => x.id !== h.id)); toast.success("Видалено"); } catch(e) { toast.error("Помилка видалення. Перевірте права Supabase."); } }} className="p-1.5 rounded-lg liquid-glass text-destructive active:scale-95"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           </div>
         </NeonCard>
@@ -1037,12 +1037,26 @@ const ElectionTab = () => {
 // ─── DOCUMENTS ────────────────────────────────────────────────────────────────
 const DocumentsTab = () => {
   const [docs, setDocs] = useState<DocumentItem[]>([]);
-  const [title, setTitle] = useState(""); const [content, setContent] = useState(""); const [editId, setEditId] = useState<number | null>(null);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [btnText, setBtnText] = useState("");
+  const [btnUrl, setBtnUrl] = useState("");
+  const [editId, setEditId] = useState<number | null>(null);
   useEffect(() => { store.getDocs().then(setDocs); }, []);
   const save = async () => {
     if (!title || !content) return toast.error("Заповніть поля");
-    if (editId) { await store.updateDoc(editId, title, content); } else { await store.addDoc(title, content); }
-    setDocs(await store.getDocs()); setTitle(""); setContent(""); setEditId(null); toast.success("Збережено!");
+    if (editId) {
+      await store.updateDoc(editId, title, content, btnText, btnUrl);
+    } else {
+      await store.addDoc(title, content, btnText, btnUrl);
+    }
+    setDocs(await store.getDocs());
+    setTitle(""); setContent(""); setBtnText(""); setBtnUrl(""); setEditId(null);
+    toast.success("Збережено!");
+  };
+  const openEdit = (d: DocumentItem) => {
+    setEditId(d.id); setTitle(d.title); setContent(d.content);
+    setBtnText(d.button_text || ""); setBtnUrl(d.button_url || "");
   };
   return (
     <div className="space-y-3 animate-fade-in">
@@ -1050,6 +1064,9 @@ const DocumentsTab = () => {
         <div className="space-y-2">
           <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Назва документу" className={inputClass} />
           <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Зміст..." className={`${inputClass} resize-none h-24`} />
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider pt-1">Кнопка-посилання (необов'язково)</p>
+          <input value={btnText} onChange={e => setBtnText(e.target.value)} placeholder="Текст кнопки (напр. Дивитися)" className={inputClass} />
+          <input value={btnUrl} onChange={e => setBtnUrl(e.target.value)} placeholder="https://посилання..." className={inputClass} />
           <GradientButton variant="green" className="w-full text-xs py-2" onClick={save}>{editId ? "Зберегти" : "Додати документ"}</GradientButton>
         </div>
       </NeonCard>
@@ -1062,9 +1079,10 @@ const DocumentsTab = () => {
             <div className="flex-1">
               <div className="flex items-center gap-1.5 mb-1"><FileText className="w-3 h-3 text-primary" /><h4 className="text-xs font-semibold">{d.title}</h4></div>
               <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{d.content}</p>
+              {d.button_text && <p className="text-[9px] text-primary/60 mt-1">🔗 {d.button_text}</p>}
             </div>
             <div className="flex gap-1 ml-2">
-              <button onClick={() => { setEditId(d.id); setTitle(d.title); setContent(d.content); }} className="p-1.5 rounded-lg liquid-glass text-primary active:scale-95"><Type className="w-3.5 h-3.5" /></button>
+              <button onClick={() => openEdit(d)} className="p-1.5 rounded-lg liquid-glass text-primary active:scale-95"><Type className="w-3.5 h-3.5" /></button>
               <button onClick={async () => { await store.deleteDoc(d.id); setDocs(prev => prev.filter(x => x.id !== d.id)); toast.success("Видалено"); }} className="p-1.5 rounded-lg liquid-glass text-destructive active:scale-95"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           </div>
@@ -1239,22 +1257,17 @@ const FactionAppsTab = () => {
   const sc = { review: "bg-yellow-400/15 text-yellow-400", approved: "bg-primary/15 text-primary", rejected: "bg-destructive/15 text-destructive" };
   const sl = { review: "На розгляді", approved: "Прийнято", rejected: "Відхилено" };
 
-  // Згруповуємо заявки по фракціях для вкладок (Тільки ті, що на розгляді)
-  const pendingApps = apps.filter(a => a.status === "review");
-  const factionGroups = pendingApps.reduce<Record<string, number>>((acc, a) => {
+  // Згруповуємо заявки по фракціях для вкладок
+  const factionGroups = apps.reduce<Record<string, number>>((acc, a) => {
     const key = a.factionName || "Без фракції";
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
   const factionTabs = Object.keys(factionGroups).sort();
 
-  useEffect(() => {
-    if ((activeFaction === "__all__" || !factionGroups[activeFaction]) && factionTabs.length > 0) {
-      setActiveFaction(factionTabs[0]);
-    }
-  }, [factionTabs, activeFaction]);
-
-  const filteredApps = pendingApps.filter(a => (a.factionName || "Без фракції") === activeFaction);
+  const filteredApps = activeFaction === "__all__"
+    ? apps.filter(a => a.status === "review")
+    : apps.filter(a => (a.factionName || "Без фракції") === activeFaction);
 
   return (
     <div className="space-y-3 animate-fade-in">
@@ -1278,21 +1291,21 @@ const FactionAppsTab = () => {
             style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             <style>{`.fac-tabs::-webkit-scrollbar { display: none; }`}</style>
-            <div className="fac-tabs flex gap-1.5 w-full overflow-x-auto pb-1 scroll-smooth" style={{ scrollbarWidth: "none" }}>
+            <div className="fac-tabs flex gap-1.5 w-full overflow-x-auto" style={{ scrollbarWidth: "none" }}>
               {factionTabs.map(name => {
                 const c = getFactionColor(name);
                 const active = activeFaction === name;
                 return (
                   <button
                     key={name}
-                    onClick={() => setActiveFaction(name)}
+                    onClick={() => setActiveFaction(active ? "__all__" : name)}
                     style={
                       active
                         ? { backgroundColor: `${c}26`, color: c, borderColor: `${c}66`, boxShadow: `0 0 12px ${c}40` }
                         : { borderColor: `${c}33`, color: c }
                     }
-                    className={`shrink-0 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 border ${
-                      active ? "shadow-inner" : "liquid-glass"
+                    className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 border ${
+                      active ? "" : "liquid-glass"
                     }`}
                   >
                     {name} ({factionGroups[name]})
@@ -1617,8 +1630,6 @@ const AddFactionTab = () => {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#22c55e");
   const [logoUrl, setLogoUrl] = useState("icon:Shield");
-  const [bgUrl, setBgUrl] = useState("");
-  const [bannerUrl, setBannerUrl] = useState("");
   const [gradient, setGradient] = useState("");
   const [section, setSection] = useState<"main" | "separate">("main");
   const [saving, setSaving] = useState(false);
@@ -1638,15 +1649,11 @@ const AddFactionTab = () => {
     setSaving(true);
     // Save questionnaire as JSON in gradient field (extended)
     const meta = JSON.stringify({ questions });
-    const ok = await store.addFaction(name, color, logoUrl || undefined, gradient || undefined, section, {
-      bg_image: bgUrl || null,
-      banner_image: bannerUrl || null,
-    });
+    const ok = await store.addFaction(name, color, logoUrl || undefined, gradient || undefined, section);
     if (ok) {
       // Also save questions to localStorage for FactionDetail to read
       localStorage.setItem(`crp_faction_questions_${name.toLowerCase()}`, meta);
-      setName(""); setColor("#22c55e"); setLogoUrl("icon:Shield"); setGradient("");
-      setBgUrl(""); setBannerUrl("");
+      setName(""); setColor("#22c55e"); setLogoUrl(""); setGradient("");
       setQuestions(["Чому хочеш вступити у фракцію?", "Який у тебе досвід в RP?"]);
       toast.success(`Фракцію "${name}" додано з анкетою!`);
     } else toast.error("Помилка збереження");
@@ -1669,18 +1676,6 @@ const AddFactionTab = () => {
 
           {/* Name */}
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Назва фракції" className={inputClass} />
-
-          {/* Photo resources */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Фон (URL)</label>
-              <input value={bgUrl} onChange={e => setBgUrl(e.target.value)} placeholder="https://..." className={inputClass} />
-            </div>
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Баннер (URL)</label>
-              <input value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} placeholder="https://..." className={inputClass} />
-            </div>
-          </div>
 
           {/* Icon picker */}
           <div>
@@ -2430,7 +2425,6 @@ useEffect(() => {
         updated_at: new Date().toISOString(),
       }, { onConflict: "faction_slug" });
     }
-    }
     
     setFactions(prev => prev.map(f => f.id === editingId ? { ...f, name: editName, color: editColor, section: editSection } : f));
     setEditingId(null);
@@ -2926,7 +2920,7 @@ return (
         </div>
       )}
 
-{/* 4. МОДАЛКА ЧЕРЕЗ ПОРТАЛ (ПРОБ’Є БУДЬ-ЩО) */}
+      {/* 4. МОДАЛКА ЧЕРЕЗ ПОРТАЛ */}
       {isModalOpen && playerToKick && createPortal(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999999 }}>
           {/* ФОН з блюром та плавною появою */}
@@ -2982,9 +2976,9 @@ return (
         </div>,
         document.body
       )}
-      </div> // <--- ДОДАЙ ЦЕ (закриває основний контейнер AdminPanel)
+      </div>
   );
-}; // <--- ДОДАЙ ЦЕ (закриває саму функцію AdminPanel)
+};
 // ─── BANS TAB ─────────────────────────────────────────────────────────────────
 const BansTab = () => {
   const [bans, setBans] = useState<{
