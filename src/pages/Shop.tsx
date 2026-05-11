@@ -208,12 +208,59 @@ const Shop = () => {
     { day: 7,   reward: 200,  icon: "🔥", color: "#3b82f6",  label: "Д7"   },
   ];
 
+  // SVG NFT icons — unique per milestone
+  const NftIcon = ({ type, color, size = 28 }: { type: string; color: string; size?: number }) => {
+    const s = size;
+    if (type === "crystal") return (
+      <svg width={s} height={s} viewBox="0 0 28 28" fill="none">
+        <polygon points="14,2 24,10 20,26 8,26 4,10" fill={color + "30"} stroke={color} strokeWidth="1.2"/>
+        <polygon points="14,2 24,10 14,8" fill={color + "50"}/>
+        <polygon points="14,2 4,10 14,8" fill={color + "80"}/>
+        <line x1="14" y1="2" x2="14" y2="26" stroke={color} strokeWidth="0.6" strokeDasharray="2,2"/>
+        <circle cx="14" cy="8" r="1.5" fill={color}/>
+      </svg>
+    );
+    if (type === "shield") return (
+      <svg width={s} height={s} viewBox="0 0 28 28" fill="none">
+        <path d="M14 3L24 7V14C24 19.5 19.5 23.5 14 25C8.5 23.5 4 19.5 4 14V7L14 3Z" fill={color + "25"} stroke={color} strokeWidth="1.2"/>
+        <path d="M14 7L20 10V14C20 17.5 17.5 20 14 21C10.5 20 8 17.5 8 14V10L14 7Z" fill={color + "40"}/>
+        <path d="M11 14L13 16L17 12" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    );
+    if (type === "crown") return (
+      <svg width={s} height={s} viewBox="0 0 28 28" fill="none">
+        <path d="M4 20H24L22 10L17 15L14 7L11 15L6 10Z" fill={color + "35"} stroke={color} strokeWidth="1.2"/>
+        <rect x="4" y="20" width="20" height="3" rx="1" fill={color + "50"} stroke={color} strokeWidth="0.8"/>
+        <circle cx="14" cy="7" r="1.8" fill={color}/>
+        <circle cx="6" cy="10" r="1.5" fill={color}/>
+        <circle cx="22" cy="10" r="1.5" fill={color}/>
+      </svg>
+    );
+    if (type === "rainbow") return (
+      <svg width={s} height={s} viewBox="0 0 28 28" fill="none">
+        <defs>
+          <linearGradient id="rb1" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#facc15"/>
+            <stop offset="33%" stopColor="#ef4444"/>
+            <stop offset="66%" stopColor="#a855f7"/>
+            <stop offset="100%" stopColor="#3b82f6"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 20C4 12 8.5 6 14 6C19.5 6 24 12 24 20" stroke="url(#rb1)" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+        <path d="M7 20C7 13.5 10 9 14 9C18 9 21 13.5 21 20" stroke="#22c55e" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+        <path d="M10 20C10 15 11.8 12 14 12C16.2 12 18 15 18 20" stroke="#facc15" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+        <circle cx="14" cy="22" r="2" fill="url(#rb1)"/>
+      </svg>
+    );
+    return null;
+  };
+
   // Milestone NFT rewards
   const nftMilestones = [
-    { days: 100, nft: "100–200",  label: "100 днів",  color: "#facc15" },
-    { days: 300, nft: "200–350",  label: "300 днів",  color: "#f97316" },
-    { days: 500, nft: "350–500",  label: "500 днів",  color: "#a855f7" },
-    { days: 1000, nft: "500+",    label: "1000 днів", color: "url(#rainbow)", labelColor: "#fff" },
+    { days: 100,  nft: "100–200", label: "100 днів",  color: "#facc15", icon: "crystal", name: "Кристал Удачі"   },
+    { days: 300,  nft: "200–350", label: "300 днів",  color: "#f97316", icon: "shield",  name: "Щит Ветерана"    },
+    { days: 500,  nft: "350–500", label: "500 днів",  color: "#a855f7", icon: "crown",   name: "Корона Майстра"  },
+    { days: 1000, nft: "500+",    label: "1000 днів", color: "#3b82f6", icon: "rainbow", name: "Легенда Серії"   },
   ];
 
   return (
@@ -278,24 +325,64 @@ const Shop = () => {
       {/* NFT Milestone Rewards */}
       <div className="liquid-glass-card rounded-2xl p-4 mb-4 animate-fade-in">
         <div className="flex items-center gap-2 mb-3">
-          <span style={{ fontSize: 16 }}>🎁</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1L10 6H15L11 9.5L12.5 15L8 12L3.5 15L5 9.5L1 6H6Z" fill="hsl(var(--primary))" opacity="0.9"/>
+          </svg>
           <span className="text-sm font-semibold text-foreground">NFT Нагороди за серію</span>
         </div>
         <div className="space-y-2">
           {nftMilestones.map(m => {
             const reached = streak >= m.days;
+            const locked = !reached;
             return (
-              <div key={m.days} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all"
-                style={reached ? { background: m.color + "15", borderColor: m.color + "40" } : { background: "hsl(0 0% 100% / 0.02)", borderColor: "hsl(0 0% 100% / 0.06)" }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base"
-                  style={{ background: m.color + "22", border: `1px solid ${m.color}44` }}>
-                  {reached ? "🏆" : "🔒"}
+              <div key={m.days}
+                className="flex items-center gap-3 px-3 py-3 rounded-2xl border transition-all duration-300"
+                style={reached
+                  ? { background: m.color + "12", borderColor: m.color + "45", boxShadow: `0 0 20px ${m.color}18` }
+                  : { background: "hsl(0 0% 100% / 0.02)", borderColor: "hsl(0 0% 100% / 0.06)" }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 relative"
+                  style={{
+                    background: reached ? m.color + "18" : "hsl(0 0% 100% / 0.04)",
+                    border: `1px solid ${reached ? m.color + "40" : "hsl(0 0% 100% / 0.08)"}`,
+                    filter: locked ? "grayscale(1) opacity(0.3)" : "none",
+                    transition: "filter 0.4s",
+                  }}>
+                  <NftIcon type={m.icon} color={m.color} size={30} />
+                  {locked && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <rect x="2" y="5" width="8" height="6" rx="1" fill="#666"/>
+                        <path d="M4 5V4a2 2 0 014 0v1" stroke="#666" strokeWidth="1.2" fill="none"/>
+                      </svg>
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs font-bold" style={{ color: reached ? m.color : "#555" }}>{m.label}</p>
-                  <p className="text-[10px] text-muted-foreground">NFT вартістю {m.nft} CR</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black" style={{ color: reached ? m.color : "#444" }}>{m.name}</p>
+                  <p className="text-[10px] font-medium" style={{ color: reached ? m.color + "99" : "#333" }}>
+                    {m.label} • {m.nft} CR
+                  </p>
+                  {!reached && (
+                    <div className="mt-1 h-1 rounded-full bg-white/5 overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${Math.min(100, (streak / m.days) * 100)}%`, background: m.color + "60" }} />
+                    </div>
+                  )}
                 </div>
-                {reached && <span className="text-[9px] font-black px-2 py-0.5 rounded-md" style={{ background: m.color + "20", color: m.color, border: `1px solid ${m.color}40` }}>ОТРИМАНО</span>}
+                {reached ? (
+                  <div className="flex flex-col items-center gap-0.5 shrink-0">
+                    <span className="text-[8px] font-black px-2 py-1 rounded-lg"
+                      style={{ background: m.color + "20", color: m.color, border: `1px solid ${m.color}40` }}>
+                      NFT
+                    </span>
+                    <span className="text-[7px] font-bold" style={{ color: m.color + "99" }}>ВИДАНО</span>
+                  </div>
+                ) : (
+                  <div className="text-right shrink-0">
+                    <p className="text-[9px] font-black text-muted-foreground/40">{Math.max(0, m.days - streak)} днів</p>
+                    <p className="text-[7px] text-muted-foreground/25">залишилось</p>
+                  </div>
+                )}
               </div>
             );
           })}
