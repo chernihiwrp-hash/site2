@@ -1,9 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Универсальный безопасный прокси для всех мутаций.
-// Использует SERVICE_ROLE_KEY (bypass RLS) только на сервере.
-// На клиенте — только чтение через анонимный ключ.
-
 const ALLOWED_TABLES = new Set<string>([
   "users",
   "license_applications",
@@ -42,6 +38,15 @@ interface Body {
 }
 
 export default async function handler(req: any, res: any) {
+  // CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -50,7 +55,7 @@ export default async function handler(req: any, res: any) {
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SERVICE_KEY) {
-    return res.status(500).json({ error: "Server not configured" });
+    return res.status(500).json({ error: "Server not configured: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" });
   }
 
   let body: Body;
