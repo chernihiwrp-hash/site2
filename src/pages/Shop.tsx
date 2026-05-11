@@ -105,12 +105,12 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
         animation: "flameGlow 4s ease-in-out infinite",
       }} />
 
-      {/* --- Основной контейнер ПОКАЧИВАНИЯ (плавное движение) --- */}
+      {/* --- Основной контейнер ПОКАЧИВАНИЯ --- */}
       <div style={{ 
         position: "relative", 
         width: "100%", 
         height: "100%",
-        animation: "flameWobble 4s ease-in-out infinite", // Только покачивание
+        animation: "flameWobble 4s ease-in-out infinite",
         transformOrigin: "50% 90%"
       }}>
         
@@ -130,32 +130,32 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
 
         {/* --- Группа ЛИЦА --- */}
         <div style={{ position: "absolute", inset: 0 }}>
-          {/* 4. Рот (микро-движение) */}
-          <div style={{ position: "absolute", inset: 0, animation: "mouthBreath 4s ease-in-out infinite", transformOrigin: "50% 65%" }}>
+          {/* 4. Рот (НОВОЕ: ЗАМЕТНАЯ пульсация улыбки) */}
+          <div style={{ position: "absolute", inset: 0, animation: "mouthBreathActive 4s ease-in-out infinite", transformOrigin: "50% 65%" }}>
             <img src="https://i.ibb.co/MDJnjp7k/image-2.png" style={layerStyle} alt="mouth" />
           </div>
 
-          {/* 5. Брови (микро-движение) */}
-          <div style={{ position: "absolute", inset: 0, animation: "browsFloat 4s ease-in-out infinite", transformOrigin: "50% 35%" }}>
+          {/* 5. Брови (НОВОЕ: ЗАМЕТНОЕ движение вверх-вниз) */}
+          <div style={{ position: "absolute", inset: 0, animation: "browsFloatActive 4s ease-in-out infinite", transformOrigin: "50% 35%" }}>
             <img src="https://i.ibb.co/wF1TRzYX/image-3.png" style={layerStyle} alt="brows" />
           </div>
 
-          {/* 6. Глаза (БЫСТРОЕ И ЗАМЕТНОЕ МОРГАНИЕ) */}
+          {/* 6. Глаза (НОВОЕ: БОЛЕЕ ПЛАВНОЕ И РЕДКОЕ МОРГАНИЕ) */}
           <div style={{ 
             position: "absolute", 
             inset: 0, 
-            animation: "blink 5s infinite", // Чаще моргает
+            animation: "blinkSlow 7s infinite", // Реже моргает
             transformOrigin: "50% 55%" 
           }}>
             <img src="https://i.ibb.co/3mqZW48Y/image-1.png" style={layerStyle} alt="eyes" />
           </div>
         </div>
 
-        {/* 7. РУЧКИ НА САМЫЙ ВЕРХНИЙ СЛОЙ (Добавлены в конце!) */}
+        {/* 7. Ручки НА САМЫЙ ВЕРХНИЙ СЛОЙ (НОВОЕ: ЗАМЕТНОЕ ПОКАЧИВАНИЕ) */}
         <div style={{
           position: "absolute",
           inset: 0,
-          animation: "handsWiggle 4s ease-in-out infinite",
+          animation: "handsWiggleActive 4s ease-in-out infinite", // Амплитуда больше
           transformOrigin: "50% 60%"
         }}>
           {/* Слой ручек */}
@@ -174,16 +174,16 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
       </div>
 
       <style>{`
-        /* Основное плавное ПОКАЧИВАНИЕ (без пульсации) */
+        /* Основное плавное покачивание */
         @keyframes flameWobble {
-          0%, 100% { transform: rotate(-2deg) translateY(0); }
-          50% { transform: rotate(2deg) translateY(-1px); }
+          0%, 100% { transform: rotate(-2.5deg) translateY(0); }
+          50% { transform: rotate(2.5deg) translateY(-2px); }
         }
 
-        /* НОВОЕ: Быстрое и Хлёсткое моргание (веки схлопываются мгновенно) */
-        @keyframes blink {
-          0%, 93%, 95%, 100% { transform: scaleY(1); }
-          94% { transform: scaleY(0); } // Схлопывание в ноль
+        /* НОВОЕ: Плавное и Редкое моргание (веки закрываются весомее) */
+        @keyframes blinkSlow {
+          0%, 91%, 95%, 100% { transform: scaleY(1); }
+          93% { transform: scaleY(0.02); } // Схлопывание в ноль
         }
 
         /* Пульсация свечения */
@@ -195,25 +195,25 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
         /* Плавание внутреннего эффекта (для кончиков) */
         @keyframes effectFloat {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-5px); }
+          50% { transform: translateY(-7px); }
         }
 
-        /* Покачивание ручек */
-        @keyframes handsWiggle {
-          0%, 100% { transform: translateY(0) rotate(-0.5deg); }
-          50% { transform: translateY(-1px) rotate(0.5deg); }
+        /* НОВОЕ: ЗАМЕТНОЕ покачивание ручек (большая амплитуда) */
+        @keyframes handsWiggleActive {
+          0%, 100% { transform: translateY(0) rotate(-1deg); }
+          50% { transform: translateY(-4px) rotate(1deg); }
         }
 
-        /* Брови */
-        @keyframes browsFloat {
+        /* НОВОЕ: ЗАМЕТНАЯ анимация бровей (вверх-вниз) */
+        @keyframes browsFloatActive {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-1.5px); }
+          50% { transform: translateY(-5px) scaleX(1.02); } // Выше приподнимаются
         }
 
-        /* Рот */
-        @keyframes mouthBreath {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scaleX(1.02) scaleY(0.98); }
+        /* НОВОЕ: ЗАМЕТНАЯ анимация рта (улыбка-дыхание) */
+        @keyframes mouthBreathActive {
+          0%, 100% { transform: scale(1) translateY(0); }
+          50% { transform: scaleX(1.06) scaleY(0.94) translateY(1.5px); }
         }
       `}</style>
     </div>
