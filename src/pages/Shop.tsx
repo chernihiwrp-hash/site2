@@ -89,124 +89,134 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number, size?: number }) 
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      overflow: "visible", // Чтобы детали не обрезались при увеличении
+      overflow: "visible", // Чтобы оверлей не обрезался
     }}>
-      {/* Холодное свечение */}
+      {/* 1. Свечение (холодный HSL) */}
       <div style={{
         position: "absolute", 
-        width: "100%", height: "100%", 
-        background: `radial-gradient(circle, rgba(135, 206, 250, 0.5) 0%, transparent 70%)`,
-        filter: "blur(20px)",
-        animation: "iceGlow 4s ease-in-out infinite",
+        width: "90%", 
+        height: "90%", 
+        borderRadius: "50%",
+        background: `radial-gradient(circle, rgba(135,206,250,0.5) 0%, transparent 75%)`,
+        filter: `blur(18px)`,
+        animation: "flameGlow 3s ease-in-out infinite",
       }} />
 
-      {/* Основной контейнер (Неподвижен!) */}
+      {/* --- Основной контейнер (СДЕЛАН БОЛЬШЕ и ДОБАВЛЕНО ЛЁГКОЕ ДРОЖАНИЕ) --- */}
       <div style={{ 
         position: "relative", 
-        width: "100%", height: "100%",
-        transformOrigin: "50% 80%",
-        // iceShiver удалён
+        width: "100%", 
+        height: "100%",
+        transform: "scale(1.25)", // Сделали огонек крупнее
+        animation: "shudder 1s linear infinite", // Лёгкое мелкое дрожание
+        transformOrigin: "50% 90%",
       }}>
         
-        {/* === Глубина глыбы (задние слои) === */}
+        {/* === Глубина глыбы льда (ЗАДНИЙ ФОН) === */}
         <img src="https://i.ibb.co/1JmdZ0Q4/Untitled190-20260511164205.png" style={{ ...layerStyle, zIndex: 1 }} alt="1" />
 
-        {/* === ТЕЛО (УВЕЛИЧЕНО) === */}
-        <div style={{ position: "absolute", inset: 0, transform: "scale(1.1)", transformOrigin: "50% 60%", zIndex: 2 }}>
-          <img src="https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" style={layerStyle} alt="2" />
-        </div>
+        {/* 2. Основное тело (Замерзшее) */}
+        <img src="https://i.ibb.co/Z6M9kR7q/Untitled190-20260511164214.png" style={{ ...layerStyle, zIndex: 2 }} alt="2" />
 
-        {/* Внутренний эффект (плавает) */}
-        <div style={{ position: "absolute", inset: 0, transform: "scale(1.15)", transformOrigin: "50% 60%", zIndex: 3 }}>
-          <img 
-            src="https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" 
-            style={{ ...layerStyle, animation: "innerFloatFrozen 4s ease-in-out infinite" }} 
-            alt="3" 
-          />
-        </div>
+        {/* 3. Внутренний эффект (плавает медленно) */}
+        <img 
+          src="https://i.ibb.co/zTgzcJxp/Untitled190-20260511164219.png" 
+          style={{ ...layerStyle, zIndex: 3, animation: "innerFloat 3s infinite ease-in-out" }} 
+          alt="3" 
+        />
 
-        {/* === ЛИЦО (ВСЕ ДЕТАЛИ УВЕЛИЧЕНЫ И АНИМИРОВАНЫ) === */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 4, transform: "scale(1.12)", transformOrigin: "50% 60%" }}>
-          {/* Глаза (моргают редко и "застывше") */}
-          <div style={{ position: "absolute", inset: 0, animation: "blinkFrozen 10s infinite", transformOrigin: "50% 55%" }}>
+        {/* --- Группа ЛИЦА (СУПЕР-МЕЛКАЯ МИМИКА ХОЛОДА) --- */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 4 }}>
+          {/* 4. Глаза (БЫСТРОЕ И ЗАМЕТНОЕ МОРГАНИЕ) */}
+          <div style={{ position: "absolute", inset: 0, animation: "blinkFrozen 6s infinite", transformOrigin: "50% 55%" }}>
             <img src="https://i.ibb.co/vx7mxNFv/Untitled190-20260511164225.png" style={layerStyle} alt="4" />
           </div>
 
-          {/* Брови (НОВОЕ: Анимация "Паники" - поднимаются высоко) */}
+          {/* 5. Брови (НОВОЕ: Лёгкое, едва заметное дрожание) */}
           <div style={{
             position: "absolute",
             inset: 0,
-            animation: "scaredBrows 4s ease-in-out infinite",
+            animation: "browsShudder 1s linear infinite",
             transformOrigin: "50% 35%"
           }}>
             <img src="https://i.ibb.co/fzFFqSg7/Untitled190-20260511164231.png" style={layerStyle} alt="5" />
           </div>
 
-          {/* Рот (НОВОЕ: Дрожит мелко) */}
+          {/* 6. Рот (НОВОЕ: Лёгкая вибрация "дыхания") */}
           <div style={{
             position: "absolute",
             inset: 0,
-            animation: "mouthTremble 4s linear infinite",
+            animation: "mouthVibrate 1s linear infinite",
             transformOrigin: "50% 65%"
           }}>
             <img src="https://i.ibb.co/KjSFLxFf/Untitled190-20260511164236.png" style={layerStyle} alt="6" />
           </div>
         </div>
 
-        {/* СОПЛЯ (НОВОЕ: Растягивается вниз и возвращается пружинисто) */}
+        {/* 7. СОПЛЯ (НОВОЕ: Медленно и печально вытягивается вниз) */}
         <div style={{
           position: "absolute",
           inset: 0,
           zIndex: 5,
-          transform: "scale(1.15)", // Увеличена
-          animation: "snotPanic 6s ease-in-out infinite", // Дольше анимация
+          animation: "snotDripSoft 4s ease-in-out infinite",
           transformOrigin: "50% 50%"
         }}>
           <img src="https://i.ibb.co/zVbT4TTR/Untitled190-20260511164441.png" style={layerStyle} alt="7" />
         </div>
 
-        {/* Руки (поверх тела) */}
-        <div style={{ position: "absolute", inset: 0, transform: "scale(1.1)", zIndex: 6 }}>
-          <img src="https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" style={layerStyle} alt="8" />
-        </div>
+        {/* 8. Руки (поверх тела) */}
+        <img src="https://i.ibb.co/Rpqxt0hP/Untitled190-20260511164241.png" style={{ ...layerStyle, zIndex: 6 }} alt="8" />
 
-        {/* === ОКРУЖЕНИЕ ГЛЫБЫ (передние слои) === */}
+        {/* === ГЛЫБА ЛЬДА (САМЫЙ ВЕРХНИЙ СЛОЙ) === */}
+        {/* 9. Передняя часть */}
         <img src="https://i.ibb.co/zW5DhzsJ/Untitled190-20260511164252.png" style={{ ...layerStyle, zIndex: 7 }} alt="9" />
+        {/* 10. Оверлей (блики) */}
         <img src="https://i.ibb.co/2YyJrLF2/Untitled190-20260511164352.png" style={{ ...layerStyle, zIndex: 8, opacity: 0.6 }} alt="10" />
       </div>
 
       <style>{`
+        /* НОВОЕ: Лёгкое мелкое дрожание всего тела от холода */
+        @keyframes shudder {
+          0%, 100% { transform: scale(1.25) translateY(0) rotate(0deg); }
+          15%, 45%, 75% { transform: scale(1.25) translateY(-0.5px) rotate(0.2deg); }
+          30%, 60%, 90% { transform: scale(1.25) translateY(0.5px) rotate(-0.2deg); }
+        }
+
+        /* Заметное моргание ("примерзшие веки" хлопают резче) */
+        @keyframes blinkFrozen {
+          0%, 94%, 96%, 100% { transform: scaleY(1); }
+          95% { transform: scaleY(0.01); }
+        }
+
         /* Пульсация свечения */
-        @keyframes iceGlow { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+        @keyframes flameGlow {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 0.8; }
+        }
 
         /* Внутренний эффект плавает медленно */
-        @keyframes innerFloatFrozen {
+        @keyframes innerFloat {
           0%, 100% { transform: translateY(0); opacity: 0.7; }
           50% { transform: translateY(-7px); opacity: 1; }
         }
 
-        /* Замедленное моргание (глаза "примерзли") */
-        @keyframes blinkFrozen { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0); } }
-
-        /* НОВОЕ: Брови взлетают от ужаса */
-        @keyframes scaredBrows {
+        /* НОВОЕ: Лёгкое, едва заметное дрожание бровей */
+        @keyframes browsShudder {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-7px) scaleX(1.03); }
+          50% { transform: translateY(-1.5px); }
         }
 
-        /* НОВОЕ: Рот дрожит мелко и быстро (имитация стука зубов) */
-        @keyframes mouthTremble {
+        /* НОВОЕ: Вибрация рта (стук зубов) */
+        @keyframes mouthVibrate {
           0%, 100% { transform: translateX(0); }
-          15%, 45%, 75% { transform: translateX(-1px); }
-          30%, 60%, 90% { transform: translateX(1px); }
+          15%, 45%, 75% { transform: translateX(-0.5px) translateY(-0.3px); }
+          30%, 60%, 90% { transform: translateX(0.5px) translateY(0.3px); }
         }
 
-        /* НОВОЕ: Сопля вытягивается вниз и пружинисто возвращается */
-        @keyframes snotPanic {
-          0%, 100% { transform: translateY(0) scaleY(1); animation-timing-function: ease-out; }
-          40% { transform: translateY(6px) scaleY(1.3); animation-timing-function: ease-in; }
-          60% { transform: translateY(-2px) scaleY(0.9); animation-timing-function: ease-out; }
-          80% { transform: translateY(1px) scaleY(1.02); animation-timing-function: ease-in; }
+        /* НОВОЕ: Сопля медленно вытягивается вниз и возвращается */
+        @keyframes snotDripSoft {
+          0%, 100% { transform: translateY(0) scaleY(1); }
+          50% { transform: translateY(3px) scaleY(1.05); }
         }
       `}</style>
     </div>
