@@ -199,13 +199,21 @@ const Shop = () => {
   };
 
   const streakDays = [
-    { day: 1, reward: 100, icon: Star },
-    { day: 2, reward: 100, icon: Star },
-    { day: 3, reward: 150, icon: Flame },
-    { day: 4, reward: 150, icon: Flame },
-    { day: 5, reward: 150, icon: Flame },
-    { day: 6, reward: 200, icon: Trophy },
-    { day: 7, reward: 200, icon: Trophy },
+    { day: 1,   reward: 100,  icon: "🔥", color: "#facc15",  label: "Д1"   },
+    { day: 2,   reward: 100,  icon: "🔥", color: "#facc15",  label: "Д2"   },
+    { day: 3,   reward: 150,  icon: "🔥", color: "#f97316",  label: "Д3"   },
+    { day: 4,   reward: 150,  icon: "🔥", color: "#ef4444",  label: "Д4"   },
+    { day: 5,   reward: 150,  icon: "🔥", color: "#a855f7",  label: "Д5"   },
+    { day: 6,   reward: 200,  icon: "🔥", color: "#22c55e",  label: "Д6"   },
+    { day: 7,   reward: 200,  icon: "🔥", color: "#3b82f6",  label: "Д7"   },
+  ];
+
+  // Milestone NFT rewards
+  const nftMilestones = [
+    { days: 100, nft: "100–200",  label: "100 днів",  color: "#facc15" },
+    { days: 300, nft: "200–350",  label: "300 днів",  color: "#f97316" },
+    { days: 500, nft: "350–500",  label: "500 днів",  color: "#a855f7" },
+    { days: 1000, nft: "500+",    label: "1000 днів", color: "url(#rainbow)", labelColor: "#fff" },
   ];
 
   return (
@@ -224,7 +232,7 @@ const Shop = () => {
 
       <div className="liquid-glass-card rounded-2xl p-4 mb-4 animate-fade-in">
         <div className="flex items-center gap-2 mb-3">
-          <Flame className="w-4 h-4 text-orange-400" />
+          <span style={{ fontSize: 18 }}>🔥</span>
           <span className="text-sm font-semibold text-foreground">Серія: {streak} днів</span>
           {streak >= 3 && (
             <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-orange-400/15 text-orange-400 border border-orange-400/20">
@@ -236,18 +244,58 @@ const Shop = () => {
           {streakDays.map((d) => {
             const isDone = streak >= d.day;
             const isCurrent = streak + 1 === d.day;
-            const Icon = d.icon;
+            const fireColor = isDone || isCurrent ? d.color : "#555";
             return (
               <div key={d.day} className={`flex flex-col items-center gap-1 rounded-xl py-2 transition-all ${
-                isDone ? "bg-primary/15 border border-primary/25" :
-                isCurrent ? "bg-primary/8 border border-primary/15" :
+                isDone ? "border" :
+                isCurrent ? "border" :
                 "bg-muted/10 border border-white/5"
-              }`}>
-                <Icon className={`w-3.5 h-3.5 ${isDone ? "text-primary" : isCurrent ? "text-primary/60" : "text-muted-foreground/30"}`} />
-                <span className={`text-[8px] font-bold ${isDone ? "text-primary" : isCurrent ? "text-primary/60" : "text-muted-foreground/30"}`}>
+              }`}
+                style={isDone ? { background: d.color + "22", borderColor: d.color + "55" }
+                  : isCurrent ? { background: d.color + "11", borderColor: d.color + "33" }
+                  : {}}>
+                <span style={{ fontSize: 14, filter: isDone ? `drop-shadow(0 0 4px ${d.color})` : "grayscale(1)", transition: "filter 0.3s" }}>🔥</span>
+                <span className={`text-[8px] font-bold`} style={{ color: isDone ? d.color : isCurrent ? d.color + "99" : "#444" }}>
                   +{d.reward}
                 </span>
-                <span className={`text-[7px] ${isDone ? "text-primary/60" : "text-muted-foreground/30"}`}>Д{d.day}</span>
+                <span className="text-[7px]" style={{ color: isDone ? d.color + "aa" : "#333" }}>{d.label}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 1000-day rainbow */}
+        {streak >= 1000 && (
+          <div className="mt-3 rounded-xl p-3 text-center animate-fade-in"
+            style={{ background: "linear-gradient(135deg, #facc15, #f97316, #ef4444, #a855f7, #22c55e, #3b82f6)", backgroundClip: "text" }}>
+            <span className="text-sm font-black" style={{ background: "linear-gradient(90deg,#facc15,#f97316,#ef4444,#a855f7,#22c55e,#3b82f6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              🌈 ЛЕГЕНДА • 1000 ДНІВ
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* NFT Milestone Rewards */}
+      <div className="liquid-glass-card rounded-2xl p-4 mb-4 animate-fade-in">
+        <div className="flex items-center gap-2 mb-3">
+          <span style={{ fontSize: 16 }}>🎁</span>
+          <span className="text-sm font-semibold text-foreground">NFT Нагороди за серію</span>
+        </div>
+        <div className="space-y-2">
+          {nftMilestones.map(m => {
+            const reached = streak >= m.days;
+            return (
+              <div key={m.days} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all"
+                style={reached ? { background: m.color + "15", borderColor: m.color + "40" } : { background: "hsl(0 0% 100% / 0.02)", borderColor: "hsl(0 0% 100% / 0.06)" }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base"
+                  style={{ background: m.color + "22", border: `1px solid ${m.color}44` }}>
+                  {reached ? "🏆" : "🔒"}
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-bold" style={{ color: reached ? m.color : "#555" }}>{m.label}</p>
+                  <p className="text-[10px] text-muted-foreground">NFT вартістю {m.nft} CR</p>
+                </div>
+                {reached && <span className="text-[9px] font-black px-2 py-0.5 rounded-md" style={{ background: m.color + "20", color: m.color, border: `1px solid ${m.color}40` }}>ОТРИМАНО</span>}
               </div>
             );
           })}
