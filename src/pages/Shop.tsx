@@ -41,11 +41,13 @@ export const loadSavedTheme = () => {
 /* ───────────── STREAK COLOR (interpolated HSL) ───────────── */
 // <10 = yellow, 15 = red, 25 = purple, 50 = blue, 90 = green, 100 = RGB cycling
 const STREAK_STOPS: { at: number; h: number; s: number; l: number }[] = [
-  { at: 0,   h: 50,  s: 100, l: 55 }, // жёлтый
+  { at: 0,   h: 30,  s: 100, l: 55 }, // оранжевый
   { at: 15,  h: 0,   s: 90,  l: 55 }, // красный
-  { at: 25,  h: 280, s: 85,  l: 60 }, // фиолетовый
-  { at: 50,  h: 215, s: 100, l: 55 }, // синий
-  { at: 90,  h: 135, s: 85,  l: 50 }, // зелёный
+  { at: 25,  h: 270, s: 85,  l: 60 }, // фиолетовый
+  { at: 50,  h: 215, s: 100, l: 58 }, // синий
+  { at: 100, h: 210, s: 100, l: 62 }, // глубокий синий
+  { at: 175, h: 195, s: 100, l: 58 }, // сине-голубой (начало rgb)
+  { at: 200, h: 165, s: 90,  l: 55 }, // зелёно-синий
 ];
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const lerpHue = (a: number, b: number, t: number) => {
@@ -136,37 +138,119 @@ const FrozenFlame = ({ size = 180 }: { size?: number }) => {
 };
 
 /* ───────────── ACTIVE FLAME ───────────── */
+// PNG base color is orange ~30°. hue-rotate shifts FROM that base.
+// Formula: shift = targetHue - 30 (mod 360)
+// Targets:
+//   0–14  → orange (0°, no shift)
+//   15–24 → red    (0° = -30 → use -20deg for vivid red)
+//   25–49 → purple (270° → shift +240deg)
+//   50–99 → blue   (215° → shift +185deg)
+//   100–174 → deep blue (210° → fixed, NOT rgb)
+//   175–199 → partial rgb: slow hue-rotate starting from blue offset
+//   200+  → full rgb + teal/green-blue glow
+
+const getFlameMode = (streak: number): "orange" | "red" | "purple" | "blue" | "deep_blue" | "rgb_blue" | "rgb_full" => {
+  if (streak >= 200) return "rgb_full";
+  if (streak >= 175) return "rgb_blue";
+  if (streak >= 100) return "deep_blue";
+  if (streak >= 50)  return "blue";
+  if (streak >= 25)  return "purple";
+  if (streak >= 15)  return "red";
+  return "orange";
+};
+
+// Returns CSS filter string for body/hands layers
+const getFlameFilter = (mode: ReturnType<typeof getFlameMode>, extra = ""): string => {
+  const sat = extra || "saturate(1.3)";
+  switch (mode) {
+    case "orange":    return `hue-rotate(0deg) ${sat}`;
+    case "red":       return `hue-rotate(-20deg) saturate(1.8) brightness(1.05)`;
+    case "purple":    return `hue-rotate(240deg) saturate(1.6) brightness(1.05)`;
+    case "blue":      return `hue-rotate(185deg) saturate(1.7) brightness(1.1)`;
+    case "deep_blue": return `hue-rotate(180deg) saturate(2) brightness(1.15)`;
+    case "rgb_blue":  return `hue-rotate(180deg) saturate(2) brightness(1.15)`;
+    case "rgb_full":  return `saturate(1.5)`;
+  }
+};
+
+// Glow radial background color per mode
+const getGlowColor = (mode: ReturnType<typeof getFlameMode>): string => {
+  switch (mode) {
+    case "orange":    return "rgba(255,140,0,0.5)";
+    case "red":       return "rgba(255,50,30,0.55)";
+    case "purple":    return "rgba(180,60,255,0.5)";
+    case "blue":      return "rgba(60,140,255,0.5)";
+    case "deep_blue": return "rgba(40,110,255,0.55)";
+    case "rgb_blue":  return "rgba(40,110,255,0.5)";
+    case "rgb_full":  return "rgba(80,220,200,0.5)";
+  }
+};
+
 const StreakFlame = ({ streak, size = 180 }: { streak: number; size?: number }) => {
-  const hueShift = streak >= 90 ? 95 : streak >= 50 ? 165 : streak >= 25 ? 230 : streak >= 15 ? -25 : 0;
+  const mode = getFlameMode(streak);
+  const isRgbFull  = mode === "rgb_full";
+  const isRgbBlue  = mode === "rgb_blue";
+  const isAnyRgb   = isRgbFull || isRgbBlue;
+
   const layerStyle: React.CSSProperties = {
     position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
     objectFit: "contain", display: "block", pointerEvents: "none",
   };
-  // RGB animation for 100+
-  const isRgb = streak >= 100;
+
+  // For rgb_blue: animate hue-rotate starting from 180deg (blue), slow cycle
+  // For rgb_full: full cycle starting from 0
+  const bodyAnim   = isRgbFull ? "rgbBodyFull 2s linear infinite"
+                   : isRgbBlue ? "rgbBodyBlue 6s linear infinite"
+                   : undefined;
+  const innerAnim  = isRgbFull ? "effectFloat 4s infinite ease-in-out, rgbInnerFull 2s linear infinite"
+                   : isRgbBlue ? "effectFloat 4s infinite ease-in-out, rgbInnerBlue 6s linear infinite"
+                   : "effectFloat 4s infinite ease-in-out";
+  const handsAnim  = isRgbFull ? "rgbHandsFull 2s linear infinite"
+                   : isRgbBlue ? "rgbHandsBlue 6s linear infinite"
+                   : undefined;
+  const glowAnim   = isRgbFull ? "rgbGlowFull 2s linear infinite"
+                   : isRgbBlue ? "rgbGlowBlue 6s linear infinite"
+                   : "flameGlow 4s ease-in-out infinite";
+
+  const staticFilter  = getFlameFilter(mode);
+  const staticFilter2 = getFlameFilter(mode, "saturate(1.8)");
 
   return (
     <div style={{
       position: "relative", width: size, height: size,
       display: "flex", alignItems: "center", justifyContent: "center", overflow: "visible",
     }}>
+      {/* Glow orb */}
       <div style={{
         position: "absolute", width: "90%", height: "90%", borderRadius: "50%",
-        background: isRgb
-          ? "radial-gradient(circle, rgba(255,100,100,0.5) 0%, transparent 70%)"
-          : `radial-gradient(circle, rgba(255,140,0,0.5) 0%, transparent 70%)`,
-        filter: isRgb ? "blur(15px)" : `blur(15px) hue-rotate(${hueShift}deg)`,
-        animation: isRgb ? "rgbGlow 2s linear infinite" : "flameGlow 4s ease-in-out infinite",
+        background: `radial-gradient(circle, ${getGlowColor(mode)} 0%, transparent 70%)`,
+        filter: "blur(15px)",
+        animation: glowAnim,
       }} />
+
+      {/* Flame wrapper */}
       <div style={{
         position: "relative", width: "100%", height: "100%",
         animation: "flameWobble 4s ease-in-out infinite",
         transformOrigin: "50% 90%",
       }}>
+        {/* Body */}
         <img src="https://i.ibb.co/3mg4dWt4/Untitled190-20260511153855.png"
-          style={{ ...layerStyle, filter: isRgb ? "saturate(1.5)" : `hue-rotate(${hueShift}deg)`, animation: isRgb ? "rgbBody 2s linear infinite" : undefined }} alt="body" />
+          style={{
+            ...layerStyle,
+            filter: isAnyRgb ? undefined : staticFilter,
+            animation: bodyAnim,
+          }} alt="body" />
+
+        {/* Effect / inner glow layer */}
         <img src="https://i.ibb.co/WvBJRvQc/Untitled190-20260511153903.png"
-          style={{ ...layerStyle, filter: isRgb ? "saturate(2)" : `hue-rotate(${hueShift}deg)`, animation: isRgb ? "effectFloat 4s infinite ease-in-out, rgbInner 2s linear infinite" : "effectFloat 4s infinite ease-in-out" }} alt="effect" />
+          style={{
+            ...layerStyle,
+            filter: isAnyRgb ? undefined : staticFilter2,
+            animation: innerAnim,
+          }} alt="effect" />
+
+        {/* Face — no hue shift, keep natural */}
         <div style={{ position: "absolute", inset: 0 }}>
           <div style={{ position: "absolute", inset: 0, animation: "mouthBreathActive 4s ease-in-out infinite", transformOrigin: "50% 65%" }}>
             <img src="https://i.ibb.co/MDJnjp7k/image-2.png" style={layerStyle} alt="mouth" />
@@ -178,13 +262,24 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number; size?: number }) 
             <img src="https://i.ibb.co/3mqZW48Y/image-1.png" style={layerStyle} alt="eyes" />
           </div>
         </div>
+
+        {/* Hands */}
         <div style={{ position: "absolute", inset: 0, animation: "handsWiggleActive 4s ease-in-out infinite", transformOrigin: "50% 60%" }}>
           <img src="https://i.ibb.co/JRntLWBQ/Untitled190-20260511155448.png"
-            style={{ ...layerStyle, filter: isRgb ? undefined : `hue-rotate(${hueShift}deg)` }} alt="hands" />
+            style={{
+              ...layerStyle,
+              filter: isAnyRgb ? undefined : staticFilter,
+              animation: handsAnim,
+            }} alt="hands" />
           <img src="https://i.ibb.co/jZbBtPmB/Untitled190-20260511155454.png"
-            style={{ ...layerStyle, filter: isRgb ? undefined : `hue-rotate(${hueShift}deg)` }} alt="hands-inner" />
+            style={{
+              ...layerStyle,
+              filter: isAnyRgb ? undefined : staticFilter2,
+              animation: handsAnim,
+            }} alt="hands-inner" />
         </div>
       </div>
+
       <style>{`
         @keyframes flameWobble { 0%,100%{transform:rotate(-2.5deg) translateY(0)} 50%{transform:rotate(2.5deg) translateY(-2px)} }
         @keyframes blinkSlow { 0%,91%,95%,100%{transform:scaleY(1)} 93%{transform:scaleY(0.02)} }
@@ -193,9 +288,29 @@ const StreakFlame = ({ streak, size = 180 }: { streak: number; size?: number }) 
         @keyframes handsWiggleActive { 0%,100%{transform:translateY(0) rotate(-1deg)} 50%{transform:translateY(-4px) rotate(1deg)} }
         @keyframes browsFloatActive { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px) scaleX(1.02)} }
         @keyframes mouthBreathActive { 0%,100%{transform:scale(1) translateY(0)} 50%{transform:scaleX(1.06) scaleY(0.94) translateY(1.5px)} }
-        @keyframes rgbGlow { 0%{background:radial-gradient(circle,rgba(255,80,80,0.5) 0%,transparent 70%)} 33%{background:radial-gradient(circle,rgba(80,255,80,0.5) 0%,transparent 70%)} 66%{background:radial-gradient(circle,rgba(80,80,255,0.5) 0%,transparent 70%)} 100%{background:radial-gradient(circle,rgba(255,80,80,0.5) 0%,transparent 70%)} }
-        @keyframes rgbBody { 0%{filter:hue-rotate(0deg) saturate(1.5)} 100%{filter:hue-rotate(360deg) saturate(1.5)} }
-        @keyframes rgbInner { 0%{filter:hue-rotate(0deg) saturate(2)} 100%{filter:hue-rotate(360deg) saturate(2)} }
+
+        /* rgb_blue: slow cycle starting from blue (180deg), ±90deg swing → blue↔teal↔purple */
+        @keyframes rgbBodyBlue  { 0%{filter:hue-rotate(180deg) saturate(2) brightness(1.15)} 50%{filter:hue-rotate(270deg) saturate(2.2) brightness(1.2)} 100%{filter:hue-rotate(540deg) saturate(2) brightness(1.15)} }
+        @keyframes rgbInnerBlue { 0%{filter:hue-rotate(180deg) saturate(2.5) brightness(1.2)} 50%{filter:hue-rotate(270deg) saturate(2.8) brightness(1.25)} 100%{filter:hue-rotate(540deg) saturate(2.5) brightness(1.2)} }
+        @keyframes rgbHandsBlue { 0%{filter:hue-rotate(180deg) saturate(2) brightness(1.1)} 50%{filter:hue-rotate(270deg) saturate(2.2) brightness(1.15)} 100%{filter:hue-rotate(540deg) saturate(2) brightness(1.1)} }
+        @keyframes rgbGlowBlue  {
+          0%   { background: radial-gradient(circle,rgba(40,110,255,0.55) 0%,transparent 70%); }
+          33%  { background: radial-gradient(circle,rgba(140,40,255,0.55) 0%,transparent 70%); }
+          66%  { background: radial-gradient(circle,rgba(40,200,255,0.5) 0%,transparent 70%); }
+          100% { background: radial-gradient(circle,rgba(40,110,255,0.55) 0%,transparent 70%); }
+        }
+
+        /* rgb_full: full 360 cycle fast */
+        @keyframes rgbBodyFull  { 0%{filter:hue-rotate(0deg) saturate(1.6)} 100%{filter:hue-rotate(360deg) saturate(1.6)} }
+        @keyframes rgbInnerFull { 0%{filter:hue-rotate(0deg) saturate(2.2)} 100%{filter:hue-rotate(360deg) saturate(2.2)} }
+        @keyframes rgbHandsFull { 0%{filter:hue-rotate(0deg) saturate(1.6)} 100%{filter:hue-rotate(360deg) saturate(1.6)} }
+        @keyframes rgbGlowFull  {
+          0%   { background: radial-gradient(circle,rgba(255,80,80,0.5) 0%,transparent 70%); }
+          25%  { background: radial-gradient(circle,rgba(80,255,120,0.5) 0%,transparent 70%); }
+          50%  { background: radial-gradient(circle,rgba(80,80,255,0.5) 0%,transparent 70%); }
+          75%  { background: radial-gradient(circle,rgba(255,200,40,0.5) 0%,transparent 70%); }
+          100% { background: radial-gradient(circle,rgba(255,80,80,0.5) 0%,transparent 70%); }
+        }
       `}</style>
     </div>
   );
@@ -347,7 +462,8 @@ const Shop = () => {
   const milestoneDays = [15, 50, 150, 365];
   const flameC = streakColor((streakFrozen || streakAtRisk) ? 0 : streak);
   const flameCss = (streakFrozen || streakAtRisk) ? "rgba(150,210,255,0.9)" : hsl(flameC, 1);
-  const isRgb = streak >= 100 && !streakFrozen && !streakAtRisk;
+  const flameMode = getFlameMode(!streakFrozen && !streakAtRisk ? streak : 0);
+  const isRgb = (flameMode === "rgb_full" || flameMode === "rgb_blue") && !streakFrozen && !streakAtRisk;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
