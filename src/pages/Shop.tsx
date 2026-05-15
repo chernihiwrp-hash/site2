@@ -3,7 +3,7 @@ import { Gift, Clock, Zap, Star, Trophy, Sparkles, Lock, Flame, AlertTriangle, C
 import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
 import { setBalance as syncBalance, supabase } from "../lib/store";
-import { dbUpdate, ilike } from "../lib/db";
+import { dbInsert, dbUpdate, ilike } from "../lib/db";
 
 /* ───────────── THEMES ───────────── */
 export type ThemeId = "lime" | "neon_blue" | "cyber_red" | "gold_vip" | "purple_haze" | "arctic" | "matrix" | "sunset";
