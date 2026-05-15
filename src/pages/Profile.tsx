@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { store, supabase, getBalanceFromDB } from "../lib/store";
 import type { Notification } from "../lib/store";
+import HouseFamilyModal from "../components/HouseFamilyModal";
 
 const getTelegramUser = () => {
   try {
@@ -93,6 +94,7 @@ const Profile = () => {
   const [availableNfts, setAvailableNfts] = useState<any[]>([]);
   const [selectedNftIds, setSelectedNftIds] = useState<string[]>([]);
   const [showOrbitSettings, setShowOrbitSettings] = useState(false);
+  const [showHouseModal, setShowHouseModal] = useState(false);
   const [nftVisible, setNftVisible] = useState(false);
   const [contentVisible, setContentVisible] = useState(false);
   const [orbitSpeed, setOrbitSpeed] = useState<number>(() => {
@@ -303,6 +305,22 @@ const Profile = () => {
               style={{ width: AV, height: AV, position: "relative", zIndex: 30 }}
               onClick={() => setShowOrbitSettings(true)}
             >
+              {/* Шестерня для управління домом / сім'єю */}
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowHouseModal(true); }}
+                title="Управління домом та сім'єю"
+                className="absolute flex items-center justify-center transition-all active:scale-90 hover:scale-105"
+                style={{
+                  right: -6, bottom: -6, width: 24, height: 24, zIndex: 40,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, hsl(142 71% 45% / 0.95), hsl(152 76% 30% / 0.95))",
+                  border: "1.5px solid hsl(142 71% 55%)",
+                  boxShadow: "0 0 10px hsl(142 71% 45% / 0.6), 0 2px 6px rgba(0,0,0,0.5)",
+                }}
+              >
+                <Settings className="w-3 h-3 text-white" style={{ filter: "drop-shadow(0 0 2px rgba(0,0,0,0.5))" }} />
+              </button>
+
               {/* Аватарка */}
               <div
                 className="group absolute rounded-xl overflow-hidden"
@@ -748,6 +766,23 @@ const Profile = () => {
           </button>
         </div>
       )}
+
+      {/* ═══ МОДАЛКА ДОМА ТА СІМ'Ї ═══ */}
+      <HouseFamilyModal
+        open={showHouseModal}
+        onClose={() => setShowHouseModal(false)}
+        ownerNick={nick}
+        houses={profileData.houses.map((h: any) => ({
+          id: h.id,
+          name: h.name,
+          price: h.price,
+          image: h.image,
+          photos: h.photos,
+          rental_days: h.rental_days,
+          created_at: h.created_at,
+          desc: h.desc,
+        }))}
+      />
     </div>
   );
 };
