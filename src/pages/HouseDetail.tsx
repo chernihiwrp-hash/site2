@@ -4,8 +4,9 @@ import PageHeader from "../components/PageHeader";
 import GradientButton from "../components/GradientButton";
 import {
   ChevronLeft, ChevronRight, Home, Euro,
-  CheckCircle, User, Sparkles, Tag, Clock,
-  Calendar, Building2, Copy, Check, AlertCircle
+  CheckCircle, User, Sparkles, Clock,
+  Calendar, Building2, Copy, Check, AlertCircle,
+  Crown, Shield
 } from "lucide-react";
 import { store, supabase } from "../lib/store";
 import { dbInsert } from "../lib/db";
@@ -13,8 +14,6 @@ import type { HouseItem, FamilyMember, FamilyRole } from "../lib/store";
 import HouseFamilyDisplay from "../components/HouseFamilyDisplay";
 import { toast } from "sonner";
 
-// Ціни в євро за термін
-// eurPrice буде розраховуватись від house.price
 const RENTAL_OPTIONS = [
   { days: 3,  label: "3 дні",   ratio: 0.15 },
   { days: 7,  label: "7 днів",  ratio: 0.30 },
@@ -23,6 +22,12 @@ const RENTAL_OPTIONS = [
 ];
 
 const PAYMENT_USER = "Vkadosik1234";
+
+const roleLabels: Record<string, { label: string; color: string; Icon: any }> = {
+  owner:    { label: "Власник",      color: "hsl(45 100% 60%)",  Icon: Crown   },
+  co_owner: { label: "Співвласник",  color: "hsl(180 80% 55%)",  Icon: Shield  },
+  member:   { label: "Сожитель",     color: "hsl(142 71% 50%)",  Icon: User    },
+};
 
 const HouseDetail = () => {
   const { id } = useParams();
@@ -34,7 +39,6 @@ const HouseDetail = () => {
   const [submitted, setSubmitted] = useState(false);
   const [rentalDays, setRentalDays] = useState(7);
   const [copied, setCopied] = useState(false);
-  const [step, setStep] = useState<"choose" | "payment" | "confirm">("choose");
   const [housePurchaseId, setHousePurchaseId] = useState<number | null>(null);
   const [userRole, setUserRole] = useState<FamilyRole | null>(null);
 
@@ -45,11 +49,9 @@ const HouseDetail = () => {
     });
   }, [id]);
 
-  // Підвантажуємо house_purchase_requests.id і роль юзера в сімʼї
   useEffect(() => {
     if (!nick || !id) return;
     const loadPurchaseAndRole = async () => {
-      // Знаходимо approved request для цього дому
       const { data: req } = await supabase
         .from("house_purchase_requests")
         .select("id")
@@ -58,7 +60,6 @@ const HouseDetail = () => {
         .maybeSingle();
       if (!req) return;
       setHousePurchaseId(req.id);
-      // Знаходимо роль поточного юзера в сімʼї
       const { data: member } = await supabase
         .from("house_families")
         .select("role")
@@ -83,7 +84,6 @@ const HouseDetail = () => {
   const photos = house.photos?.filter(p => p.startsWith("http") || p.startsWith("data:")) || (house.image ? [house.image] : []);
   const isAvailable = !house.owner;
   const isLux = house.category === "Люкс";
-  // Округляем, чтобы избежать артефактов с плавающей точкой (429000.00000000006€).
   const getPrice = (ratio: number) => house ? Math.round(house.price * ratio) : 0;
   const selectedOption = RENTAL_OPTIONS.find(o => o.days === rentalDays) || RENTAL_OPTIONS[1];
   const selectedPrice = house ? getPrice(selectedOption.ratio) : 0;
@@ -111,7 +111,6 @@ const HouseDetail = () => {
         return;
       }
       setSubmitted(true);
-      setStep("confirm");
     } catch (e) {
       console.error("Exception:", e);
       toast.error("Помилка. Спробуйте ще раз.");
@@ -149,7 +148,8 @@ const HouseDetail = () => {
               <span className="text-primary font-semibold">{PAYMENT_USER}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 px-5 py-3 rounded-2xl" style={{ background: "hsl(142 71% 45% / 0.08)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
+          <div className="flex items-center gap-2 px-5 py-3 rounded-2xl"
+            style={{ background: "hsl(142 71% 45% / 0.08)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
             <Clock className="w-4 h-4" style={{ color: "hsl(142 71% 45%)" }} />
             <span className="text-xs font-medium" style={{ color: "hsl(142 71% 45%)" }}>Очікуйте підтвердження в профілі</span>
           </div>
@@ -161,11 +161,11 @@ const HouseDetail = () => {
   return (
     <div className="min-h-screen pb-28 px-4 pt-4">
       <PageHeader title={house.name} backTo="/houses" />
-      <div className="animate-fade-in space-y-4">
+      <div className="animate-fade-in space-y-3">
 
-        {/* Photo */}
+        {/* ── Фото ── */}
         <div className="relative w-full rounded-2xl overflow-hidden"
-          style={{ height: photos.length > 0 ? 220 : 140, border: "1px solid hsl(0 0% 100% / 0.08)" }}>
+          style={{ height: photos.length > 0 ? 230 : 140, border: "1px solid hsl(0 0% 100% / 0.08)" }}>
           {photos.length > 0 ? (
             <img src={photos[photoIdx]} alt={house.name} className="w-full h-full object-cover" />
           ) : (
@@ -174,145 +174,199 @@ const HouseDetail = () => {
               {isLux ? <Building2 className="w-16 h-16 text-yellow-400/20" /> : <Home className="w-16 h-16 text-primary/20" />}
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-          <div className="absolute top-3 left-3 flex gap-2">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/88 via-black/10 to-transparent" />
+
+          {/* Категорія */}
+          <div className="absolute top-3 left-3">
             <span className="text-[10px] font-bold px-2.5 py-1 rounded-xl backdrop-blur-sm flex items-center gap-1"
-              style={{ background: isLux ? "hsl(45 100% 55% / 0.2)" : "hsl(var(--primary) / 0.2)", color: isLux ? "hsl(45 100% 55%)" : "hsl(var(--primary))", border: `1px solid ${isLux ? "hsl(45 100% 55% / 0.4)" : "hsl(var(--primary) / 0.4)"}` }}>
+              style={{
+                background: isLux ? "hsl(45 100% 55% / 0.22)" : "hsl(var(--primary) / 0.22)",
+                color: isLux ? "hsl(45 100% 65%)" : "hsl(var(--primary))",
+                border: `1px solid ${isLux ? "hsl(45 100% 55% / 0.45)" : "hsl(var(--primary) / 0.45)"}`,
+              }}>
               <Sparkles className="w-3 h-3" /> {house.category}
             </span>
           </div>
+
+          {/* Статус */}
           <div className="absolute top-3 right-3">
-            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-xl backdrop-blur-sm ${isAvailable ? "text-primary" : "text-destructive"}`}
-              style={{ background: isAvailable ? "hsl(var(--primary) / 0.2)" : "hsl(0 70% 50% / 0.2)", border: isAvailable ? "1px solid hsl(var(--primary) / 0.4)" : "1px solid hsl(0 70% 50% / 0.4)" }}>
-              {isAvailable ? "ВІЛЬНО" : "ЗАЙНЯТО"}
+            <span className="text-[10px] font-bold px-2.5 py-1 rounded-xl backdrop-blur-sm"
+              style={{
+                background: isAvailable ? "hsl(142 71% 45% / 0.22)" : "hsl(0 70% 50% / 0.22)",
+                color: isAvailable ? "hsl(142 71% 65%)" : "hsl(0 70% 65%)",
+                border: isAvailable ? "1px solid hsl(142 71% 45% / 0.45)" : "1px solid hsl(0 70% 50% / 0.45)",
+              }}>
+              {isAvailable ? "● ВІЛЬНО" : "● ЗАЙНЯТО"}
             </span>
           </div>
-          <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
-            <div>
-              <h2 className="text-base font-black text-white">{house.name}</h2>
-              <p className="text-[10px] text-white/60">{house.desc}</p>
+
+          {/* Назва + ціна знизу */}
+          <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
+            <h2 className="text-lg font-black text-white leading-tight">{house.name}</h2>
+            {house.desc && <p className="text-[11px] text-white/50 mt-0.5 line-clamp-1">{house.desc}</p>}
+            <div className="flex items-baseline gap-2 mt-1.5">
+              <span className="text-yellow-400 font-black text-xl">{house.price.toLocaleString()}€</span>
+              <span className="text-white/35 text-[10px]">повна вартість</span>
             </div>
           </div>
+
+          {/* Навігація фото */}
           {photos.length > 1 && (
             <>
-              <button onClick={() => setPhotoIdx(i => Math.max(0, i - 1))} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90">
+              <button onClick={() => setPhotoIdx(i => Math.max(0, i - 1))}
+                className="absolute left-2 top-[42%] -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center active:scale-90">
                 <ChevronLeft className="w-4 h-4 text-white" />
               </button>
-              <button onClick={() => setPhotoIdx(i => Math.min(photos.length - 1, i + 1))} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90">
+              <button onClick={() => setPhotoIdx(i => Math.min(photos.length - 1, i + 1))}
+                className="absolute right-2 top-[42%] -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center active:scale-90">
                 <ChevronRight className="w-4 h-4 text-white" />
               </button>
+              <div className="absolute bottom-[3.75rem] left-1/2 -translate-x-1/2 flex gap-1">
+                {photos.map((_, i) => (
+                  <button key={i} onClick={() => setPhotoIdx(i)}
+                    className="rounded-full transition-all"
+                    style={{ width: i === photoIdx ? 16 : 5, height: 5, background: i === photoIdx ? "white" : "rgba(255,255,255,0.35)" }} />
+                ))}
+              </div>
             </>
           )}
         </div>
 
-        {isAvailable ? (
-          <div className="rounded-2xl overflow-hidden" style={{ background: "hsl(0 0% 0% / 0.4)", border: "1px solid hsl(var(--primary) / 0.15)", backdropFilter: "blur(20px)" }}>
-            <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "hsl(0 0% 100% / 0.06)" }}>
-              <Euro className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-semibold">Орендувати будинок</span>
+        {/* ── Роль поточного юзера ── */}
+        {userRole && (() => {
+          const meta = roleLabels[userRole];
+          if (!meta) return null;
+          const { Icon } = meta;
+          return (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+              style={{ background: `color-mix(in srgb, ${meta.color} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${meta.color} 30%, transparent)` }}>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: `color-mix(in srgb, ${meta.color} 18%, transparent)`, border: `1px solid color-mix(in srgb, ${meta.color} 40%, transparent)` }}>
+                <Icon className="w-4 h-4" style={{ color: meta.color }} />
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Ваша роль</p>
+                <p className="text-[13px] font-bold" style={{ color: meta.color }}>{meta.label}</p>
+              </div>
             </div>
-            <div className="p-4 space-y-4">
+          );
+        })()}
 
-              {/* Nick */}
-              <div>
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Ваш нік</label>
-                <div className="flex items-center gap-2 liquid-glass rounded-xl px-4 py-3">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-foreground/80">{nick || "—"}</span>
-                </div>
+        {isAvailable ? (
+          /* ══════ ВІЛЬНИЙ ══════ */
+          <div className="space-y-3">
+
+            {/* Орендар */}
+            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl liquid-glass">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.25)" }}>
+                <User className="w-4 h-4 text-primary" />
               </div>
-
-              {/* Rental period */}
               <div>
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 block">Термін оренди</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {RENTAL_OPTIONS.map(({ days, label, ratio }) => (
-                    <button key={days} onClick={() => setRentalDays(days)}
-                      className="flex flex-col items-center py-2.5 rounded-xl border transition-all active:scale-95"
-                      style={{
-                        background: rentalDays === days ? "hsl(var(--primary) / 0.15)" : "hsl(0 0% 100% / 0.03)",
-                        borderColor: rentalDays === days ? "hsl(var(--primary) / 0.5)" : "hsl(0 0% 100% / 0.08)",
-                        boxShadow: rentalDays === days ? "0 0 12px hsl(var(--primary) / 0.2)" : "none",
-                      }}>
-                      <span className={`text-xs font-bold ${rentalDays === days ? "text-primary" : "text-foreground"}`}>{label}</span>
-                      <span className={`text-[10px] font-bold mt-0.5 ${rentalDays === days ? "text-yellow-400" : "text-muted-foreground"}`}>{house ? Math.round(house.price * ratio).toLocaleString() : 0}€</span>
-                    </button>
-                  ))}
-                </div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Орендар</p>
+                <p className="text-[13px] font-bold text-foreground">{nick || "—"}</p>
               </div>
+            </div>
 
-              {/* Payment block */}
-              <div className="rounded-2xl p-4 space-y-3" style={{ background: "hsl(45 100% 55% / 0.05)", border: "1px solid hsl(45 100% 55% / 0.15)" }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <Euro className="w-4 h-4 text-yellow-400" />
-                  <span className="text-xs font-bold text-foreground">Оплата</span>
+            {/* Термін */}
+            <div className="rounded-2xl overflow-hidden"
+              style={{ background: "hsl(0 0% 0% / 0.4)", border: "1px solid hsl(0 0% 100% / 0.08)", backdropFilter: "blur(20px)" }}>
+              <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "hsl(0 0% 100% / 0.06)" }}>
+                <Calendar className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold">Термін оренди</span>
+              </div>
+              <div className="p-3 grid grid-cols-4 gap-2">
+                {RENTAL_OPTIONS.map(({ days, label, ratio }) => (
+                  <button key={days} onClick={() => setRentalDays(days)}
+                    className="flex flex-col items-center py-3 rounded-xl border transition-all active:scale-95"
+                    style={{
+                      background: rentalDays === days ? "hsl(var(--primary) / 0.15)" : "hsl(0 0% 100% / 0.03)",
+                      borderColor: rentalDays === days ? "hsl(var(--primary) / 0.5)" : "hsl(0 0% 100% / 0.08)",
+                      boxShadow: rentalDays === days ? "0 0 14px hsl(var(--primary) / 0.2)" : "none",
+                    }}>
+                    <span className={`text-[11px] font-bold ${rentalDays === days ? "text-primary" : "text-foreground/70"}`}>{label}</span>
+                    <span className={`text-[10px] font-bold mt-1 ${rentalDays === days ? "text-yellow-400" : "text-muted-foreground"}`}>
+                      {house ? Math.round(house.price * ratio).toLocaleString() : 0}€
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Оплата */}
+            <div className="rounded-2xl overflow-hidden"
+              style={{ background: "hsl(45 100% 55% / 0.05)", border: "1px solid hsl(45 100% 55% / 0.2)" }}>
+              <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "hsl(45 100% 55% / 0.12)" }}>
+                <Euro className="w-4 h-4 text-yellow-400" />
+                <span className="text-sm font-semibold">Оплата</span>
+              </div>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">{rentalDays} днів</span>
+                  </div>
+                  <span className="text-2xl font-black text-yellow-400">{selectedPrice.toLocaleString()}€</span>
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Переведи <span className="text-yellow-400 font-bold text-sm">{selectedPrice.toLocaleString()}€</span> на акаунт нижче і натисни "Підтвердити оплату". Адміністратор перевірить і активує оренду.
-                </p>
                 <div className="flex items-center gap-2 liquid-glass rounded-xl px-3 py-2.5">
-                  <span className="text-xs text-muted-foreground">Перевести на:</span>
+                  <span className="text-xs text-muted-foreground shrink-0">На акаунт:</span>
                   <span className="text-sm font-bold text-primary flex-1">{PAYMENT_USER}</span>
                   <button onClick={copyPayment} className="p-1.5 liquid-glass rounded-lg active:scale-90 transition-all">
                     {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
                   </button>
                 </div>
-                <div className="flex items-start gap-2 px-3 py-2 rounded-xl" style={{ background: "hsl(45 100% 55% / 0.08)", border: "1px solid hsl(45 100% 55% / 0.15)" }}>
+                <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
+                  style={{ background: "hsl(45 100% 55% / 0.08)", border: "1px solid hsl(45 100% 55% / 0.18)" }}>
                   <AlertCircle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-yellow-400/80">Вкажи у коментарі до переказу свій нік: <span className="font-bold">{nick}</span></p>
+                  <p className="text-[10px] text-yellow-400/80 leading-relaxed">
+                    Вкажи у коментарі до переказу свій нік: <span className="font-bold text-yellow-400">{nick}</span>
+                  </p>
                 </div>
               </div>
-
-              {/* Summary */}
-              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl" style={{ background: "hsl(0 0% 100% / 0.03)", border: "1px solid hsl(0 0% 100% / 0.06)" }}>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">{rentalDays} днів</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Euro className="w-3.5 h-3.5 text-yellow-400" />
-                  <span className="text-sm font-black text-yellow-400">{selectedPrice.toLocaleString()}€</span>
-                </div>
-              </div>
-
-              <GradientButton variant="green" className="w-full" onClick={handleConfirmPayment} disabled={loading || !nick.trim()}>
-                {loading
-                  ? <span className="flex items-center gap-2 justify-center"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Відправляю...</span>
-                  : <span className="flex items-center gap-2 justify-center"><CheckCircle className="w-4 h-4" />Підтвердити оплату</span>
-                }
-              </GradientButton>
             </div>
+
+            <GradientButton variant="green" className="w-full" onClick={handleConfirmPayment} disabled={loading || !nick.trim()}>
+              {loading
+                ? <span className="flex items-center gap-2 justify-center">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Відправляю...
+                  </span>
+                : <span className="flex items-center gap-2 justify-center">
+                    <CheckCircle className="w-4 h-4" />
+                    Підтвердити оплату
+                  </span>
+              }
+            </GradientButton>
           </div>
+
         ) : (
+          /* ══════ ЗАЙНЯТИЙ ══════ */
           <div className="space-y-3">
-            {/* Власник / роль поточного юзера */}
-            <div className="rounded-2xl p-5" style={{ background: "hsl(0 70% 50% / 0.05)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center" style={{ background: "hsl(0 70% 50% / 0.1)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
-                  <User className="w-6 h-6 text-destructive" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-destructive">Будинок зайнятий</p>
-                  <p className="text-xs text-muted-foreground">Власник: <span className="text-foreground font-semibold">{house.owner}</span></p>
-                </div>
+
+            {/* Власник */}
+            <div className="rounded-2xl overflow-hidden"
+              style={{ background: "hsl(0 0% 0% / 0.4)", border: "1px solid hsl(0 0% 100% / 0.08)", backdropFilter: "blur(20px)" }}>
+              <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "hsl(0 0% 100% / 0.06)" }}>
+                <Crown className="w-4 h-4 text-yellow-400" />
+                <span className="text-sm font-semibold">Власник будинку</span>
               </div>
-              {/* Роль поточного юзера */}
-              {userRole && (() => {
-                const roleLabels: Record<string, { label: string; color: string }> = {
-                  owner: { label: "Власник", color: "hsl(45 100% 60%)" },
-                  co_owner: { label: "Співвласник", color: "hsl(180 80% 55%)" },
-                  member: { label: "Сожитель", color: "hsl(142 71% 50%)" },
-                };
-                const meta = roleLabels[userRole];
-                return meta ? (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: `${meta.color}18`, border: `1px solid ${meta.color}50` }}>
-                    <span className="text-[11px] text-muted-foreground">Ваша роль:</span>
-                    <span className="text-[11px] font-bold" style={{ color: meta.color }}>{meta.label}</span>
-                  </div>
-                ) : null;
-              })()}
+              <div className="px-4 py-3.5 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: "hsl(45 100% 55% / 0.12)", border: "1px solid hsl(45 100% 55% / 0.3)" }}>
+                  <Crown className="w-5 h-5 text-yellow-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Гравець</p>
+                  <p className="text-[15px] font-bold text-foreground truncate">{house.owner}</p>
+                </div>
+                <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-destructive shrink-0"
+                  style={{ background: "hsl(0 70% 50% / 0.12)", border: "1px solid hsl(0 70% 50% / 0.3)" }}>
+                  ЗАЙНЯТО
+                </span>
+              </div>
             </div>
-            {/* Сімʼя дому */}
+
+            {/* Сім'я */}
             {housePurchaseId && (
               <HouseFamilyDisplay housePurchaseId={housePurchaseId} />
             )}
