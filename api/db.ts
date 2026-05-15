@@ -21,6 +21,7 @@ const ALLOWED_TABLES = new Set<string>([
   "houses",
   "documents",
   "bans",
+  "house_families",
 ]);
 
 const ALLOWED_OPS = new Set(["insert", "update", "delete", "upsert"]);
