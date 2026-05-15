@@ -432,14 +432,16 @@ const Shop = () => {
     if (streak < days || claimedNfts.has(nft.id) || claimingNft !== null) return;
     setClaimingNft(nft.id);
     try {
-      // Save to nft_owners — the table that Profile reads from
-      const { error } = await supabase.from("nft_owners").insert({
+      // Save to nft_owners via secure /api/db route (bypasses RLS with service role)
+      const { error } = await dbInsert("nft_owners", {
         owner_nick: nick,
         nft_id: nft.id,
         obtained_at: new Date().toISOString(),
       });
       if (error) {
-        console.warn("NFT claim DB error:", error);
+        toast.error(`Помилка отримання NFT: ${error.message}`);
+        setClaimingNft(null);
+        return;
       }
       const newClaimed = new Set(claimedNfts);
       newClaimed.add(nft.id);
@@ -460,7 +462,7 @@ const Shop = () => {
   ];
 
   const milestoneDays = [15, 50, 150, 365];
-  const milestonePrices = [1000, 3000, 6000, 10000];
+  const milestonePrices = [1000, 3000, 6000, 20000];
   const flameC = streakColor((streakFrozen || streakAtRisk) ? 0 : streak);
   const flameCss = (streakFrozen || streakAtRisk) ? "rgba(150,210,255,0.9)" : hsl(flameC, 1);
   const flameMode = getFlameMode(!streakFrozen && !streakAtRisk ? streak : 0);
