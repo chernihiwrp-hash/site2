@@ -426,11 +426,11 @@ export const store = {
 
   // ── WANTED ────────────────────────────────────────────────────────────────
   getWanted: async (): Promise<WantedPerson[]> => {
-    // У БД nick зберігається в колонці target_username + фільтруємо тільки активні
+    // У БД nick зберігається в колонці target_username + фільтруємо активні або без статусу
     const { data, error } = await supabase
       .from("wanted")
       .select("*")
-      .eq("status", "active")
+      .or("status.eq.active,status.is.null")
       .order("stars", { ascending: false });
     if (error) { console.error("getWanted:", error.message); return []; }
     return (data || []).map((r: Record<string, unknown>) => ({
