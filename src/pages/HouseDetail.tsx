@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import { store, supabase } from "../lib/store";
 import { dbInsert } from "../lib/db";
-import type { HouseItem } from "../lib/store";
+import type { HouseItem, FamilyMember, FamilyRole } from "../lib/store";
+import HouseFamilyDisplay from "../components/HouseFamilyDisplay";
 import { toast } from "sonner";
 
 // Ціни в євро за термін
@@ -34,6 +35,8 @@ const HouseDetail = () => {
   const [rentalDays, setRentalDays] = useState(7);
   const [copied, setCopied] = useState(false);
   const [step, setStep] = useState<"choose" | "payment" | "confirm">("choose");
+  const [housePurchaseId, setHousePurchaseId] = useState<number | null>(null);
+  const [userRole, setUserRole] = useState<FamilyRole | null>(null);
 
   useEffect(() => {
     store.getHouses().then(houses => {
@@ -41,6 +44,31 @@ const HouseDetail = () => {
       if (found) setHouse(found);
     });
   }, [id]);
+
+  // Підвантажуємо house_purchase_requests.id і роль юзера в сімʼї
+  useEffect(() => {
+    if (!nick || !id) return;
+    const loadPurchaseAndRole = async () => {
+      // Знаходимо approved request для цього дому
+      const { data: req } = await supabase
+        .from("house_purchase_requests")
+        .select("id")
+        .eq("house_id", Number(id))
+        .eq("status", "approved")
+        .maybeSingle();
+      if (!req) return;
+      setHousePurchaseId(req.id);
+      // Знаходимо роль поточного юзера в сімʼї
+      const { data: member } = await supabase
+        .from("house_families")
+        .select("role")
+        .eq("house_purchase_id", req.id)
+        .ilike("username", nick)
+        .maybeSingle();
+      if (member?.role) setUserRole(member.role as FamilyRole);
+    };
+    loadPurchaseAndRole();
+  }, [id, nick]);
 
   if (!house) return (
     <div className="min-h-screen pb-20 px-4 pt-4">
@@ -256,12 +284,38 @@ const HouseDetail = () => {
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl p-5 text-center" style={{ background: "hsl(0 70% 50% / 0.05)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
-            <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: "hsl(0 70% 50% / 0.1)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
-              <User className="w-6 h-6 text-destructive" />
+          <div className="space-y-3">
+            {/* Власник / роль поточного юзера */}
+            <div className="rounded-2xl p-5" style={{ background: "hsl(0 70% 50% / 0.05)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center" style={{ background: "hsl(0 70% 50% / 0.1)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
+                  <User className="w-6 h-6 text-destructive" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-destructive">Будинок зайнятий</p>
+                  <p className="text-xs text-muted-foreground">Власник: <span className="text-foreground font-semibold">{house.owner}</span></p>
+                </div>
+              </div>
+              {/* Роль поточного юзера */}
+              {userRole && (() => {
+                const roleLabels: Record<string, { label: string; color: string }> = {
+                  owner: { label: "Власник", color: "hsl(45 100% 60%)" },
+                  co_owner: { label: "Співвласник", color: "hsl(180 80% 55%)" },
+                  member: { label: "Сожитель", color: "hsl(142 71% 50%)" },
+                };
+                const meta = roleLabels[userRole];
+                return meta ? (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: `${meta.color}18`, border: `1px solid ${meta.color}50` }}>
+                    <span className="text-[11px] text-muted-foreground">Ваша роль:</span>
+                    <span className="text-[11px] font-bold" style={{ color: meta.color }}>{meta.label}</span>
+                  </div>
+                ) : null;
+              })()}
             </div>
-            <p className="text-sm font-bold text-destructive mb-1">Будинок зайнятий</p>
-            <p className="text-xs text-muted-foreground">Власник: <span className="text-foreground font-semibold">{house.owner}</span></p>
+            {/* Сімʼя дому */}
+            {housePurchaseId && (
+              <HouseFamilyDisplay housePurchaseId={housePurchaseId} />
+            )}
           </div>
         )}
       </div>
