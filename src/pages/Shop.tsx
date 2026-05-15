@@ -384,14 +384,8 @@ const Shop = () => {
         syncBalance(nick, bal); setBalanceState(bal);
       }
     });
-    Promise.all([
-      supabase.from("nft_gifts").select("*").gte("price", 3000000).order("price", { ascending: false }).limit(1),
-      supabase.from("nft_gifts").select("*").lte("price", 20000).order("price", { ascending: true }).limit(3),
-    ]).then(([expRes, cheapRes]: any[]) => {
-      const expensive = expRes.data ?? [];
-      const cheap = cheapRes.data ?? [];
-      setNftGifts([...expensive, ...cheap].slice(0, 4));
-    });
+    supabase.from("nft_gifts").select("*").order("price", { ascending: true }).limit(4)
+      .then(({ data }: any) => { if (data) setNftGifts(data); });
 
     // Load claimed NFTs from localStorage
     const saved = localStorage.getItem("crp_claimed_nfts");
@@ -442,7 +436,6 @@ const Shop = () => {
       const { error } = await dbInsert("nft_owners", {
         owner_nick: nick,
         nft_id: nft.id,
-        obtained_at: new Date().toISOString(),
       });
       if (error) {
         toast.error(`Помилка отримання NFT: ${error.message}`);
@@ -468,7 +461,7 @@ const Shop = () => {
   ];
 
   const milestoneDays = [15, 50, 150, 365];
-  const milestonePrices = [3000000, 6000, 10000, 20000];
+  const milestonePrices = [3000, 5000, 10000, 15000];
   const flameC = streakColor((streakFrozen || streakAtRisk) ? 0 : streak);
   const flameCss = (streakFrozen || streakAtRisk) ? "rgba(150,210,255,0.9)" : hsl(flameC, 1);
   const flameMode = getFlameMode(!streakFrozen && !streakAtRisk ? streak : 0);
@@ -726,7 +719,7 @@ const Shop = () => {
                         <MiniFlameIcon done streakDay={days} current={false} />
                         {days} днів
                       </span>
-                      <span className="text-white/30">·</span><span className="text-white/60 tabular-nums">{(nft?.price ?? milestonePrices[idx]).toLocaleString()} CR</span>
+                      <span className="text-white/30">·</span><span className="text-white/60 tabular-nums">{milestonePrices[idx].toLocaleString()} CR</span>
                     </div>
                     {/* Badge */}
                     {isClaimed && (
