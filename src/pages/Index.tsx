@@ -6,7 +6,7 @@ import {
   Swords, Bug, UserX, HelpCircle, ChevronRight,
   Star, Landmark, Scale, ShieldAlert
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import PulseCity from "../components/PulseCity";
 import GradientButton from "../components/GradientButton";
@@ -116,8 +116,38 @@ const Index = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Pick 3 random buttons to decorate with sticker icons
+  const stickerIcons = [
+    "https://i.ibb.co/fdy3KvFs/58aa76f3835e515a59e0a752.png",
+    "https://i.ibb.co/7J3HdZQK/free-icon-life-preserver-4974652.png",
+    "https://i.ibb.co/VcLVx9b9/pngtree-glasses-summer-black-white-transparent-png-image-9047495.png",
+  ];
+  const stickerMap = useMemo(() => {
+    const labels = menuSections.flatMap(s => s.items.map(i => i.label));
+    const shuffled = [...labels].sort(() => Math.random() - 0.5).slice(0, 3);
+    const map: Record<string, string> = {};
+    shuffled.forEach((l, idx) => { map[l] = stickerIcons[idx]; });
+    return map;
+  }, []);
+
   return (
-    <div className="min-h-screen pb-24 px-4 pt-4">
+    <div className="min-h-screen pb-24 px-4 pt-4 relative">
+      {/* Animated GIF background (dimmed) — replaces sparks on home */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          zIndex: 0,
+          backgroundImage: "url('https://s13.gifyu.com/images/b7rM8.gif')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{ zIndex: 0, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(2px)" }}
+      />
+      <div className="relative" style={{ zIndex: 1 }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -207,9 +237,23 @@ const Index = () => {
                       navigate(it.path);
                     }}
                     className="animate-slide-up" style={{ animationDelay: `${(si * 4 + i) * 35}ms` }}>
-                    <div className={`liquid-glass-card rounded-2xl ${isThreeCol ? "p-3" : "p-4"} flex flex-col gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.97] h-full text-left ${it.red ? "hover:border-destructive/25" : "hover:border-primary/25"}`}
-                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 20px ${it.red ? "hsl(0 70% 50% / 0.14)" : "hsl(var(--primary) / 0.14)"}`; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = ""; }}>
+                    <div className={`liquid-glass-card relative overflow-hidden rounded-2xl ${isThreeCol ? "p-3" : "p-4"} flex flex-col gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.97] h-full text-left ${it.red ? "hover:border-destructive/25" : "hover:border-primary/25"}`}
+                      style={{
+                        background: "linear-gradient(135deg, hsl(0 0% 100% / 0.10), hsl(0 0% 100% / 0.02))",
+                        backdropFilter: "blur(22px) saturate(1.8)",
+                        WebkitBackdropFilter: "blur(22px) saturate(1.8)",
+                        border: "1px solid hsl(0 0% 100% / 0.18)",
+                        boxShadow: "inset 0 1px 0 hsl(0 0% 100% / 0.18), inset 0 -1px 0 hsl(0 0% 0% / 0.25), 0 8px 24px hsl(0 0% 0% / 0.35)",
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = `inset 0 1px 0 hsl(0 0% 100% / 0.22), 0 0 24px ${it.red ? "hsl(0 70% 50% / 0.25)" : "hsl(var(--primary) / 0.25)"}`; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "inset 0 1px 0 hsl(0 0% 100% / 0.18), inset 0 -1px 0 hsl(0 0% 0% / 0.25), 0 8px 24px hsl(0 0% 0% / 0.35)"; }}>
+                      {/* Glossy highlight */}
+                      <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-2xl"
+                        style={{ background: "linear-gradient(180deg, hsl(0 0% 100% / 0.12), transparent)" }} />
+                      {stickerMap[it.label] && (
+                        <img src={stickerMap[it.label]} alt=""
+                          className="pointer-events-none absolute -top-2 -right-2 w-10 h-10 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)] rotate-12" />
+                      )}
                       <div className={`relative ${isThreeCol ? "w-8 h-8" : "w-10 h-10"} rounded-xl flex items-center justify-center ${it.red ? "bg-destructive/10 border border-destructive/15" : "bg-primary/10 border border-primary/15"}`}>
                         <it.icon className={`${isThreeCol ? "w-4 h-4" : "w-5 h-5"} ${it.red ? "text-destructive" : "text-primary"}`} />
                         {hasBadge && (
@@ -217,7 +261,7 @@ const Index = () => {
                             style={{ boxShadow: "0 0 6px hsl(var(--primary))" }} />
                         )}
                       </div>
-                      <div>
+                      <div className="relative">
                         <p className={`${isThreeCol ? "text-xs" : "text-sm"} font-bold leading-tight truncate ${it.red ? "text-destructive" : "text-foreground"}`}>{it.label}</p>
                         <p className={`${isThreeCol ? "text-[9px]" : "text-[10px]"} text-muted-foreground mt-0.5 truncate`}>{it.desc}</p>
                       </div>
@@ -228,6 +272,7 @@ const Index = () => {
             </div>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );
