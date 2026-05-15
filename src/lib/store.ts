@@ -426,14 +426,17 @@ export const store = {
 
   // ── WANTED ────────────────────────────────────────────────────────────────
   getWanted: async (): Promise<WantedPerson[]> => {
+    // У БД nick зберігається в колонці target_username + фільтруємо тільки активні
     const { data, error } = await supabase
       .from("wanted")
       .select("*")
+      .eq("status", "active")
       .order("stars", { ascending: false });
     if (error) { console.error("getWanted:", error.message); return []; }
     return (data || []).map((r: Record<string, unknown>) => ({
       id: r.id as number,
       name:
+        (r.target_username as string) ||
         (r.name as string) ||
         (r.username as string) ||
         (r.nickname as string) ||
@@ -447,11 +450,12 @@ export const store = {
 
   addWanted: async (name: string, reason: string, stars: number): Promise<boolean> => {
     const s = Math.max(0, Math.min(5, stars));
-    // Пробуємо різні варіанти назви колонки (name / username), щоб точно зберегти нік
+    // Основна колонка в БД — target_username. Фолбеки на випадок альтернативних схем.
     const tryPayloads = [
+      { target_username: name, reason, stars: s, status: "active", issued_by: "admin" },
+      { target_username: name, reason, stars: s, status: "active" },
+      { target_username: name, reason, stars: s },
       { name, username: name, reason, stars: s },
-      { name, reason, stars: s },
-      { username: name, reason, stars: s },
     ];
     for (const payload of tryPayloads) {
       const { error } = await dbInsert("wanted", payload);
