@@ -384,8 +384,14 @@ const Shop = () => {
         syncBalance(nick, bal); setBalanceState(bal);
       }
     });
-    supabase.from("nft_gifts").select("*").gte("price", 3000).lte("price", 25000).order("price", { ascending: true }).limit(4)
-      .then(({ data }: any) => { if (data) setNftGifts(data); });
+    Promise.all([
+      supabase.from("nft_gifts").select("*").gte("price", 3000000).order("price", { ascending: false }).limit(1),
+      supabase.from("nft_gifts").select("*").lte("price", 20000).order("price", { ascending: true }).limit(3),
+    ]).then(([expRes, cheapRes]: any[]) => {
+      const expensive = expRes.data ?? [];
+      const cheap = cheapRes.data ?? [];
+      setNftGifts([...expensive, ...cheap].slice(0, 4));
+    });
 
     // Load claimed NFTs from localStorage
     const saved = localStorage.getItem("crp_claimed_nfts");
@@ -462,7 +468,7 @@ const Shop = () => {
   ];
 
   const milestoneDays = [15, 50, 150, 365];
-  const milestonePrices = [1000, 3000, 6000, 20000];
+  const milestonePrices = [3000000, 6000, 10000, 20000];
   const flameC = streakColor((streakFrozen || streakAtRisk) ? 0 : streak);
   const flameCss = (streakFrozen || streakAtRisk) ? "rgba(150,210,255,0.9)" : hsl(flameC, 1);
   const flameMode = getFlameMode(!streakFrozen && !streakAtRisk ? streak : 0);
