@@ -94,7 +94,7 @@ const Profile = () => {
   const [availableNfts, setAvailableNfts] = useState<any[]>([]);
   const [selectedNftIds, setSelectedNftIds] = useState<string[]>([]);
   const [showOrbitSettings, setShowOrbitSettings] = useState(false);
-  const [showHouseModal, setShowHouseModal] = useState(false);
+  const [houseModalId, setHouseModalId] = useState<number | null>(null);
   const [nftVisible, setNftVisible] = useState(false);
   const [contentVisible, setContentVisible] = useState(false);
   const [orbitSpeed, setOrbitSpeed] = useState<number>(() => {
@@ -305,22 +305,6 @@ const Profile = () => {
               style={{ width: AV, height: AV, position: "relative", zIndex: 30 }}
               onClick={() => setShowOrbitSettings(true)}
             >
-              {/* Шестерня для управління домом / сім'єю */}
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowHouseModal(true); }}
-                title="Управління домом та сім'єю"
-                className="absolute flex items-center justify-center transition-all active:scale-90 hover:scale-105"
-                style={{
-                  right: -6, bottom: -6, width: 24, height: 24, zIndex: 40,
-                  borderRadius: 8,
-                  background: "linear-gradient(135deg, hsl(142 71% 45% / 0.95), hsl(152 76% 30% / 0.95))",
-                  border: "1.5px solid hsl(142 71% 55%)",
-                  boxShadow: "0 0 10px hsl(142 71% 45% / 0.6), 0 2px 6px rgba(0,0,0,0.5)",
-                }}
-              >
-                <Settings className="w-3 h-3 text-white" style={{ filter: "drop-shadow(0 0 2px rgba(0,0,0,0.5))" }} />
-              </button>
-
               {/* Аватарка */}
               <div
                 className="group absolute rounded-xl overflow-hidden"
@@ -514,12 +498,25 @@ const Profile = () => {
                 {profileData.houses.map(h => {
                   const photo = h.photos?.find((p: string) => p.startsWith("http")) || h.image;
                   return (
-                    <div key={h.id} className="rounded-xl overflow-hidden"
+                    <div key={h.id} className="rounded-xl overflow-hidden relative"
                       style={{ background: "hsl(142 71% 45% / 0.05)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
                       {photo && (
                         <div className="relative h-28 overflow-hidden">
                           <img src={photo} alt={h.name} className="w-full h-full object-cover" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setHouseModalId(h.id); }}
+                            title="Управління домом та сім'єю"
+                            className="absolute top-2 left-2 flex items-center justify-center transition-all active:scale-90 hover:scale-105 z-20"
+                            style={{
+                              width: 28, height: 28, borderRadius: 8,
+                              background: "linear-gradient(135deg, hsl(142 71% 45% / 0.95), hsl(152 76% 30% / 0.95))",
+                              border: "1.5px solid hsl(142 71% 55%)",
+                              boxShadow: "0 0 10px hsl(142 71% 45% / 0.55), 0 2px 6px rgba(0,0,0,0.5)",
+                            }}
+                          >
+                            <Settings className="w-3.5 h-3.5 text-white" />
+                          </button>
                           <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10">
                             <Clock className="w-3 h-3 text-primary" />
                             <span className="text-[10px] font-bold text-white">{calculateHouseTime(h.created_at, h.rental_days || 7)}</span>
@@ -546,6 +543,19 @@ const Profile = () => {
                             </div>
                             <p className="text-[10px] text-yellow-400 font-bold">{h.price.toLocaleString()}€</p>
                           </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setHouseModalId(h.id); }}
+                            title="Управління домом та сім'єю"
+                            className="flex items-center justify-center transition-all active:scale-90 hover:scale-105 shrink-0"
+                            style={{
+                              width: 30, height: 30, borderRadius: 9,
+                              background: "linear-gradient(135deg, hsl(142 71% 45% / 0.95), hsl(152 76% 30% / 0.95))",
+                              border: "1.5px solid hsl(142 71% 55%)",
+                              boxShadow: "0 0 10px hsl(142 71% 45% / 0.55), 0 2px 6px rgba(0,0,0,0.5)",
+                            }}
+                          >
+                            <Settings className="w-3.5 h-3.5 text-white" />
+                          </button>
                         </div>
                       )}
                     </div>
@@ -769,19 +779,15 @@ const Profile = () => {
 
       {/* ═══ МОДАЛКА ДОМА ТА СІМ'Ї ═══ */}
       <HouseFamilyModal
-        open={showHouseModal}
-        onClose={() => setShowHouseModal(false)}
-        ownerNick={nick}
-        houses={profileData.houses.map((h: any) => ({
-          id: h.id,
-          name: h.name,
-          price: h.price,
-          image: h.image,
-          photos: h.photos,
-          rental_days: h.rental_days,
-          created_at: h.created_at,
-          desc: h.desc,
+        open={houseModalId !== null}
+        onClose={() => setHouseModalId(null)}
+        houses={profileData.houses.filter(h => h.id === houseModalId).map(h => ({
+          id: h.id, name: h.name, price: h.price,
+          image: h.image, photos: h.photos,
+          rental_days: h.rental_days, created_at: (h as any).created_at,
+          desc: (h as any).desc,
         }))}
+        ownerNick={nick}
       />
     </div>
   );
