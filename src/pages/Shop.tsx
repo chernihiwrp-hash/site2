@@ -384,7 +384,7 @@ const Shop = () => {
         syncBalance(nick, bal); setBalanceState(bal);
       }
     });
-    supabase.from("nft_gifts").select("*").order("price", { ascending: true }).limit(4)
+    supabase.from("nft_gifts").select("*").gte("price", 3000).lte("price", 25000).order("price", { ascending: true }).limit(4)
       .then(({ data }: any) => { if (data) setNftGifts(data); });
 
     // Load claimed NFTs from localStorage
@@ -718,7 +718,7 @@ const Shop = () => {
                         <MiniFlameIcon done streakDay={days} current={false} />
                         {days} днів
                       </span>
-                      <span className="text-white/30">·</span><span className="text-white/60 tabular-nums">{milestonePrices[idx].toLocaleString()} CR</span>
+                      <span className="text-white/30">·</span><span className="text-white/60 tabular-nums">{(nft?.price ?? milestonePrices[idx]).toLocaleString()} CR</span>
                     </div>
                     {/* Badge */}
                     {isClaimed && (
