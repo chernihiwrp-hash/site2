@@ -460,6 +460,7 @@ const Shop = () => {
   ];
 
   const milestoneDays = [15, 50, 150, 365];
+  const milestonePrices = [1000, 3000, 6000, 10000];
   const flameC = streakColor((streakFrozen || streakAtRisk) ? 0 : streak);
   const flameCss = (streakFrozen || streakAtRisk) ? "rgba(150,210,255,0.9)" : hsl(flameC, 1);
   const flameMode = getFlameMode(!streakFrozen && !streakAtRisk ? streak : 0);
@@ -717,7 +718,7 @@ const Shop = () => {
                         <MiniFlameIcon done streakDay={days} current={false} />
                         {days} днів
                       </span>
-                      {nft?.price != null && <><span className="text-white/30">·</span><span className="text-white/60 tabular-nums">{nft.price} CR</span></>}
+                      <span className="text-white/30">·</span><span className="text-white/60 tabular-nums">{milestonePrices[idx].toLocaleString()} CR</span>
                     </div>
                     {/* Badge */}
                     {isClaimed && (
