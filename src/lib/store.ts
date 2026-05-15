@@ -22,6 +22,15 @@ export type HouseItem = {
   category: string; owner: string | null; image?: string; photos: string[];
 };
 export type WantedPerson = { id: number; name: string; reason: string; stars: number };
+export type FamilyRole = "owner" | "co_owner" | "member";
+export type FamilyMember = {
+  id: number;
+  house_purchase_id: number;
+  username: string;
+  role: FamilyRole;
+  created_at?: string;
+};
+export type UserSearchResult = { username: string; avatar_url?: string };
 export type FactionApplication = {
   id: number; factionId: string; factionName: string; nick: string;
   roblox: string; age: string; telegram: string; experience: string;
@@ -424,17 +433,32 @@ export const store = {
     if (error) { console.error("getWanted:", error.message); return []; }
     return (data || []).map((r: Record<string, unknown>) => ({
       id: r.id as number,
-      name: (r.name as string) || (r.username as string) || "",
+      name:
+        (r.name as string) ||
+        (r.username as string) ||
+        (r.nickname as string) ||
+        (r.nick as string) ||
+        (r.player as string) ||
+        "Невідомо",
       reason: (r.reason as string) || "",
       stars: Math.max(0, Math.min(5, (r.stars as number) || 0)),
     }));
   },
 
   addWanted: async (name: string, reason: string, stars: number): Promise<boolean> => {
-    try {
-      await secureInsert("wanted", { name, reason, stars: Math.max(0, Math.min(5, stars)) });
-      return true;
-    } catch (e) { console.error("addWanted:", e); return false; }
+    const s = Math.max(0, Math.min(5, stars));
+    // Пробуємо різні варіанти назви колонки (name / username), щоб точно зберегти нік
+    const tryPayloads = [
+      { name, username: name, reason, stars: s },
+      { name, reason, stars: s },
+      { username: name, reason, stars: s },
+    ];
+    for (const payload of tryPayloads) {
+      const { error } = await dbInsert("wanted", payload);
+      if (!error) return true;
+      console.warn("addWanted retry:", error.message);
+    }
+    return false;
   },
 
   removeWanted: async (id: number): Promise<void> => {
@@ -758,5 +782,66 @@ export const store = {
         const r = p.new as Record<string, unknown>;
         if (r?.id != null && r?.status != null) { cb(r.id as number, r.status as string); }
       }).subscribe();
+  },
+
+  // ── HOUSE FAMILIES ────────────────────────────────────────────────────────
+  getFamily: async (housePurchaseId: number): Promise<FamilyMember[]> => {
+    const { data, error } = await supabase
+      .from("house_families")
+      .select("*")
+      .eq("house_purchase_id", housePurchaseId)
+      .order("role", { ascending: true });
+    if (error) { console.error("getFamily:", error.message); return []; }
+    return (data || []) as FamilyMember[];
+  },
+
+  createFamily: async (housePurchaseId: number, ownerNick: string): Promise<boolean> => {
+    try {
+      await secureInsert("house_families", {
+        house_purchase_id: housePurchaseId,
+        username: ownerNick,
+        role: "owner",
+      });
+      return true;
+    } catch (e) { console.error("createFamily:", e); return false; }
+  },
+
+  addFamilyMember: async (
+    housePurchaseId: number,
+    username: string,
+    role: FamilyRole = "member",
+  ): Promise<boolean> => {
+    try {
+      await secureInsert("house_families", {
+        house_purchase_id: housePurchaseId, username, role,
+      });
+      return true;
+    } catch (e) { console.error("addFamilyMember:", e); return false; }
+  },
+
+  updateFamilyRole: async (id: number, role: FamilyRole): Promise<void> => {
+    await dbUpdate("house_families", { role }, { id: eq(id) });
+  },
+
+  removeFamilyMember: async (id: number): Promise<void> => {
+    await dbDelete("house_families", { id: eq(id) });
+  },
+
+  // Розумний пошук користувачів (для додавання в сім'ю)
+  searchUsers: async (query: string, limit = 10): Promise<UserSearchResult[]> => {
+    const q = (query || "").trim();
+    if (!q) return [];
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("username, avatar_url")
+        .ilike("username", `${q}%`)
+        .limit(limit);
+      if (error) { console.error("searchUsers:", error.message); return []; }
+      return (data || []).map((r: any) => ({
+        username: String(r.username || ""),
+        avatar_url: r.avatar_url || undefined,
+      })).filter(u => u.username);
+    } catch (e) { console.error("searchUsers:", e); return []; }
   },
 };
