@@ -17,10 +17,29 @@ const MayorElection = () => {
   });
   const [showBio, setShowBio] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showApply, setShowApply] = useState(false);
+  const [applyProgram, setApplyProgram] = useState("");
+  const [applyBio, setApplyBio] = useState("");
+  const [applying, setApplying] = useState(false);
+  const nick = localStorage.getItem("crp_nick") || "";
 
   useEffect(() => {
     store.getCandidates().then(data => { setCandidates(data); setLoading(false); });
   }, []);
+
+  const submitApply = async () => {
+    if (!nick) return toast.error("Спочатку увійдіть");
+    if (!applyProgram.trim()) return toast.error("Заповніть програму");
+    setApplying(true);
+    const ok = await store.submitMayorApplication(nick, applyProgram, applyBio);
+    setApplying(false);
+    if (ok) {
+      toast.success("Заявку відправлено! Очікуйте схвалення адміністрації.");
+      setShowApply(false); setApplyProgram(""); setApplyBio("");
+    } else {
+      toast.error("Помилка відправки");
+    }
+  };
 
   const totalVotes = candidates.reduce((s, c) => s + c.votes, 0);
 
@@ -54,6 +73,25 @@ const MayorElection = () => {
           <Vote className="w-3.5 h-3.5 text-muted-foreground" />
           <p className="text-[11px] text-muted-foreground">Всього голосів: {totalVotes}</p>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <GradientButton variant="green" className="w-full py-3" onClick={() => setShowApply(s => !s)}>
+          <Crown className="w-4 h-4 inline mr-2" /> Подати заявку на мера
+        </GradientButton>
+        {showApply && (
+          <div className="mt-3 p-4 liquid-glass-card rounded-2xl space-y-2 animate-fade-in">
+            <input value={nick} disabled className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs opacity-60" />
+            <textarea value={applyProgram} onChange={e => setApplyProgram(e.target.value)} placeholder="Ваша програма (коротко)"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs h-20 resize-none" />
+            <textarea value={applyBio} onChange={e => setApplyBio(e.target.value)} placeholder="Біографія (необов'язково)"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs h-16 resize-none" />
+            <GradientButton variant="green" className="w-full py-2 text-xs" onClick={submitApply} disabled={applying}>
+              {applying ? "Відправка..." : "Відправити заявку"}
+            </GradientButton>
+            <p className="text-[9px] text-muted-foreground">Після схвалення адмінами ви з'явитесь у списку для голосування.</p>
+          </div>
+        )}
       </div>
 
       {loading ? (
