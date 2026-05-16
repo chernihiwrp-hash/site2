@@ -22,6 +22,11 @@ const ALLOWED_TABLES = new Set<string>([
   "documents",
   "bans",
   "house_families",
+  // ── НОВІ таблиці адмін-фічей ──
+  "recruitment_settings",       // закриття набору у фракцію / адміни
+  "house_confiscations",        // історія конфіскацій будинків
+  "mayor_candidate_applications", // заявки на кандидата у мери
+  "notifications",              // server-side нотифікації (замість localStorage)
 ]);
 
 const ALLOWED_OPS = new Set(["insert", "update", "delete", "upsert"]);
