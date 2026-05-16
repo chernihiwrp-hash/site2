@@ -68,6 +68,7 @@ const Index = () => {
   const [sosType, setSosType] = useState("raid");
   const [sosDesc, setSosDesc] = useState("");
   const [sosNick, setSosNick] = useState("");
+  const [sosViolator, setSosViolator] = useState("");
   const [copied, setCopied] = useState(false);
   const [sosSending, setSosSending] = useState(false);
   const [badges, setBadges] = useState<Record<string, boolean>>({});
@@ -105,8 +106,9 @@ const Index = () => {
   const handleSos = async () => {
     if (!sosDesc.trim()) return toast.error("Опишіть ситуацію");
     setSosSending(true);
-    await store.addSos(sosNick || localStorage.getItem("crp_nick") || "Гравець", sosType, sosDesc, sosType as "raid"|"cheater"|"nrp"|"other");
-    setSosSending(false); setShowSos(false); setSosDesc(""); setSosNick("");
+    const reporter = sosNick || localStorage.getItem("crp_nick") || "Гравець";
+    await store.addSosFull(reporter, sosViolator.trim(), sosType, sosDesc, sosType as "raid"|"cheater"|"nrp"|"other");
+    setSosSending(false); setShowSos(false); setSosDesc(""); setSosNick(""); setSosViolator("");
     toast.success("Виклик відправлено адміністрації!");
   };
 
@@ -196,6 +198,9 @@ const Index = () => {
             </div>
             <label className="text-xs text-muted-foreground mb-1.5 block">Ваш нік</label>
             <input value={sosNick || localStorage.getItem("crp_nick") || ""} onChange={e => setSosNick(e.target.value)} placeholder="Нік в грі"
+              className="w-full liquid-glass rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-destructive/30 bg-transparent mb-3" />
+            <label className="text-xs text-muted-foreground mb-1.5 block">Нік порушника <span className="opacity-50">(необов'язково)</span></label>
+            <input value={sosViolator} onChange={e => setSosViolator(e.target.value)} placeholder="Нік того, хто порушує"
               className="w-full liquid-glass rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-destructive/30 bg-transparent mb-3" />
             <label className="text-xs text-muted-foreground mb-1.5 block">Тип порушення</label>
             <div className="grid grid-cols-2 gap-2 mb-3">
