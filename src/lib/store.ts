@@ -66,10 +66,23 @@ export type HousePurchaseRequest = {
   rental_days?: number;
   status: "pending" | "approved" | "rejected"; created_at: string;
 };
-export type FactionDB = {
-  id: number; name: string; color: string; logo_url?: string;
-  gradient?: string; section: "main" | "separate"; created_at: string;
+export type RecruitmentTarget = "admin" | string; // "admin" або faction slug/назва
+export type RecruitmentSettings = { target: string; is_open: boolean; updated_at?: string };
+export type HouseConfiscation = {
+  id: number; house_id: number; house_name?: string;
+  former_owner: string; reason: string; admin: string; created_at: string;
 };
+export type MayorCandidateApplication = {
+  id: number; username: string; program: string; bio: string;
+  status: "pending" | "approved" | "rejected"; created_at: string;
+};
+
+// Курс CR (для покупки за криптовалюту замість €) — 1 € ≈ X3 CR
+export const CR_RATE = 3;
+export const toCR = (eur: number) => Math.round(eur * CR_RATE);
+
+// Фіксована ціна ліцензії у CR (одразу видається після оплати)
+export const LICENSE_CR_PRICE = 80000;
 
 // СТАЛО — всі операції з балансом через Supabase
 export const getBalance = (_nick: string): number => 0;
@@ -848,4 +861,287 @@ export const store = {
       })).filter(u => u.username);
     } catch (e) { console.error("searchUsers:", e); return []; }
   },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // ──────────────── НОВІ ФУНКЦІЇ АДМІН-ПАНЕЛІ ─────────────────────────────
+  // ════════════════════════════════════════════════════════════════════════
+
+  // ── FACTIONS (CRUD) ──── фікс крашу z.addFaction is not a function ──────
+  addFaction: async (
+    name: string,
+    color: string,
+    logoUrl?: string,
+    gradient?: string,
+    section: "main" | "separate" = "main",
+  ): Promise<boolean> => {
+    try {
+      await secureInsert("factions", {
+        name, color,
+        logo_url: logoUrl || null,
+        gradient: gradient || null,
+        section,
+      });
+      return true;
+    } catch (e) {
+      console.error("addFaction:", e);
+      return false;
+    }
+  },
+
+  updateFaction: async (
+    id: number,
+    updates: Partial<{ name: string; color: string; gradient: string; section: "main"|"separate"; logo_url: string; description: string; icon_name: string; dangerous: boolean; background_image: string; banner_image: string; questions: string[] }>,
+  ): Promise<boolean> => {
+    const { error } = await dbUpdate("factions", updates, { id: eq(id) });
+    if (error) { console.error("updateFaction:", error.message); return false; }
+    return true;
+  },
+
+  deleteFaction: async (id: number): Promise<boolean> => {
+    const { error } = await dbDelete("factions", { id: eq(id) });
+    if (error) { console.error("deleteFaction:", error.message); return false; }
+    return true;
+  },
+
+  // ── RECRUITMENT OPEN / CLOSED (фракції + адміни) ────────────────────────
+  // Зберігається в таблиці recruitment_settings (target text PRIMARY KEY, is_open bool).
+  // target = "admin" для адмін-набору, або точна назва фракції (lowercase).
+  getRecruitmentMap: async (): Promise<Record<string, boolean>> => {
+    try {
+      const { data } = await supabase.from("recruitment_settings").select("*");
+      const map: Record<string, boolean> = {};
+      (data || []).forEach((r: any) => { map[String(r.target).toLowerCase()] = r.is_open !== false; });
+      return map;
+    } catch { return {}; }
+  },
+
+  isRecruitmentOpen: async (target: string): Promise<boolean> => {
+    try {
+      const { data } = await supabase
+        .from("recruitment_settings").select("is_open")
+        .eq("target", target.toLowerCase()).maybeSingle();
+      // default: відкрито, якщо запису немає
+      return data?.is_open !== false;
+    } catch { return true; }
+  },
+
+  setRecruitmentOpen: async (target: string, isOpen: boolean): Promise<boolean> => {
+    const { error } = await dbUpsert(
+      "recruitment_settings",
+      { target: target.toLowerCase(), is_open: isOpen, updated_at: new Date().toISOString() },
+      { onConflict: "target" },
+    );
+    if (error) { console.error("setRecruitmentOpen:", error.message); return false; }
+    return true;
+  },
+
+  // ── HOUSES (повне оновлення з категорією) ───────────────────────────────
+  updateHouseFull: async (
+    id: number,
+    updates: Partial<{ name: string; price: number; description: string; category: string; image_url: string }>,
+  ): Promise<boolean> => {
+    const { error } = await dbUpdate("houses", updates, { id: eq(id) });
+    if (error) { console.error("updateHouseFull:", error.message); return false; }
+    return true;
+  },
+
+  // ── HOUSE CONFISCATION ──────────────────────────────────────────────────
+  confiscateHouse: async (
+    houseId: number,
+    formerOwner: string,
+    reason: string,
+    admin: string,
+  ): Promise<boolean> => {
+    try {
+      // 1. Лог
+      await secureInsert("house_confiscations", {
+        house_id: houseId, former_owner: formerOwner, reason, admin,
+      });
+      // 2. Звільняємо будинок (повертаємо у продаж)
+      await dbUpdate("houses", { owner_username: null, is_for_sale: true }, { id: eq(houseId) });
+      // 3. Закриваємо схвалені оренди цього юзера на цей будинок
+      await dbUpdate(
+        "house_purchase_requests",
+        { status: "rejected" },
+        { house_id: eq(houseId), username: ilike(formerOwner), status: eq("approved") },
+      );
+      // 4. Нотифікація гравцю
+      await store.addNotification(formerOwner, `🚨 Ваш будинок конфіскований адміністрацією. Причина: ${reason}`);
+      return true;
+    } catch (e) {
+      console.error("confiscateHouse:", e);
+      return false;
+    }
+  },
+
+  getConfiscations: async (): Promise<HouseConfiscation[]> => {
+    const { data } = await supabase
+      .from("house_confiscations").select("*").order("created_at", { ascending: false });
+    if (!data) return [];
+    // підтягуємо назви будинків
+    const ids = [...new Set(data.map((r: any) => r.house_id).filter(Boolean))];
+    let names: Record<number, string> = {};
+    if (ids.length) {
+      const { data: hs } = await supabase.from("houses").select("id, name").in("id", ids);
+      (hs || []).forEach((h: any) => { names[h.id] = h.name; });
+    }
+    return data.map((r: any) => ({
+      id: r.id, house_id: r.house_id, house_name: names[r.house_id] || `#${r.house_id}`,
+      former_owner: r.former_owner, reason: r.reason, admin: r.admin || "admin",
+      created_at: r.created_at,
+    }));
+  },
+
+  // Список конфіскацій конкретного гравця (для його профілю)
+  getUserConfiscations: async (nick: string): Promise<HouseConfiscation[]> => {
+    const all = await store.getConfiscations();
+    return all.filter(c => c.former_owner.toLowerCase() === nick.toLowerCase());
+  },
+
+  // ── LICENSE PURCHASE ────────────────────────────────────────────────────
+  // submitLicense із підтримкою telegram + типу оплати
+  submitLicenseFull: async (
+    username: string,
+    licenseType: string,
+    telegram?: string,
+    paymentMethod: "money" | "cr" = "money",
+  ): Promise<{ ok: boolean; auto?: boolean; error?: string }> => {
+    if (paymentMethod === "cr") {
+      // Списуємо CR і одразу видаємо approved-ліцензію
+      const balance = await getBalanceFromDB(username);
+      if (balance < LICENSE_CR_PRICE) {
+        return { ok: false, error: `Недостатньо CR. Потрібно ${LICENSE_CR_PRICE.toLocaleString()}` };
+      }
+      const ok = await subtractBalance(username, LICENSE_CR_PRICE);
+      if (!ok) return { ok: false, error: "Не вдалось списати CR" };
+      try {
+        await secureInsert("license_applications", {
+          username,
+          license_type: telegram ? `${licenseType} | TG: ${telegram}` : licenseType,
+          status: "approved",
+        });
+        await store.addNotification(username, `✅ Ліцензію видано (оплата ${LICENSE_CR_PRICE.toLocaleString()} CR)`);
+        return { ok: true, auto: true };
+      } catch (e: any) {
+        // повертаємо CR
+        await addBalance(username, LICENSE_CR_PRICE);
+        return { ok: false, error: e?.message || "DB error" };
+      }
+    }
+    // Звичайна заявка (за гроші) — як було
+    try {
+      await secureInsert("license_applications", {
+        username,
+        license_type: telegram ? `${licenseType} | TG: ${telegram}` : licenseType,
+        status: "pending",
+      });
+      return { ok: true };
+    } catch (e: any) {
+      return { ok: false, error: e?.message };
+    }
+  },
+
+  // ── MAYOR CANDIDATE APPLICATIONS ────────────────────────────────────────
+  submitMayorApplication: async (
+    username: string, program: string, bio: string,
+  ): Promise<boolean> => {
+    try {
+      await secureInsert("mayor_candidate_applications", {
+        username, program, bio, status: "pending",
+      });
+      return true;
+    } catch (e) {
+      console.error("submitMayorApplication:", e);
+      return false;
+    }
+  },
+
+  getMayorApplications: async (): Promise<MayorCandidateApplication[]> => {
+    const { data } = await supabase
+      .from("mayor_candidate_applications").select("*").order("created_at", { ascending: false });
+    return (data || []) as MayorCandidateApplication[];
+  },
+
+  updateMayorApplicationStatus: async (id: number, status: "approved" | "rejected") => {
+    // Якщо схвалено — додаємо як кандидата на вибори
+    if (status === "approved") {
+      const { data: app } = await supabase
+        .from("mayor_candidate_applications").select("*").eq("id", id).maybeSingle();
+      if (app) {
+        await secureInsert("mayor_election", {
+          candidate_username: app.username, description: app.program, bio: app.bio,
+          created_by: "admin", votes: 0,
+        });
+        await store.addNotification(app.username, "✅ Вашу кандидатуру на мера прийнято! Гравці можуть голосувати.");
+      }
+    } else {
+      const { data: app } = await supabase
+        .from("mayor_candidate_applications").select("username").eq("id", id).maybeSingle();
+      if (app?.username) await store.addNotification(app.username, "❌ Вашу заявку на мера відхилено.");
+    }
+    await dbUpdate("mayor_candidate_applications", { status }, { id: eq(id) });
+  },
+
+  // ── SOS (нік репортера + нік порушника) ─────────────────────────────────
+  addSosFull: async (
+    reporterNick: string,
+    violatorNick: string,
+    reason: string,
+    description: string,
+    type: "raid" | "cheater" | "nrp" | "other" = "other",
+  ): Promise<boolean> => {
+    try {
+      const payload = violatorNick
+        ? `[${reporterNick} → порушник: ${violatorNick}] ${description}`
+        : `[${reporterNick}] ${description}`;
+      await secureInsert("sos_signals", {
+        username: reporterNick, message: payload, type, status: "active",
+      });
+      return true;
+    } catch (e) {
+      console.error("addSosFull:", e);
+      return false;
+    }
+  },
+
+  // ── HOUSE PURCHASE WITH CR (миттєва видача) ─────────────────────────────
+  buyHouseWithCR: async (
+    houseId: number, username: string, priceEUR: number, rentalDays = 24,
+  ): Promise<{ ok: boolean; error?: string }> => {
+    const crPrice = toCR(priceEUR);
+    const balance = await getBalanceFromDB(username);
+    if (balance < crPrice) return { ok: false, error: `Потрібно ${crPrice.toLocaleString()} CR` };
+    const ok = await subtractBalance(username, crPrice);
+    if (!ok) return { ok: false, error: "Не вдалось списати CR" };
+    try {
+      // одразу approved — будинок видається моментально
+      await secureInsert("house_purchase_requests", {
+        house_id: houseId, username, status: "approved", rental_days: rentalDays,
+      });
+      await dbUpdate("houses", { owner_username: username, is_for_sale: false }, { id: eq(houseId) });
+      await store.addNotification(username, `🏠 Будинок придбано за ${crPrice.toLocaleString()} CR`);
+      return { ok: true };
+    } catch (e: any) {
+      await addBalance(username, crPrice);
+      return { ok: false, error: e?.message || "DB error" };
+    }
+  },
+
+  // ── NFT GIVE (примусова видача користувачу, fix: "Отримати" не видавав) ─
+  giveNftToUser: async (nick: string, nftId: string): Promise<boolean> => {
+    try {
+      // перевіряємо, чи вже є
+      const { data: existing } = await supabase
+        .from("nft_owners").select("nft_id")
+        .eq("owner_nick", nick).eq("nft_id", nftId).maybeSingle();
+      if (existing) return true; // вже є — теж "успіх"
+      await secureInsert("nft_owners", { owner_nick: nick, nft_id: nftId });
+      await store.addNotification(nick, "🎁 Ви отримали NFT-нагороду!");
+      return true;
+    } catch (e) {
+      console.error("giveNftToUser:", e);
+      return false;
+    }
+  },
 };
+
