@@ -94,25 +94,33 @@ const HouseDetail = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const [paymentMethod, setPaymentMethod] = useState<"money" | "cr">("money");
+  const [telegram, setTelegram] = useState("");
+
   const handleConfirmPayment = async () => {
     if (!nick.trim()) return toast.error("Нік не знайдено");
+    // TG обов'язковий ТІЛЬКИ для оплати у €
+    if (paymentMethod === "money" && !telegram.trim()) {
+      return toast.error("Вкажіть Telegram (обов'язково при оплаті €)");
+    }
     setLoading(true);
     try {
-      const { error } = await dbInsert("house_purchase_requests", {
-        house_id: house.id,
-        username: nick,
-        status: "pending",
-        rental_days: rentalDays,
-      });
-      if (error) {
-        console.error("House purchase error:", error);
-        toast.error("Помилка бази даних: " + error.message);
-        setLoading(false);
-        return;
+      if (paymentMethod === "cr") {
+        const res = await store.buyHouseWithCR(house.id, nick, selectedPrice, rentalDays);
+        if (!res.ok) { toast.error(res.error || "Помилка"); setLoading(false); return; }
+        toast.success("🏠 Будинок ваш!");
+        setSubmitted(true);
+      } else {
+        const { error } = await dbInsert("house_purchase_requests", {
+          house_id: house.id, username: nick, status: "pending",
+          rental_days: rentalDays,
+          telegram: telegram.trim() || null,
+        });
+        if (error) { toast.error("Помилка БД: " + error.message); setLoading(false); return; }
+        setSubmitted(true);
       }
-      setSubmitted(true);
     } catch (e) {
-      console.error("Exception:", e);
+      console.error(e);
       toast.error("Помилка. Спробуйте ще раз.");
     }
     setLoading(false);
