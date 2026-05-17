@@ -478,6 +478,22 @@ const Shop = () => {
   const flameMode = getFlameMode(!streakFrozen && !streakAtRisk ? streak : 0);
   const isRgb = (flameMode === "rgb_full" || flameMode === "rgb_blue") && !streakFrozen && !streakAtRisk;
 
+  // Тижневий цикл — кожні 7 днів полоска оновлюється з 1
+  const weekDay = streak === 0 ? 0 : ((streak - 1) % 7) + 1;
+  const prevWeekDayRef = useRef(weekDay);
+  const [weekResetKey, setWeekResetKey] = useState(0);
+  const [dayBumpKey, setDayBumpKey] = useState(0);
+  useEffect(() => {
+    const prev = prevWeekDayRef.current;
+    if (prev === 7 && weekDay === 1) {
+      // Тиждень завершено → новий цикл, гарна анімація скиду
+      setWeekResetKey(k => k + 1);
+    } else if (weekDay > prev) {
+      setDayBumpKey(k => k + 1);
+    }
+    prevWeekDayRef.current = weekDay;
+  }, [weekDay]);
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
       {/* ─── HEADER ─── */}
@@ -530,22 +546,40 @@ const Shop = () => {
 
         <div className="p-5">
           {/* ── STREAK BAR with flame icons ── */}
-          <div className="mb-5">
+          <div className="mb-5 relative" key={`week-${weekResetKey}`}
+               style={{ animation: weekResetKey > 0 ? "weekResetFlash 1.1s ease-out" : undefined }}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs uppercase tracking-widest text-white/40 font-medium">Тижнева серія</span>
-              <span className="text-xs text-white/40">{Math.min(streak, 7)}/7 днів</span>
+              <span className="text-xs text-white/40 tabular-nums">{weekDay}/7 днів</span>
             </div>
-            <div className="flex gap-1.5 items-end">
+            {/* sweep overlay при скиді тижня */}
+            {weekResetKey > 0 && (
+              <div key={`sweep-${weekResetKey}`} className="absolute inset-x-0 top-8 bottom-0 pointer-events-none overflow-hidden rounded-xl"
+                   style={{ animation: "weekSweepFade 1.2s ease-out forwards" }}>
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: `linear-gradient(110deg, transparent 0%, ${hsl(flameC, 0.55)} 50%, transparent 100%)`,
+                  filter: "blur(8px)",
+                  animation: "weekSweep 1.1s ease-out forwards",
+                }} />
+              </div>
+            )}
+            <div className="flex gap-1.5 items-end relative">
               {streakDays.map((d) => {
-                const done = streak >= d.day;
-                const current = streak + 1 === d.day;
+                const done = weekDay >= d.day;
+                const current = weekDay + 1 === d.day || (weekDay === 0 && d.day === 1);
+                const isJustFilled = dayBumpKey > 0 && weekDay === d.day;
                 const frozen = (streakFrozen || streakAtRisk) && done;
                 const c = streakColor(d.day);
                 return (
-                  <div key={d.day} className="flex-1 flex flex-col items-center gap-1">
+                  <div key={d.day} className="flex-1 flex flex-col items-center gap-1"
+                       style={{
+                         animation: weekResetKey > 0
+                           ? `dayPopIn 0.6s ${d.day * 70}ms cubic-bezier(0.34, 1.56, 0.64, 1) both`
+                           : undefined,
+                       }}>
                     {/* Flame icon */}
                     <div className="relative flex items-center justify-center" style={{ width: 36, height: 36 }}>
-                      {/* Glow bg for done */}
                       {done && !frozen && (
                         <div style={{
                           position: "absolute", inset: 0, borderRadius: "50%",
@@ -563,14 +597,23 @@ const Shop = () => {
                       )}
                     </div>
                     {/* Bar segment */}
-                    <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                      <div className="h-full rounded-full transition-all duration-500"
+                    <div className="w-full h-1.5 rounded-full overflow-hidden relative" style={{ background: "rgba(255,255,255,0.06)" }}>
+                      <div className="h-full rounded-full"
                         style={{
                           width: done ? "100%" : "0%",
                           background: frozen
                             ? "linear-gradient(90deg, rgba(100,180,255,0.6), rgba(150,220,255,0.4))"
                             : `linear-gradient(90deg, ${hsl(c, 0.9)}, ${hsl({ ...c, h: (c.h + 20) % 360 }, 0.7)})`,
+                          transition: "width 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
+                          boxShadow: done && !frozen ? `0 0 10px ${hsl(c, 0.6)}` : undefined,
                         }} />
+                      {isJustFilled && !frozen && (
+                        <div key={`bump-${dayBumpKey}`} style={{
+                          position: "absolute", inset: 0, borderRadius: 999,
+                          background: `linear-gradient(90deg, transparent, ${hsl(c, 0.9)}, transparent)`,
+                          animation: "barFlash 0.9s ease-out forwards",
+                        }} />
+                      )}
                     </div>
                     {/* Label */}
                     <span className="text-[10px] font-medium" style={{ color: done ? (frozen ? "rgba(150,210,255,0.7)" : hsl(c, 0.8)) : "rgba(255,255,255,0.25)" }}>
@@ -793,6 +836,29 @@ const Shop = () => {
         }
         @keyframes rgbText {
           0%{color:hsl(0,90%,65%)} 33%{color:hsl(120,85%,55%)} 66%{color:hsl(240,90%,70%)} 100%{color:hsl(360,90%,65%)}
+        }
+        @keyframes weekResetFlash {
+          0%   { filter: brightness(1); }
+          25%  { filter: brightness(1.6) saturate(1.4); }
+          100% { filter: brightness(1); }
+        }
+        @keyframes weekSweep {
+          0%   { transform: translateX(-110%); }
+          100% { transform: translateX(110%); }
+        }
+        @keyframes weekSweepFade {
+          0%   { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes dayPopIn {
+          0%   { opacity: 0; transform: translateY(8px) scale(0.6); }
+          60%  { opacity: 1; transform: translateY(-2px) scale(1.08); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes barFlash {
+          0%   { opacity: 0; transform: translateX(-100%); }
+          50%  { opacity: 1; }
+          100% { opacity: 0; transform: translateX(100%); }
         }
       `}</style>
     </div>
