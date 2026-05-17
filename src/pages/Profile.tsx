@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import {
   User, Briefcase, Home, Car, FileCheck, Wallet, Lock,
   Bell, ChevronDown, ChevronRight, Shield, CheckCircle,
-  LogIn, RefreshCw, Coins, Clock, Settings, X, Trophy
+  LogIn, RefreshCw, Coins, Clock, Settings, X
 } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { store, supabase, getBalanceFromDB, subtractBalance } from "../lib/store";
+import { store, supabase, getBalanceFromDB } from "../lib/store";
 import type { Notification } from "../lib/store";
 import HouseFamilyModal from "../components/HouseFamilyModal";
 
@@ -94,8 +94,6 @@ const Profile = () => {
   const [availableNfts, setAvailableNfts] = useState<any[]>([]);
   const [selectedNftIds, setSelectedNftIds] = useState<string[]>([]);
   const [showOrbitSettings, setShowOrbitSettings] = useState(false);
-  const [showRewards, setShowRewards] = useState(false);
-  const [rewardNfts, setRewardNfts] = useState<any[]>([]);
   const [houseModalId, setHouseModalId] = useState<number | null>(null);
   const [nftVisible, setNftVisible] = useState(false);
   const [contentVisible, setContentVisible] = useState(false);
@@ -123,9 +121,6 @@ const Profile = () => {
         setAvailableNfts([]);
         setSelectedNftIds([]);
       }
-      // Завантажуємо всі NFT для магазину нагород
-      const { data: allNfts } = await supabase.from('nft_gifts').select('*');
-      setRewardNfts(allNfts || []);
       setProfileData({ ...data, cars: carsData || [] });
       const realBalance = await getBalanceFromDB(nick);
       setBalanceState(realBalance);
@@ -225,11 +220,6 @@ const Profile = () => {
       >
         <h1 className="font-display text-xl font-bold tracking-wider neon-text-lime">ПРОФІЛЬ</h1>
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/top")} title="Топ балансів"
-            className="w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all"
-            style={{ border: "1px solid hsl(45 100% 55% / 0.25)", background: "hsl(45 100% 55% / 0.06)" }}>
-            <Trophy className="w-4 h-4" style={{ color: "hsl(45 100% 60%)", filter: "drop-shadow(0 0 4px hsl(45 100% 55% / 0.6))" }} />
-          </button>
           <button onClick={loadData} disabled={refreshing} className="w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all">
             <RefreshCw className={`w-4 h-4 text-muted-foreground ${refreshing ? "animate-spin" : ""}`} />
           </button>
@@ -592,85 +582,7 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* ═══ НАГОРОДИ (NFT) ═══ */}
-      {(() => {
-        // Ціни за дні: 15→3000, 50→10000, 150→15000, 365→20000, 500→25000
-        const NFT_PRICES: Record<number, number> = { 15: 3000, 50: 10000, 150: 15000, 365: 20000, 500: 25000 };
-        const ownedNftIds = availableNfts.map(n => n.id);
-        const handleBuyNft = async (nft: any) => {
-          const days = nft.rental_days ?? nft.days ?? nft.duration_days ?? 0;
-          const price = NFT_PRICES[days] ?? nft.price ?? 3000;
-          if (balance < price) return alert(`Недостатньо CR. Потрібно: ${price.toLocaleString()} CR`);
-          if (ownedNftIds.includes(nft.id)) return alert("Ви вже маєте цю нагороду");
-          const ok = await subtractBalance(nick, price);
-          if (!ok) return alert("Помилка списання CR");
-          await supabase.from("nft_owners").insert({ nft_id: nft.id, owner_nick: nick });
-          setBalanceState(b => b - price);
-          setAvailableNfts(prev => [...prev, nft]);
-          alert(`✅ NFT «${nft.name}» отримано!`);
-        };
-        return (
-          <div className="mb-6 px-1" style={blockAnim(contentVisible, 280)}>
-            <button onClick={() => setShowRewards(!showRewards)}
-              className="w-full liquid-glass-card rounded-2xl px-4 py-3.5 flex items-center justify-between transition-all active:scale-[0.98]"
-              style={showRewards ? { boxShadow: "0 0 18px hsl(45 100% 55% / 0.25)", borderColor: "hsl(45 100% 55% / 0.3)" } : {}}>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-                  style={showRewards
-                    ? { background: "hsl(45 100% 55% / 0.18)", border: "1px solid hsl(45 100% 55% / 0.4)", boxShadow: "0 0 12px hsl(45 100% 55% / 0.3)" }
-                    : { background: "hsl(45 100% 55% / 0.1)", border: "1px solid hsl(45 100% 55% / 0.12)" }}>
-                  <Trophy className="w-4 h-4" style={{ color: "hsl(45 100% 60%)" }} />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium" style={showRewards ? { color: "hsl(45 100% 60%)" } : {}}>Нагороди</p>
-                  <p className="text-[10px] text-muted-foreground">NFT за CR • {availableNfts.length} отримано</p>
-                </div>
-              </div>
-              {showRewards
-                ? <ChevronDown className="w-4 h-4" style={{ color: "hsl(45 100% 60%)" }} />
-                : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-            </button>
-            {showRewards && (
-              <div className="mt-2 space-y-2 animate-fade-in">
-                {rewardNfts.length === 0 && (
-                  <div className="text-center py-6 liquid-glass-card rounded-2xl">
-                    <Trophy className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground">Нагород немає</p>
-                  </div>
-                )}
-                {rewardNfts.map(nft => {
-                  const days = nft.rental_days ?? nft.days ?? nft.duration_days ?? 0;
-                  const price = NFT_PRICES[days] ?? nft.price ?? 3000;
-                  const owned = ownedNftIds.includes(nft.id);
-                  return (
-                    <div key={nft.id} className="liquid-glass-card rounded-2xl p-4 flex items-center gap-3">
-                      {nft.image_url && <img src={nft.image_url} alt={nft.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />}
-                      {!nft.image_url && (
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: "hsl(45 100% 55% / 0.12)", border: "1px solid hsl(45 100% 55% / 0.25)" }}>
-                          <Trophy className="w-5 h-5" style={{ color: "hsl(45 100% 60%)" }} />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{nft.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{days} днів активності</p>
-                        <p className="text-xs font-bold" style={{ color: "hsl(200 80% 60%)" }}>{price.toLocaleString()} CR</p>
-                      </div>
-                      <button onClick={() => handleBuyNft(nft)} disabled={owned}
-                        className="px-3 py-2 rounded-xl text-xs font-bold shrink-0 transition-all active:scale-95 disabled:opacity-50"
-                        style={owned
-                          ? { background: "hsl(var(--primary) / 0.1)", border: "1px solid hsl(var(--primary) / 0.2)", color: "hsl(var(--primary))" }
-                          : { background: "hsl(45 100% 55% / 0.15)", border: "1px solid hsl(45 100% 55% / 0.3)", color: "hsl(45 100% 60%)" }}>
-                        {owned ? "✓ Є" : "Отримати"}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })()}
+
 
       {/* ═══ ЯРУС 1: ЛІЦЕНЗІЇ ═══ */}
       <div className="space-y-4 mb-6 px-1" style={blockAnim(contentVisible, 300)}>
