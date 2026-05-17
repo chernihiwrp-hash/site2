@@ -46,7 +46,8 @@ const isSuperAdmin = () =>
 type TabId =
   "sos" | "applications" | "factions" | "licenses" | "plates" | "house_requests" |
   "news" | "houses" | "wanted" | "election" | "documents" |
-  "add_faction" | "voice" | "tokens" | "nft" | "manage_factions" | "debug" | "bans";
+  "add_faction" | "voice" | "tokens" | "nft" | "manage_factions" | "recruitment" |
+  "confiscation" | "mayor_apps" | "debug" | "bans";
 
 const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boolean }[] = [
   { id: "sos",            label: "SOS Сигнали",           icon: AlertTriangle, sub: "Realtime",    danger: true },
@@ -68,6 +69,9 @@ const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boo
   { id: "nft",            label: "NFT Подарунки",          icon: Gift,           sub: "Магазин" },
   
   { id: "manage_factions", label: "Управління фракціями",   icon: ShieldAlert,    sub: "Фракції" },
+  { id: "recruitment",     label: "Набір (відкрити/закрити)", icon: Lock,          sub: "Фракції" },
+  { id: "confiscation",    label: "Конфіскація будинків",   icon: Gavel,          sub: "Управління", danger: true },
+  { id: "mayor_apps",      label: "Заявки на мера",         icon: Crown,          sub: "Управління" },
   { id: "bans",            label: "Бани гравців",            icon: UserX,          sub: "Безпека", danger: true },
   { id: "debug",           label: "Діагностика",             icon: Settings,       sub: "Debug" },
 ];
@@ -77,7 +81,8 @@ const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
   plates: false, 
   house_requests: false, news: false, houses: false, wanted: false,
   election: false, documents: false, add_faction: false, voice: false, 
-  tokens: false, nft: false, manage_factions: false, debug: false, bans: false,
+  tokens: false, nft: false, manage_factions: false, recruitment: false,
+  confiscation: false, mayor_apps: false, debug: false, bans: false,
 };
 
 const DEFAULT_PERMS: Record<TabId, boolean> = {
@@ -85,7 +90,8 @@ const DEFAULT_PERMS: Record<TabId, boolean> = {
   plates: true, 
   house_requests: true, news: true, houses: true, wanted: true,
   election: true, documents: true, add_faction: true, voice: true, 
-  tokens: true, nft: true, manage_factions: true, debug: true, bans: true,
+  tokens: true, nft: true, manage_factions: true, recruitment: true,
+  confiscation: true, mayor_apps: true, debug: true, bans: true,
 };
 
 const getAdminPerms = (nick: string): Record<TabId, boolean> => {
@@ -287,6 +293,9 @@ const AdminPanel = () => {
         {tab === "house_requests"  && <HouseRequestsTab />}
         {tab === "add_faction"     && <AddFactionTab />}
         {tab === "manage_factions" && <ManageFactionsTab />}
+        {tab === "recruitment"     && <RecruitmentTab />}
+        {tab === "confiscation"    && <ConfiscationTab />}
+        {tab === "mayor_apps"      && <MayorAppsTab />}
         {tab === "bans"            && <BansTab />}
         {tab === "debug"           && <DebugTab />}
         {/* ─── ВСТАВЛЯЙ СЮДА ─── */}
@@ -364,13 +373,19 @@ const SuperAdminTab = () => {
   const [editPerms, setEditPerms] = useState<Record<TabId, boolean>>({ ...DEFAULT_PERMS });
 
   useEffect(() => {
-    supabase.from("admin_applications").select("*").eq("status", "approved").then(({ data }) => {
-      if (!data) return;
+    supabase.from("admin_applications").select("*").eq("status", "approved").then(({ data, error }) => {
+      if (error) console.error("admin_applications:", error.message);
+      if (!data || data.length === 0) return;
       const list = data.map((r: Record<string, unknown>) => {
         const fd = (r.form_data as Record<string, unknown>) || {};
-        const n = (fd.nick as string) || (r.username as string) || "";
+        // Пробуємо різні поля де може бути нік
+        const n = (fd.nick as string)
+          || (fd.nickname as string)
+          || (r.username as string)
+          || (r.nick as string)
+          || String(r.id || "");
         return { nick: n, perms: getAdminPerms(n) };
-      });
+      }).filter(a => a.nick && a.nick.length > 0);
       setAdmins(list);
     });
   }, []);
@@ -627,7 +642,15 @@ const HousesTab = () => {
   const [name, setName] = useState(""); const [price, setPrice] = useState("");
   const [desc, setDesc] = useState(""); const [imageUrl, setImageUrl] = useState("");
   const [category, setCategory] = useState("Люкс");
+  // Edit state
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editName, setEditName] = useState(""); const [editPrice, setEditPrice] = useState("");
+  const [editDesc, setEditDesc] = useState(""); const [editCategory, setEditCategory] = useState("Люкс");
+
   useEffect(() => { store.getHouses().then(setHouses); }, []);
+
+  const crPrice = (eur: number) => Math.round(eur * 3);
+
   const add = async () => {
     if (!name || !price) return toast.error("Заповніть назву і ціну");
     await store.addHouse(name, desc, Number(price), imageUrl || undefined, category);
@@ -635,6 +658,56 @@ const HousesTab = () => {
     setName(""); setPrice(""); setDesc(""); setImageUrl(""); setAddMode(false);
     toast.success("Будинок додано!");
   };
+
+  const openEdit = (h: HouseItem) => {
+    setEditId(h.id); setEditName(h.name); setEditPrice(String(h.price));
+    setEditDesc(h.desc || ""); setEditCategory(h.category || "Люкс");
+  };
+
+  const saveEdit = async () => {
+    if (!editId || !editName || !editPrice) return toast.error("Заповніть поля");
+    await (store as any).updateHouseFull(editId, {
+      name: editName, price: Number(editPrice), description: editDesc, category: editCategory,
+    });
+    setHouses(await store.getHouses());
+    setEditId(null);
+    toast.success("Будинок оновлено!");
+  };
+
+  if (editId !== null) {
+    const ep = Number(editPrice) || 0;
+    return (
+      <div className="space-y-3 animate-fade-in">
+        <div className="flex items-center gap-3 mb-1">
+          <button onClick={() => setEditId(null)} className="liquid-glass w-9 h-9 rounded-xl flex items-center justify-center active:scale-95">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <p className="text-sm font-bold">Редагувати будинок</p>
+        </div>
+        <NeonCard glowColor="lime">
+          <div className="space-y-2.5">
+            <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Назва" className={inputClass} />
+            <div>
+              <input value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="Ціна (€)" type="number" className={inputClass} />
+              {ep > 0 && (
+                <p className="text-[10px] text-primary mt-1 px-1">💎 Ціна у CR: <span className="font-bold">{crPrice(ep).toLocaleString()} CR</span> (x3)</p>
+              )}
+            </div>
+            <input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Опис" className={inputClass} />
+            <div className="flex gap-2">
+              {["Люкс","Економ"].map(c => (
+                <button key={c} onClick={() => setEditCategory(c)}
+                  className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${editCategory === c ? "bg-primary/20 border-primary/30 text-primary" : "liquid-glass text-muted-foreground"}`}>{c}</button>
+              ))}
+            </div>
+            <GradientButton variant="green" className="w-full text-xs py-2" onClick={saveEdit}>Зберегти</GradientButton>
+          </div>
+        </NeonCard>
+      </div>
+    );
+  }
+
+  const ep = Number(price) || 0;
   return (
     <div className="space-y-3 animate-fade-in">
       <div className="flex justify-between items-center">
@@ -647,7 +720,12 @@ const HousesTab = () => {
         <NeonCard glowColor="lime">
           <div className="space-y-2">
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Назва" className={inputClass} />
-            <input value={price} onChange={e => setPrice(e.target.value)} placeholder="Ціна (€)" type="number" className={inputClass} />
+            <div>
+              <input value={price} onChange={e => setPrice(e.target.value)} placeholder="Ціна (€)" type="number" className={inputClass} />
+              {ep > 0 && (
+                <p className="text-[10px] text-primary mt-1 px-1">💎 Ціна у CR: <span className="font-bold">{crPrice(ep).toLocaleString()} CR</span> (x3)</p>
+              )}
+            </div>
             <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Опис" className={inputClass} />
             <input value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="Фото (https://...)" className={inputClass} />
             {imageUrl && <img src={imageUrl} alt="" className="w-full h-20 object-cover rounded-xl" onError={e => (e.currentTarget.style.display = "none")} />}
@@ -661,14 +739,18 @@ const HousesTab = () => {
       {houses.map(h => (
         <NeonCard key={h.id} glowColor="yellow">
           <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-xs font-semibold">{h.name}</h4>
-              <p className="text-[10px] text-muted-foreground">{h.desc}</p>
-              <span className="text-xs font-bold" style={{ color: "hsl(45,100%,55%)" }}>{h.price.toLocaleString()}€</span>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-xs font-semibold truncate">{h.name}</h4>
+              <p className="text-[10px] text-muted-foreground truncate">{h.desc}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs font-bold" style={{ color: "hsl(45,100%,55%)" }}>{h.price.toLocaleString()}€</span>
+                <span className="text-[9px] text-primary">/ {crPrice(h.price).toLocaleString()} CR</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ml-2 shrink-0">
               <span className={`text-[9px] px-2 py-0.5 rounded-md font-bold ${h.owner ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary"}`}>{h.owner ? "ПРОДАНО" : "ВІЛЬНО"}</span>
-              <button onClick={async () => { try { await store.deleteHouse(h.id); setHouses(prev => prev.filter(x => x.id !== h.id)); toast.success("Видалено"); } catch(e) { toast.error("Помилка видалення. Перевірте права Supabase."); } }} className="p-1.5 rounded-lg liquid-glass text-destructive active:scale-95"><Trash2 className="w-3.5 h-3.5" /></button>
+              <button onClick={() => openEdit(h)} className="p-1.5 rounded-lg liquid-glass text-primary active:scale-95" title="Редагувати"><Settings className="w-3.5 h-3.5" /></button>
+              <button onClick={async () => { try { await store.deleteHouse(h.id); setHouses(prev => prev.filter(x => x.id !== h.id)); toast.success("Видалено"); } catch(e) { toast.error("Помилка видалення."); } }} className="p-1.5 rounded-lg liquid-glass text-destructive active:scale-95"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           </div>
         </NeonCard>
@@ -1078,6 +1160,272 @@ const DocumentsTab = () => {
 };
 
 // ─── FACTION APPS ─────────────────────────────────────────────────────────────
+
+// ─── RECRUITMENT CONTROL TAB (закрити набір) ─────────────────────────────────
+const RecruitmentTab = () => {
+  const [factions, setFactions] = useState<any[]>([]);
+  const [recruitMap, setRecruitMap] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+
+  const STATIC_FACTIONS = [
+    "СБУ","ДБР","НПУ","ВСУ","Прокуратура","ДСНС","Суддя","Адвокати","ОРІОН","ГЕТТО","МАФІЯ"
+  ];
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const [map, { data: dbFactions }] = await Promise.all([
+        store.getRecruitmentMap(),
+        supabase.from("factions").select("name"),
+      ]);
+      setRecruitMap(map);
+      const dbNames = (dbFactions || []).map((f: any) => f.name);
+      setFactions([...STATIC_FACTIONS, ...dbNames.filter((n: string) => !STATIC_FACTIONS.includes(n))]);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const toggle = async (target: string) => {
+    const current = recruitMap[target.toLowerCase()] !== false;
+    const next = !current;
+    await store.setRecruitmentOpen(target, next);
+    setRecruitMap(prev => ({ ...prev, [target.toLowerCase()]: next }));
+    toast.success(`${target}: набір ${next ? "відкрито ✅" : "закрито 🔒"}`);
+  };
+
+  const isOpen = (name: string) => recruitMap[name.toLowerCase()] !== false;
+
+  return (
+    <div className="space-y-3 animate-fade-in">
+      <p className="text-xs text-muted-foreground">Закрийте набір — гравці побачать повідомлення «Дочекайтеся набору»</p>
+
+      {/* Адмін-набір */}
+      <NeonCard glowColor="lime">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Набір адмінів</p>
+              <p className="text-[10px] text-muted-foreground">{isOpen("admin") ? "Відкрито" : "Закрито"}</p>
+            </div>
+          </div>
+          <button onClick={() => toggle("admin")}
+            className={`relative w-12 h-6 rounded-full transition-all ${isOpen("admin") ? "bg-primary" : "bg-muted/40"}`}
+            style={{ boxShadow: isOpen("admin") ? "0 0 10px hsl(84 81% 44% / 0.4)" : "none" }}>
+            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isOpen("admin") ? "left-7" : "left-1"}`} />
+          </button>
+        </div>
+      </NeonCard>
+
+      {loading && <div className="text-center py-4"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}
+
+      {/* Фракції */}
+      {factions.map(name => (
+        <NeonCard key={name} glowColor="green">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center">
+                <Users className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">{name}</p>
+                <p className="text-[10px] text-muted-foreground">{isOpen(name) ? "Набір відкрито" : "Набір закрито"}</p>
+              </div>
+            </div>
+            <button onClick={() => toggle(name)}
+              className={`relative w-12 h-6 rounded-full transition-all ${isOpen(name) ? "bg-primary" : "bg-muted/40"}`}
+              style={{ boxShadow: isOpen(name) ? "0 0 10px hsl(84 81% 44% / 0.4)" : "none" }}>
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isOpen(name) ? "left-7" : "left-1"}`} />
+            </button>
+          </div>
+        </NeonCard>
+      ))}
+    </div>
+  );
+};
+
+// ─── HOUSE CONFISCATION TAB ───────────────────────────────────────────────────
+const ConfiscationTab = () => {
+  const [search, setSearch] = useState("");
+  const [houses, setHouses] = useState<HouseItem[]>([]);
+  const [selected, setSelected] = useState<HouseItem | null>(null);
+  const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [confiscations, setConfiscations] = useState<any[]>([]);
+  const nick = localStorage.getItem("crp_nick") || "admin";
+
+  useEffect(() => {
+    store.getHouses().then(hs => setHouses(hs.filter(h => h.owner)));
+    (store as any).getConfiscations?.().then(setConfiscations);
+  }, []);
+
+  const filtered = houses.filter(h =>
+    !search.trim() ||
+    (h.owner || "").toLowerCase().includes(search.toLowerCase()) ||
+    h.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const confiscate = async () => {
+    if (!selected || !reason.trim()) return toast.error("Вкажіть причину");
+    setLoading(true);
+    const ok = await (store as any).confiscateHouse(selected.id, selected.owner!, reason.trim(), nick);
+    if (ok) {
+      toast.success(`Будинок «${selected.name}» конфісковано`);
+      setSelected(null); setReason("");
+      setHouses(prev => prev.filter(h => h.id !== selected.id));
+      (store as any).getConfiscations?.().then(setConfiscations);
+    } else {
+      toast.error("Помилка конфіскації");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="space-y-3 animate-fade-in">
+      <p className="text-xs text-muted-foreground">Знайдіть будинок гравця та вилучіть його з причиною</p>
+
+      <div className="liquid-glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
+        <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Пошук за ніком або назвою..."
+          className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+      </div>
+
+      {selected && (
+        <NeonCard glowColor="red">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <Home className="w-3.5 h-3.5 text-yellow-400" />
+              <p className="text-xs font-bold text-yellow-400">{selected.name}</p>
+              <span className="text-[10px] text-muted-foreground">— {selected.owner}</span>
+            </div>
+            <textarea value={reason} onChange={e => setReason(e.target.value)}
+              placeholder="Причина конфіскації..." rows={2}
+              className={`${inputClass} resize-none`} />
+            <div className="flex gap-2">
+              <GradientButton variant="danger" className="flex-1 text-xs py-2" onClick={confiscate} disabled={loading}>
+                {loading ? "Вилучаю..." : "Вилучити будинок"}
+              </GradientButton>
+              <button onClick={() => setSelected(null)} className="px-3 py-2 liquid-glass rounded-xl text-xs text-muted-foreground active:scale-95">
+                Скасувати
+              </button>
+            </div>
+          </div>
+        </NeonCard>
+      )}
+
+      {filtered.length === 0 && !selected && (
+        <div className="text-center py-10 liquid-glass-card rounded-2xl">
+          <Home className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" />
+          <p className="text-xs text-muted-foreground">Немає зайнятих будинків</p>
+        </div>
+      )}
+
+      {filtered.map(h => (
+        <NeonCard key={h.id} glowColor="yellow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold">{h.name}</p>
+              <p className="text-[10px] text-muted-foreground">Власник: <span className="text-foreground font-semibold">{h.owner}</span></p>
+              <p className="text-[10px] text-yellow-400">{h.price.toLocaleString()}€</p>
+            </div>
+            <button onClick={() => setSelected(h)}
+              className="px-3 py-2 rounded-xl text-xs font-bold active:scale-95"
+              style={{ background: "hsl(0 70% 50% / 0.12)", border: "1px solid hsl(0 70% 50% / 0.3)", color: "hsl(0 70% 50%)" }}>
+              Вилучити
+            </button>
+          </div>
+        </NeonCard>
+      ))}
+
+      {confiscations.length > 0 && (
+        <div className="mt-4">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 px-1">Історія конфіскацій ({confiscations.length})</p>
+          {confiscations.slice(0, 5).map((c: any) => (
+            <NeonCard key={c.id} glowColor="red">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-bold">{c.house_name}</p>
+                  <p className="text-[10px] text-muted-foreground">Власник: <span className="text-destructive">{c.former_owner}</span></p>
+                  <p className="text-[10px] text-muted-foreground">Причина: {c.reason}</p>
+                </div>
+                <span className="text-[9px] text-muted-foreground">{new Date(c.created_at).toLocaleDateString("uk-UA")}</span>
+              </div>
+            </NeonCard>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── MAYOR APPLICATIONS TAB ───────────────────────────────────────────────────
+const MayorAppsTab = () => {
+  const [apps, setApps] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (store as any).getMayorApplications?.().then((data: any[]) => { setApps(data); setLoading(false); });
+  }, []);
+
+  const decide = async (id: number, status: "approved" | "rejected") => {
+    await (store as any).updateMayorApplicationStatus(id, status);
+    setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    toast.success(status === "approved" ? "Кандидата додано до виборів!" : "Відхилено");
+  };
+
+  const sc = { pending: "bg-yellow-400/15 text-yellow-400", approved: "bg-primary/15 text-primary", rejected: "bg-destructive/15 text-destructive" };
+  const sl = { pending: "На розгляді", approved: "Прийнято", rejected: "Відхилено" };
+
+  return (
+    <div className="space-y-3 animate-fade-in">
+      <p className="text-xs text-muted-foreground">Заявки гравців на участь у виборах мера</p>
+      {loading && <div className="text-center py-8"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}
+      {!loading && apps.length === 0 && (
+        <div className="text-center py-10 liquid-glass-card rounded-2xl">
+          <Crown className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" />
+          <p className="text-xs text-muted-foreground">Заявок немає</p>
+        </div>
+      )}
+      {apps.map(a => (
+        <NeonCard key={a.id} glowColor="green">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Crown className="w-3.5 h-3.5 text-yellow-400" />
+                <p className="text-xs font-bold">{a.username}</p>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-md ${(sc as any)[a.status] || sc.pending}`}>
+                  {(sl as any)[a.status] || "На розгляді"}
+                </span>
+              </div>
+              {a.status === "pending" && (
+                <div className="flex gap-1">
+                  <button onClick={() => decide(a.id, "approved")} className="p-1.5 rounded-lg bg-primary/15 text-primary active:scale-95"><Check className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => decide(a.id, "rejected")} className="p-1.5 rounded-lg bg-destructive/15 text-destructive active:scale-95"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              )}
+            </div>
+            {a.program && (
+              <div className="liquid-glass rounded-xl px-3 py-2">
+                <p className="text-[9px] text-muted-foreground mb-0.5">Програма:</p>
+                <p className="text-[10px] text-foreground">{a.program}</p>
+              </div>
+            )}
+            {a.bio && (
+              <div className="liquid-glass rounded-xl px-3 py-2">
+                <p className="text-[9px] text-muted-foreground mb-0.5">Біографія:</p>
+                <p className="text-[10px] text-foreground">{a.bio}</p>
+              </div>
+            )}
+          </div>
+        </NeonCard>
+      ))}
+    </div>
+  );
+};
+
 // ─── DEBUG TAB ────────────────────────────────────────────────────────────────
 const DebugTab = () => {
   const [log, setLog] = useState<string[]>([]);
@@ -1250,9 +1598,18 @@ const FactionAppsTab = () => {
   }, {});
   const factionTabs = Object.keys(factionGroups).sort();
 
+  // При __all__ показуємо тільки "На розгляді"; при конкретній фракції — всі заявки цієї фракції
   const filteredApps = activeFaction === "__all__"
     ? apps.filter(a => a.status === "review")
     : apps.filter(a => (a.factionName || "Без фракції") === activeFaction);
+
+  // Стан фільтра статусу всередині конкретної фракції
+  const [factionStatusFilter, setFactionStatusFilter] = useState<"all"|"review"|"approved"|"rejected">("all");
+  const visibleApps = activeFaction === "__all__"
+    ? filteredApps
+    : factionStatusFilter === "all"
+      ? filteredApps
+      : filteredApps.filter(a => a.status === factionStatusFilter);
 
   return (
     <div className="space-y-3 animate-fade-in">
@@ -1303,17 +1660,33 @@ const FactionAppsTab = () => {
       )}
 
       {loading && <div className="text-center py-8"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}
-      {!loading && filteredApps.length === 0 && (
+
+      {/* Фільтр статусу при конкретній фракції */}
+      {!loading && activeFaction !== "__all__" && (
+        <div className="flex gap-1.5 p-1 liquid-glass rounded-xl overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+          {(["all","review","approved","rejected"] as const).map(s => {
+            const lbl = { all: "Всі", review: "На розгляді", approved: "Прийнято", rejected: "Відхилено" }[s];
+            return (
+              <button key={s} onClick={() => setFactionStatusFilter(s)}
+                className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap px-2 ${factionStatusFilter === s ? "bg-primary text-black" : "text-muted-foreground"}`}>
+                {lbl}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {!loading && visibleApps.length === 0 && (
         <div className="text-center py-10 liquid-glass-card rounded-2xl">
           <Shield className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" />
           <p className="text-xs text-muted-foreground">Немає заявок</p>
           {activeFaction !== "__all__" && (
-            <p className="text-[10px] text-muted-foreground/50 mt-1">У фракції «{activeFaction}» поки немає заявок</p>
+            <p className="text-[10px] text-muted-foreground/50 mt-1">У фракції «{activeFaction}» немає заявок з вибраним статусом</p>
           )}
         </div>
       )}
 
-      {filteredApps.map(a => (
+      {visibleApps.map(a => (
         <NeonCard key={a.id} glowColor="green">
           <div
             className="space-y-2 transition-all duration-500"
