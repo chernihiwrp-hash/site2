@@ -41,6 +41,8 @@ const HouseDetail = () => {
   const [copied, setCopied] = useState(false);
   const [housePurchaseId, setHousePurchaseId] = useState<number | null>(null);
   const [userRole, setUserRole] = useState<FamilyRole | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"money" | "cr">("money");
+  const [telegram, setTelegram] = useState("");
 
   useEffect(() => {
     store.getHouses().then(houses => {
@@ -93,9 +95,6 @@ const HouseDetail = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const [paymentMethod, setPaymentMethod] = useState<"money" | "cr">("money");
-  const [telegram, setTelegram] = useState("");
 
   const handleConfirmPayment = async () => {
     if (!nick.trim()) return toast.error("Нік не знайдено");
