@@ -49,30 +49,29 @@ type TabId =
   "add_faction" | "voice" | "tokens" | "nft" | "manage_factions" | "recruitment" |
   "confiscation" | "mayor_apps" | "debug" | "bans";
 
-const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boolean }[] = [
-  { id: "sos",            label: "SOS Сигнали",           icon: AlertTriangle, sub: "Realtime",    danger: true },
-  { id: "applications",   label: "Заявки адміністратора", icon: Users,          sub: "Заявки" },
-  { id: "factions",       label: "Заявки у фракції",      icon: Shield,         sub: "Заявки" },
-  { id: "licenses",       label: "Ліцензії",              icon: FileCheck,      sub: "Управління" },
-  { id: "plates",         label: "Номери",                icon: Car,            sub: "Управління" },
-  { id: "house_requests", label: "Купівля будинків",       icon: Home,           sub: "Управління" },
-  { id: "news",           label: "Новини та оновлення",    icon: Newspaper,      sub: "Управління" },
-  { id: "houses",         label: "Управління будинками",  icon: Building2,      sub: "Управління" },
-  { id: "wanted",         label: "Розшук",                icon: Crosshair,      sub: "Управління", danger: true },
-  { id: "election",       label: "Вибори мера",            icon: Vote,           sub: "Управління" },
-  { id: "documents",      label: "Документи",              icon: ScrollText,     sub: "Управління" },
-  { id: "add_faction",    label: "Додати фракцію",          icon: ShieldAlert,    sub: "Управління" },
-  { id: "voice",          label: "Голос міста",            icon: Megaphone,      sub: "Управління" },
-  { id: "tokens",         label: "Токени CR",              icon: Coins,          sub: "Фінанси" },
-  
-  // ДОДАЙ ЦЕЙ РЯДОК СЮДИ:
-  { id: "nft",            label: "NFT Подарунки",          icon: Gift,           sub: "Магазин" },
-  
-  { id: "manage_factions", label: "Управління фракціями",   icon: ShieldAlert,    sub: "Фракції" },
-  { id: "recruitment",     label: "Набір (відкрити/закрити)", icon: Lock,          sub: "Фракції" },
-  { id: "confiscation",    label: "Конфіскація будинків",   icon: Gavel,          sub: "Управління", danger: true },
-  { id: "mayor_apps",      label: "Заявки на мера",         icon: Crown,          sub: "Управління" },
-  { id: "bans",            label: "Бани гравців",            icon: UserX,          sub: "Безпека", danger: true },
+const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boolean; category: string }[] = [
+  { id: "sos",            label: "SOS Сигнали",           icon: AlertTriangle, sub: "Realtime",    danger: true,  category: "🚨 Термінове" },
+  { id: "applications",   label: "Заявки адміністратора", icon: Users,          sub: "Заявки",                    category: "📋 Заявки" },
+  { id: "factions",       label: "Заявки у фракції",      icon: Shield,         sub: "Заявки",                    category: "📋 Заявки" },
+  { id: "mayor_apps",      label: "Заявки на мера",        icon: Crown,          sub: "Заявки",                    category: "📋 Заявки" },
+  { id: "licenses",       label: "Ліцензії",              icon: FileCheck,      sub: "Управління",                category: "⚙️ Управління" },
+  { id: "plates",         label: "Номери авто",           icon: Car,            sub: "Управління",                category: "⚙️ Управління" },
+  { id: "house_requests", label: "Купівля будинків",      icon: Home,           sub: "Управління",                category: "⚙️ Управління" },
+  { id: "houses",         label: "Управління будинками",  icon: Building2,      sub: "Управління",                category: "⚙️ Управління" },
+  { id: "confiscation",   label: "Конфіскація будинків",  icon: Gavel,          sub: "Управління", danger: true,  category: "⚙️ Управління" },
+  { id: "documents",      label: "Документи",             icon: ScrollText,     sub: "Управління",                category: "⚙️ Управління" },
+  { id: "news",           label: "Новини та оновлення",   icon: Newspaper,      sub: "Управління",                category: "📢 Контент" },
+  { id: "voice",          label: "Голос міста",           icon: Megaphone,      sub: "Управління",                category: "📢 Контент" },
+  { id: "election",       label: "Вибори мера",           icon: Vote,           sub: "Управління",                category: "📢 Контент" },
+  { id: "wanted",         label: "Розшук",                icon: Crosshair,      sub: "Управління", danger: true,  category: "🔒 Безпека" },
+  { id: "bans",           label: "Бани гравців",          icon: UserX,          sub: "Безпека",    danger: true,  category: "🔒 Безпека" },
+  { id: "tokens",         label: "Токени CR",             icon: Coins,          sub: "Фінанси",                   category: "💰 Фінанси" },
+  { id: "nft",            label: "NFT Подарунки",         icon: Gift,           sub: "Магазин",                   category: "💰 Фінанси" },
+  { id: "manage_factions", label: "Управління фракціями", icon: ShieldAlert,    sub: "Фракції",                   category: "🛡️ Фракції" },
+  { id: "recruitment",    label: "Набір у фракції",       icon: Lock,           sub: "Фракції",                   category: "🛡️ Фракції" },
+  { id: "add_faction",    label: "Додати фракцію",        icon: ShieldAlert,    sub: "Управління",                category: "🛡️ Фракції" },
+  { id: "debug",          label: "Діагностика",           icon: Settings,       sub: "Debug",                     category: "🔧 Система" },
+];
   { id: "debug",           label: "Діагностика",             icon: Settings,       sub: "Debug" },
 ];
 
@@ -334,24 +333,37 @@ const AdminPanel = () => {
       {/* Restrictions panel button */}
       <RestrictionsButton onOpen={() => setTab("restrictions")} />
 
-      <div className="space-y-2 animate-fade-in">
-        {allowedTabs.map((t, i) => (
-          <button key={t.id} onClick={() => setTab(t.id)} className="w-full animate-slide-up" style={{ animationDelay: `${i * 35}ms` }}>
-            <div className={`liquid-glass-card rounded-2xl px-4 py-3.5 flex items-center justify-between transition-all duration-200 hover:scale-[1.01] active:scale-[0.98] ${t.danger ? "border-destructive/20 hover:border-destructive/30" : "hover:border-primary/20"}`}
-              style={t.danger ? { boxShadow: "0 0 10px hsl(0 70% 50% / 0.07)" } : {}}>
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.danger ? "bg-destructive/10 border border-destructive/20" : "bg-primary/10 border border-primary/15"}`}>
-                  <t.icon className={`w-5 h-5 ${t.danger ? "text-destructive" : "text-primary"}`} />
-                </div>
-                <div className="text-left">
-                  <span className={`text-sm font-medium block ${t.danger ? "text-destructive" : "text-foreground"}`}>{t.label}</span>
-                  <span className="text-[10px] text-muted-foreground">{t.sub}</span>
-                </div>
+      <div className="space-y-4 animate-fade-in">
+        {(() => {
+          // Group tabs by category
+          const groups: Record<string, typeof allowedTabs> = {};
+          allowedTabs.forEach(t => {
+            const cat = t.category || "Інше";
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(t);
+          });
+          return Object.entries(groups).map(([cat, tabs]) => (
+            <div key={cat}>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 px-1">{cat}</p>
+              <div className="space-y-1.5">
+                {tabs.map((t, i) => (
+                  <button key={t.id} onClick={() => setTab(t.id)} className="w-full animate-slide-up" style={{ animationDelay: `${i * 25}ms` }}>
+                    <div className={`liquid-glass-card rounded-2xl px-4 py-3 flex items-center justify-between transition-all duration-200 hover:scale-[1.01] active:scale-[0.98] ${t.danger ? "border-destructive/20 hover:border-destructive/30" : "hover:border-primary/20"}`}
+                      style={t.danger ? { boxShadow: "0 0 10px hsl(0 70% 50% / 0.07)" } : {}}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.danger ? "bg-destructive/10 border border-destructive/20" : "bg-primary/10 border border-primary/15"}`}>
+                          <t.icon className={`w-4 h-4 ${t.danger ? "text-destructive" : "text-primary"}`} />
+                        </div>
+                        <span className={`text-sm font-medium ${t.danger ? "text-destructive" : "text-foreground"}`}>{t.label}</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </button>
+                ))}
               </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </div>
-          </button>
-        ))}
+          ));
+        })()}
 
         {allowedTabs.length === 0 && (
           <div className="text-center py-12 liquid-glass-card rounded-2xl">
@@ -1557,11 +1569,41 @@ const FactionAppsTab = () => {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [activeFaction, setActiveFaction] = useState<string>("__all__");
+  const [factionStatusFilter, setFactionStatusFilter] = useState<"all"|"review"|"approved"|"rejected">("review");
+  const [factions, setFactions] = useState<any[]>([]);
 
   const load = async () => {
     setLoading(true);
-    const data = await store.getFactionApps();
-    setApps(data);
+    try {
+      // Завантажуємо заявки напряму з supabase — без обмежень
+      const { data, error } = await supabase
+        .from("faction_applications")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) { console.error("faction_applications load error:", error); }
+      const mapped: FactionApplication[] = (data || []).map((r: Record<string, unknown>) => {
+        const fd = (r.form_data as Record<string, unknown>) || {};
+        return {
+          id: r.id as number,
+          factionId: (r.faction_id as string) || "",
+          factionName: (r.faction_name as string) || "",
+          nick: (fd.nick as string) || (r.username as string) || "",
+          username: (r.username as string) || "",
+          roblox: (fd.roblox as string) || "",
+          age: (fd.age as string) || "",
+          telegram: (fd.telegram as string) || "",
+          experience: (fd.experience as string) || "",
+          message: (fd.message as string) || "",
+          status: ((r.status === "pending" ? "review" : r.status) as FactionApplication["status"]),
+          date: new Date(r.created_at as string).toLocaleDateString("uk-UA"),
+        };
+      });
+      setApps(mapped);
+
+      // Завантажуємо список всіх фракцій
+      const { data: fData } = await supabase.from("factions").select("id, name, image_url, color").order("name");
+      setFactions(fData || []);
+    } catch(e) { console.error(e); }
     setLoading(false);
   };
 
@@ -1571,7 +1613,6 @@ const FactionAppsTab = () => {
       setApps(prev => [app, ...prev]);
       toast.info(`Нова заявка від ${app.nick} у ${app.factionName}`);
     });
-    // Realtime UPDATE — щоб статус мінявся миттєво без перезаходу
     const upd = store.onAppStatusChange("faction_applications", (id, status) => {
       const mapped = (status === "pending" ? "review" : status) as FactionApplication["status"];
       setApps(prev => prev.map(a => a.id === id ? { ...a, status: mapped } : a));
@@ -1580,96 +1621,144 @@ const FactionAppsTab = () => {
   }, []);
 
   const decide = async (id: number, status: "approved" | "rejected") => {
-    await store.updateFactionAppStatus(id, status);
+    const { error } = await supabase.from("faction_applications").update({ status }).eq("id", id);
+    if (error) { toast.error("Помилка: " + error.message); return; }
     const app = apps.find(a => a.id === id);
     if (app?.nick) store.addNotification(app.nick, `Заявка у ${app.factionName} ${status === "approved" ? "✅ схвалена" : "❌ відхилена"}`);
     setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
     toast.success(status === "approved" ? "Схвалено!" : "Відхилено!");
   };
 
-  const sc = { review: "bg-yellow-400/15 text-yellow-400", approved: "bg-primary/15 text-primary", rejected: "bg-destructive/15 text-destructive" };
+  const sc = { review: "bg-yellow-400/15 text-yellow-400 border-yellow-400/20", approved: "bg-primary/15 text-primary border-primary/20", rejected: "bg-destructive/15 text-destructive border-destructive/20" };
   const sl = { review: "На розгляді", approved: "Прийнято", rejected: "Відхилено" };
 
-  // Згруповуємо заявки по фракціях для вкладок
-  const factionGroups = apps.reduce<Record<string, number>>((acc, a) => {
+  // Унікальні фракції з заявок + з БД
+  const appFactionNames = [...new Set(apps.map(a => a.factionName || "Без фракції"))].sort();
+  // Підрахунок заявок по фракції
+  const factionCounts = apps.reduce<Record<string, { all: number; review: number }>>((acc, a) => {
     const key = a.factionName || "Без фракції";
-    acc[key] = (acc[key] || 0) + 1;
+    if (!acc[key]) acc[key] = { all: 0, review: 0 };
+    acc[key].all++;
+    if (a.status === "review") acc[key].review++;
     return acc;
   }, {});
-  const factionTabs = Object.keys(factionGroups).sort();
 
-  // При __all__ показуємо тільки "На розгляді"; при конкретній фракції — всі заявки цієї фракції
-  const filteredApps = activeFaction === "__all__"
-    ? apps.filter(a => a.status === "review")
-    : apps.filter(a => (a.factionName || "Без фракції") === activeFaction);
+  // Видимі заявки
+  const visibleApps = (() => {
+    let filtered = activeFaction === "__all__" ? apps : apps.filter(a => (a.factionName || "Без фракції") === activeFaction);
+    if (factionStatusFilter !== "all") filtered = filtered.filter(a => a.status === factionStatusFilter);
+    return filtered;
+  })();
 
-  // Стан фільтра статусу всередині конкретної фракції
-  const [factionStatusFilter, setFactionStatusFilter] = useState<"all"|"review"|"approved"|"rejected">("all");
-  const visibleApps = activeFaction === "__all__"
-    ? filteredApps
-    : factionStatusFilter === "all"
-      ? filteredApps
-      : filteredApps.filter(a => a.status === factionStatusFilter);
+  const pendingCount = apps.filter(a => a.status === "review").length;
 
   return (
     <div className="space-y-3 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">На розгляді: {apps.filter(a => a.status === "review").length}</p>
+        <div>
+          <p className="text-xs font-semibold text-foreground">Заявки у фракції</p>
+          <p className="text-[10px] text-muted-foreground">{pendingCount} на розгляді · {apps.length} всього</p>
+        </div>
         <div className="flex items-center gap-2">
           <button onClick={load} className="liquid-glass px-2 py-1 rounded-lg active:scale-95">
             <RefreshCw className={`w-3 h-3 text-muted-foreground ${loading ? "animate-spin" : ""}`} />
           </button>
-          <div className="flex items-center gap-1.5 text-[10px] text-primary">
-            <Radio className="w-3 h-3 animate-pulse" /> Realtime
+          <div className="flex items-center gap-1 text-[10px] text-primary liquid-glass px-2 py-1 rounded-lg">
+            <Radio className="w-3 h-3 animate-pulse" /> Live
           </div>
         </div>
       </div>
 
-      {/* ── ВКЛАДКИ ПО ФРАКЦІЯХ ── */}
-      {factionTabs.length > 0 && (
-        <div className="relative">
+      {/* ── МІНІ-КАРТКИ ФРАКЦІЙ зі слайдером ── */}
+      {appFactionNames.length > 0 && (
+        <div>
+          <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold mb-2 px-1">Фільтр по фракції</p>
           <div
-            className="flex gap-1.5 overflow-x-auto pb-2"
-            style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}
+            className="flex gap-2 pb-3 overflow-x-auto"
+            style={{ scrollbarWidth: "thin", scrollbarColor: "hsl(var(--primary) / 0.3) transparent", WebkitOverflowScrolling: "touch" }}
           >
-            <style>{`.fac-tabs::-webkit-scrollbar { display: none; }`}</style>
-            <div className="fac-tabs flex gap-1.5 w-full overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-              {factionTabs.map(name => {
-                const c = getFactionColor(name);
-                const active = activeFaction === name;
-                return (
-                  <button
-                    key={name}
-                    onClick={() => setActiveFaction(active ? "__all__" : name)}
-                    style={
-                      active
-                        ? { backgroundColor: `${c}26`, color: c, borderColor: `${c}66`, boxShadow: `0 0 12px ${c}40` }
-                        : { borderColor: `${c}33`, color: c }
+            <style>{`.faction-slider::-webkit-scrollbar { height: 3px; } .faction-slider::-webkit-scrollbar-track { background: transparent; } .faction-slider::-webkit-scrollbar-thumb { background: hsl(var(--primary) / 0.35); border-radius: 99px; }`}</style>
+            {/* Кнопка "Всі" */}
+            <button
+              onClick={() => setActiveFaction("__all__")}
+              className="faction-slider shrink-0 flex flex-col items-center gap-1.5 p-2.5 rounded-2xl transition-all active:scale-95 border"
+              style={activeFaction === "__all__"
+                ? { background: "hsl(var(--primary) / 0.15)", borderColor: "hsl(var(--primary) / 0.5)", boxShadow: "0 0 14px hsl(var(--primary) / 0.3)", minWidth: 72 }
+                : { background: "hsl(0 0% 100% / 0.04)", borderColor: "hsl(0 0% 100% / 0.08)", minWidth: 72 }
+              }
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: activeFaction === "__all__" ? "hsl(var(--primary) / 0.2)" : "hsl(0 0% 100% / 0.06)" }}>
+                <Shield className="w-5 h-5" style={{ color: activeFaction === "__all__" ? "hsl(var(--primary))" : "hsl(0 0% 50%)" }} />
+              </div>
+              <span className="text-[9px] font-bold text-center leading-tight" style={{ color: activeFaction === "__all__" ? "hsl(var(--primary))" : "hsl(0 0% 60%)" }}>Всі</span>
+              <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{ background: "hsl(var(--primary) / 0.1)", color: "hsl(var(--primary))" }}>
+                {pendingCount}
+              </span>
+            </button>
+
+            {appFactionNames.map(name => {
+              const active = activeFaction === name;
+              const c = getFactionColor(name);
+              const dbFaction = factions.find(f => f.name === name);
+              const counts = factionCounts[name] || { all: 0, review: 0 };
+              return (
+                <button
+                  key={name}
+                  onClick={() => setActiveFaction(active ? "__all__" : name)}
+                  className="shrink-0 flex flex-col items-center gap-1.5 p-2.5 rounded-2xl transition-all active:scale-95 border"
+                  style={active
+                    ? { background: `${c}18`, borderColor: `${c}55`, boxShadow: `0 0 14px ${c}30`, minWidth: 80 }
+                    : { background: "hsl(0 0% 100% / 0.04)", borderColor: "hsl(0 0% 100% / 0.08)", minWidth: 80 }
+                  }
+                >
+                  {/* Зображення або іконка */}
+                  <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0"
+                    style={{ background: active ? `${c}25` : "hsl(0 0% 100% / 0.06)", border: `1.5px solid ${active ? c + "60" : "transparent"}` }}>
+                    {dbFaction?.image_url
+                      ? <img src={dbFaction.image_url} alt={name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
+                      : <Shield className="w-5 h-5" style={{ color: active ? c : "hsl(0 0% 50%)" }} />
                     }
-                    className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all active:scale-95 border ${
-                      active ? "" : "liquid-glass"
-                    }`}
-                  >
-                    {name} ({factionGroups[name]})
-                  </button>
-                );
-              })}
-            </div>
+                  </div>
+                  <span className="text-[9px] font-bold text-center leading-tight max-w-[72px] truncate" style={{ color: active ? c : "hsl(0 0% 65%)" }}>
+                    {name}
+                  </span>
+                  {counts.review > 0 && (
+                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: active ? `${c}25` : "hsl(0 0% 100% / 0.08)", color: active ? c : "hsl(0 0% 60%)" }}>
+                      {counts.review} нових
+                    </span>
+                  )}
+                  {counts.review === 0 && (
+                    <span className="text-[8px] px-1.5 py-0.5 rounded-full" style={{ color: "hsl(0 0% 40%)" }}>
+                      {counts.all} всього
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
       {loading && <div className="text-center py-8"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}
 
-      {/* Фільтр статусу при конкретній фракції */}
-      {!loading && activeFaction !== "__all__" && (
-        <div className="flex gap-1.5 p-1 liquid-glass rounded-xl overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+      {/* Фільтр статусу */}
+      {!loading && (
+        <div className="grid grid-cols-4 gap-1 p-1 liquid-glass rounded-xl">
           {(["all","review","approved","rejected"] as const).map(s => {
-            const lbl = { all: "Всі", review: "На розгляді", approved: "Прийнято", rejected: "Відхилено" }[s];
+            const lbl = { all: "Всі", review: "Розгляд", approved: "Прийнято", rejected: "Відхилено" }[s];
+            const cnt = (() => {
+              const base = activeFaction === "__all__" ? apps : apps.filter(a => (a.factionName || "Без фракції") === activeFaction);
+              return s === "all" ? base.length : base.filter(a => a.status === s).length;
+            })();
             return (
               <button key={s} onClick={() => setFactionStatusFilter(s)}
-                className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap px-2 ${factionStatusFilter === s ? "bg-primary text-black" : "text-muted-foreground"}`}>
-                {lbl}
+                className={`py-1.5 rounded-lg text-[9px] font-bold transition-all flex flex-col items-center gap-0.5 ${factionStatusFilter === s ? "bg-primary text-black" : "text-muted-foreground"}`}>
+                <span>{lbl}</span>
+                <span className={`text-[8px] font-semibold ${factionStatusFilter === s ? "text-black/70" : "text-muted-foreground/60"}`}>{cnt}</span>
               </button>
             );
           })}
@@ -1680,44 +1769,36 @@ const FactionAppsTab = () => {
         <div className="text-center py-10 liquid-glass-card rounded-2xl">
           <Shield className="w-6 h-6 text-muted-foreground opacity-30 mx-auto mb-2" />
           <p className="text-xs text-muted-foreground">Немає заявок</p>
-          {activeFaction !== "__all__" && (
-            <p className="text-[10px] text-muted-foreground/50 mt-1">У фракції «{activeFaction}» немає заявок з вибраним статусом</p>
-          )}
+          <p className="text-[10px] text-muted-foreground/50 mt-1">
+            {activeFaction !== "__all__" ? `Фракція «${activeFaction}»` : "Усі фракції"} · {sl[factionStatusFilter as keyof typeof sl] || "Всі"}
+          </p>
         </div>
       )}
 
       {visibleApps.map(a => (
         <NeonCard key={a.id} glowColor="green">
-          <div
-            className="space-y-2 transition-all duration-500"
-            style={{
-              opacity: a.status === "rejected" ? 0.55 : 1,
-              transform: "translateZ(0)",
-            }}
-          >
-            {/* Header row */}
+          <div className="space-y-2 transition-all duration-500" style={{ opacity: a.status === "rejected" ? 0.55 : 1 }}>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <Users className="w-3 h-3 text-primary" />
+                <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                  <Users className="w-3 h-3 text-primary shrink-0" />
                   <h4 className="text-xs font-bold">{a.nick}</h4>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-md transition-all duration-500 ${sc[a.status]}`}>{sl[a.status]}</span>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-md border ${sc[a.status]}`}>{sl[a.status]}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Shield className="w-3 h-3 text-muted-foreground" />
-                  <p className="text-[10px] text-primary font-medium">{a.factionName}</p>
-                  <span className="text-[9px] text-muted-foreground">• {a.date}</span>
+                  <Shield className="w-3 h-3 text-muted-foreground shrink-0" />
+                  <p className="text-[10px] text-primary font-medium truncate">{a.factionName}</p>
+                  <span className="text-[9px] text-muted-foreground shrink-0">· {a.date}</span>
                 </div>
               </div>
               {a.status === "review" && (
                 <div className="flex gap-1 ml-2 shrink-0">
-                  <button onClick={() => decide(a.id, "approved")} className="p-1.5 rounded-lg bg-primary/15 text-primary active:scale-95"><Check className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => decide(a.id, "rejected")} className="p-1.5 rounded-lg bg-destructive/15 text-destructive active:scale-95"><X className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => decide(a.id, "approved")} className="p-1.5 rounded-lg bg-primary/15 text-primary active:scale-95 hover:bg-primary/25 transition-all"><Check className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => decide(a.id, "rejected")} className="p-1.5 rounded-lg bg-destructive/15 text-destructive active:scale-95 hover:bg-destructive/25 transition-all"><X className="w-3.5 h-3.5" /></button>
                 </div>
               )}
             </div>
 
-            {/* Quick info */}
             <div className="grid grid-cols-3 gap-1">
               {[
                 { label: "Roblox", value: a.roblox },
@@ -1731,7 +1812,6 @@ const FactionAppsTab = () => {
               ) : null)}
             </div>
 
-            {/* Expand/collapse message */}
             {a.message && (
               <div>
                 <button onClick={() => setExpanded(expanded === a.id ? null : a.id)}
