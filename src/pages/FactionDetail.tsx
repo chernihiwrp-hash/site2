@@ -277,6 +277,15 @@ const handleResign = async () => {
     if (!nick || !roblox || !age || !telegram) return toast.error("Заповніть усі поля");
     const unanswered = questions.findIndex((_, i) => !answers[i]?.trim());
     if (unanswered !== -1) return toast.error(`Дайте відповідь на питання ${unanswered + 1}`);
+
+    // Перевірка набору перед відправкою (на випадок якщо набір закрили поки форма була відкрита)
+    const isOpen = await store.isRecruitmentOpen(faction!.name);
+    if (!isOpen) {
+      setShowForm(false);
+      setRecruitClosed(true);
+      return;
+    }
+
     setAppStatus("sending");
 
     const message = questions.map((q, i) => `${i + 1}. ${q}\n→ ${answers[i] || ""}`).join("\n\n");
