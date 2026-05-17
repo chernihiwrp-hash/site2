@@ -617,17 +617,15 @@ export const store = {
     ];
     return data as DocumentItem[];
   },
-  addDoc: async (title: string, content: string, button_text?: string, button_url?: string) => {
-    // ✅ БЕЗОПАСНО: INSERT через сервер
-    const result = await secureInsert("documents", { title, content, button_text: button_text || null, button_url: button_url || null });
-    return result;
+  addDoc: async (title: string, content: string, button_text?: string, button_url?: string): Promise<boolean> => {
+    const { error } = await dbInsert("documents", { title, content, button_text: button_text || null, button_url: button_url || null });
+    if (error) { console.error("[addDoc] error:", error.message); return false; }
+    return true;
   },
-  updateDoc: async (id: number, title: string, content: string, button_text?: string, button_url?: string) => {
-    const result = await dbUpdate("documents", { title, content, button_text: button_text || null, button_url: button_url || null }, { id: eq(id) });
-    if (result.error) {
-      console.error("[updateDoc] error:", result.error.message);
-    }
-    return result;
+  updateDoc: async (id: number, title: string, content: string, button_text?: string, button_url?: string): Promise<boolean> => {
+    const { error } = await dbUpdate("documents", { title, content, button_text: button_text || null, button_url: button_url || null }, { id: eq(id) });
+    if (error) { console.error("[updateDoc] error:", error.message); return false; }
+    return true;
   },
   deleteDoc: async (id: number) => { await dbDelete("documents", { id: eq(id) }); },
   setDocs: (_: DocumentItem[]) => {},
@@ -938,12 +936,18 @@ export const store = {
 
   isRecruitmentOpen: async (target: string): Promise<boolean> => {
     try {
-      const { data } = await supabase
-        .from("recruitment_settings").select("is_open")
+      // Шукаємо по lowercase назві фракції
+      const { data, error } = await supabase
+        .from("recruitment_settings").select("is_open, target")
         .eq("target", target.toLowerCase()).maybeSingle();
-      // default: відкрито, якщо запису немає
-      return data?.is_open !== false;
-    } catch { return true; }
+      console.log("[isRecruitmentOpen] target:", target.toLowerCase(), "data:", data, "error:", error);
+      // Якщо запису немає — за замовчуванням відкрито
+      if (!data) return true;
+      return data.is_open !== false;
+    } catch (e) {
+      console.error("[isRecruitmentOpen] exception:", e);
+      return true;
+    }
   },
 
   setRecruitmentOpen: async (target: string, isOpen: boolean): Promise<boolean> => {
