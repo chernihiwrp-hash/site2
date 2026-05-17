@@ -1648,8 +1648,18 @@ const FactionAppsTab = () => {
   }, []);
 
   const decide = async (id: number, status: "approved" | "rejected") => {
-    const { error } = await supabase.from("faction_applications").update({ status }).eq("id", id);
-    if (error) { toast.error("Помилка: " + error.message); return; }
+    // Використовуємо dbUpdate → /api/db → service_role (обходить RLS)
+    const { error } = await dbUpdate(
+      "faction_applications",
+      { status },
+      { id: eq(id) }
+    );
+
+    if (error) {
+      toast.error("Помилка БД: " + error.message);
+      return;
+    }
+
     const app = apps.find(a => a.id === id);
     if (app?.nick) store.addNotification(app.nick, `Заявка у ${app.factionName} ${status === "approved" ? "✅ схвалена" : "❌ відхилена"}`);
     setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
