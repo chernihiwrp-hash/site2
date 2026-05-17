@@ -139,6 +139,13 @@ const AdminApplication = () => {
     if (!steps[step].validate()) return toast.error("Заповніть усі поля");
     setSending(true);
     try {
+      // Перевіряємо чи набір адмінів відкритий
+      const isOpen = await store.isRecruitmentOpen("admin");
+      if (!isOpen) {
+        toast.error("Набір адміністраторів наразі закрито. Дочекайтеся відкриття набору.");
+        setSending(false);
+        return;
+      }
       const nick = localStorage.getItem("crp_nick") || form.realName;
       const ok = await store.submitAdminApp({
         nick,
