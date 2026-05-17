@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import PageHeader from "../components/PageHeader";
 import GradientButton from "../components/GradientButton";
-import { Users, User, Send, CheckCircle, Clock, Shield, Crown, LogOut } from "lucide-react";
+import { Users, User, Send, CheckCircle, Clock, Shield, Crown, LogOut, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { store, supabase } from "../lib/store";
 
@@ -68,6 +68,7 @@ const FactionDetail = () => {
   const [resignConfirm, setResignConfirm] = useState(false);
   const [resignLoading, setResignLoading] = useState(false);
   const [recruitClosed, setRecruitClosed] = useState(false);
+  const [recruitOpen, setRecruitOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -233,6 +234,16 @@ const FactionDetail = () => {
     loadFaction();
     loadMembers();
   }, [id]);
+
+  // Перевірка стану набору при завантаженні фракції
+  useEffect(() => {
+    if (!faction?.name) return;
+    let mounted = true;
+    store.isRecruitmentOpen(faction.name).then(open => {
+      if (mounted) setRecruitOpen(open);
+    });
+    return () => { mounted = false; };
+  }, [faction?.name]);
 
   if (!faction) return (
     <div className="min-h-screen pb-20 px-4 pt-4">
@@ -456,13 +467,29 @@ const handleResign = async () => {
                 </div>
               </div>
             ) : appStatus === "idle" && (
-              <GradientButton variant={btnVariant} className="w-full" onClick={async () => {
-                const isOpen = await store.isRecruitmentOpen(faction.name);
-                if (!isOpen) { setRecruitClosed(true); return; }
-                setShowForm(true);
-              }}>
-                Подати анкету
-              </GradientButton>
+              recruitOpen === false ? (
+                <button
+                  onClick={() => setRecruitClosed(true)}
+                  className="w-full rounded-2xl py-3.5 px-4 text-sm font-bold flex items-center justify-center gap-2.5 active:scale-[0.98] transition-all relative overflow-hidden group"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(0 70% 22% / 0.85), hsl(0 60% 12% / 0.95))",
+                    border: "1.5px solid hsl(0 75% 50% / 0.55)",
+                    color: "hsl(0 80% 70%)",
+                    boxShadow: "0 0 24px hsl(0 70% 45% / 0.35), inset 0 0 20px hsl(0 70% 35% / 0.2)",
+                  }}
+                >
+                  <Lock className="w-4 h-4" style={{ color: "hsl(0 85% 62%)", filter: "drop-shadow(0 0 6px hsl(0 85% 55%))" }} />
+                  <span style={{ textShadow: "0 0 10px hsl(0 80% 50% / 0.6)" }}>Набір закрито</span>
+                </button>
+              ) : (
+                <GradientButton variant={btnVariant} className="w-full" onClick={async () => {
+                  const isOpen = await store.isRecruitmentOpen(faction.name);
+                  if (!isOpen) { setRecruitOpen(false); setRecruitClosed(true); return; }
+                  setShowForm(true);
+                }}>
+                  Подати анкету
+                </GradientButton>
+              )
             )}
           </div>
         )}
