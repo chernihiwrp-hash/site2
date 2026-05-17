@@ -384,7 +384,7 @@ const Shop = () => {
         syncBalance(nick, bal); setBalanceState(bal);
       }
     });
-    supabase.from("nft_gifts").select("*").order("price", { ascending: true }).limit(4)
+    supabase.from("nft_gifts").select("*").order("price", { ascending: true }).limit(5)
       .then(({ data }: any) => { if (data) setNftGifts(data); });
 
     // Load claimed NFTs from localStorage
@@ -432,22 +432,33 @@ const Shop = () => {
     if (streak < days || claimedNfts.has(nft.id) || claimingNft !== null) return;
     setClaimingNft(nft.id);
     try {
-      // Save to nft_owners via secure /api/db route (bypasses RLS with service role)
-      const { error } = await dbInsert("nft_owners", {
-        owner_nick: nick,
-        nft_id: nft.id,
-      });
-      if (error) {
-        toast.error(`Помилка отримання NFT: ${error.message}`);
-        setClaimingNft(null);
-        return;
+      // Перевіряємо чи вже є
+      const { data: existing } = await supabase
+        .from("nft_owners")
+        .select("id")
+        .eq("owner_nick", nick)
+        .eq("nft_id", String(nft.id))
+        .maybeSingle();
+
+      if (!existing) {
+        const { error } = await dbInsert("nft_owners", {
+          owner_nick: nick,
+          nft_id: String(nft.id),
+        });
+        if (error) {
+          toast.error(`Помилка отримання NFT: ${error.message}`);
+          setClaimingNft(null);
+          return;
+        }
       }
+
       const newClaimed = new Set(claimedNfts);
       newClaimed.add(nft.id);
       setClaimedNfts(newClaimed);
       localStorage.setItem("crp_claimed_nfts", JSON.stringify([...newClaimed]));
-      toast.success(`NFT «${nft.name}» отримано і додано до профілю!`);
+      toast.success(`🎁 NFT «${nft.name}» отримано і додано до профілю!`);
     } catch (e) {
+      console.error("claimNft error:", e);
       toast.error("Помилка отримання NFT");
     }
     setClaimingNft(null);
@@ -460,8 +471,8 @@ const Shop = () => {
     { day: 7, reward: 200, label: "Д7" },
   ];
 
-  const milestoneDays = [15, 50, 150, 365];
-  const milestonePrices = [3000, 5000, 10000, 15000];
+  const milestoneDays = [15, 50, 150, 365, 500];
+  const milestonePrices = [3000, 10000, 15000, 20000, 25000];
   const flameC = streakColor((streakFrozen || streakAtRisk) ? 0 : streak);
   const flameCss = (streakFrozen || streakAtRisk) ? "rgba(150,210,255,0.9)" : hsl(flameC, 1);
   const flameMode = getFlameMode(!streakFrozen && !streakAtRisk ? streak : 0);
@@ -673,7 +684,7 @@ const Shop = () => {
           <Gift size={18} className="text-white/70" />
           <h3 className="text-lg font-semibold">NFT Нагороди за серію</h3>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {milestoneDays.map((days, idx) => {
             const reached = streak >= days;
             const nft = nftGifts[idx];
@@ -719,7 +730,8 @@ const Shop = () => {
                         <MiniFlameIcon done streakDay={days} current={false} />
                         {days} днів
                       </span>
-                      <span className="text-white/30">·</span><span className="text-white/60 tabular-nums">{milestonePrices[idx].toLocaleString()} CR</span>
+                      <span className="text-white/30">·</span>
+                      <span className="font-bold tabular-nums" style={{ color: hsl(c, 0.9) }}>{milestonePrices[idx].toLocaleString()} CR</span>
                     </div>
                     {/* Badge */}
                     {isClaimed && (
