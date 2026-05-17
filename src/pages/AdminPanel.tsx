@@ -72,8 +72,6 @@ const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boo
   { id: "add_faction",    label: "Додати фракцію",        icon: ShieldAlert,    sub: "Управління",                category: "🛡️ Фракції" },
   { id: "debug",          label: "Діагностика",           icon: Settings,       sub: "Debug",                     category: "🔧 Система" },
 ];
-  { id: "debug",           label: "Діагностика",             icon: Settings,       sub: "Debug" },
-];
 
 const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
   sos: false, applications: false, factions: false, licenses: false,
