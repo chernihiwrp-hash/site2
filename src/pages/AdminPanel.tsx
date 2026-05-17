@@ -1144,58 +1144,57 @@ const ElectionTab = () => {
 const DocumentsTab = () => {
   const [docs, setDocs] = useState<DocumentItem[]>([]);
   const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const [content2, setContent2] = useState("");
   const [btnText, setBtnText] = useState("");
   const [btnUrl, setBtnUrl] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  useEffect(() => { store.getDocs().then(setDocs); }, []);
+
+  const reload = () => store.getDocs().then(setDocs);
+  useEffect(() => { reload(); }, []);
+
+  const clearForm = () => { setEditId(null); setTitle(""); setContent2(""); setBtnText(""); setBtnUrl(""); };
+
   const save = async () => {
-    if (!title || !content) return toast.error("Заповніть поля");
+    if (!title.trim() || !content2.trim()) return toast.error("Заповніть поля");
     setSaving(true);
-    try {
-      if (editId !== null) {
-        const result = await store.updateDoc(editId, title, content, btnText, btnUrl);
-        if (result && result.error) {
-          toast.error("Помилка збереження: " + result.error.message);
-          setSaving(false);
-          return;
-        }
-      } else {
-        await store.addDoc(title, content, btnText, btnUrl);
-      }
-      const freshDocs = await store.getDocs();
-      setDocs(freshDocs);
-      setTitle(""); setContent(""); setBtnText(""); setBtnUrl(""); setEditId(null);
-      toast.success("Збережено!");
-    } catch (e: any) {
-      toast.error("Помилка: " + (e?.message || "невідома"));
-    } finally {
-      setSaving(false);
+    let ok: boolean;
+    if (editId !== null) {
+      ok = await store.updateDoc(editId, title.trim(), content2.trim(), btnText.trim(), btnUrl.trim());
+    } else {
+      ok = await store.addDoc(title.trim(), content2.trim(), btnText.trim(), btnUrl.trim());
     }
+    setSaving(false);
+    if (!ok) return toast.error("Помилка збереження! Перевір консоль (F12)");
+    await reload();
+    clearForm();
+    toast.success(editId !== null ? "Документ оновлено!" : "Документ додано!");
   };
+
   const openEdit = (d: DocumentItem) => {
-    setEditId(d.id); setTitle(d.title); setContent(d.content);
-    setBtnText(d.button_text || ""); setBtnUrl(d.button_url || "");
-    // Скролимо вгору до форми
+    setEditId(d.id);
+    setTitle(d.title);
+    setContent2(d.content);
+    setBtnText(d.button_text || "");
+    setBtnUrl(d.button_url || "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
   return (
     <div className="space-y-3 animate-fade-in">
       <NeonCard glowColor="lime">
         {editId !== null && (
-          <div className="mb-2 px-1 py-1.5 rounded-xl flex items-center gap-2"
+          <div className="mb-2 flex items-center gap-2 px-2 py-1.5 rounded-xl"
             style={{ background: "hsl(84 81% 44% / 0.08)", border: "1px solid hsl(84 81% 44% / 0.2)" }}>
-            <span className="text-[10px] text-primary font-semibold">✏️ Редагування документу #{editId}</span>
-            <button onClick={() => { setEditId(null); setTitle(""); setContent(""); setBtnText(""); setBtnUrl(""); }}
-              className="ml-auto text-[10px] text-muted-foreground underline">скасувати</button>
+            <span className="text-[10px] text-primary font-semibold flex-1">✏️ Редагування #{editId}</span>
+            <button onClick={clearForm} className="text-[10px] text-muted-foreground underline">скасувати</button>
           </div>
         )}
         <div className="space-y-2">
           <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Назва документу" className={inputClass} />
-          <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Зміст..." className={`${inputClass} resize-none h-24`} />
+          <textarea value={content2} onChange={e => setContent2(e.target.value)} placeholder="Зміст..." className={`${inputClass} resize-none h-24`} />
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider pt-1">Кнопка-посилання (необов'язково)</p>
-          <input value={btnText} onChange={e => setBtnText(e.target.value)} placeholder="Текст кнопки (напр. Дивитися)" className={inputClass} />
+          <input value={btnText} onChange={e => setBtnText(e.target.value)} placeholder="Текст кнопки" className={inputClass} />
           <input value={btnUrl} onChange={e => setBtnUrl(e.target.value)} placeholder="https://посилання..." className={inputClass} />
           <GradientButton variant="green" className="w-full text-xs py-2" onClick={save} disabled={saving}>
             {saving ? "Збереження..." : editId !== null ? "💾 Зберегти зміни" : "Додати документ"}
@@ -1223,6 +1222,7 @@ const DocumentsTab = () => {
     </div>
   );
 };
+
 
 // ─── FACTION APPS ─────────────────────────────────────────────────────────────
 
