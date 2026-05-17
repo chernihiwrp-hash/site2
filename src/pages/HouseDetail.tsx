@@ -6,9 +6,9 @@ import {
   ChevronLeft, ChevronRight, Home, Euro,
   CheckCircle, User, Sparkles, Clock,
   Calendar, Building2, Copy, Check, AlertCircle,
-  Crown, Shield
+  Crown, Shield, Coins, Zap
 } from "lucide-react";
-import { store, supabase } from "../lib/store";
+import { store, supabase, getBalanceFromDB } from "../lib/store";
 import { dbInsert } from "../lib/db";
 import type { HouseItem, FamilyMember, FamilyRole } from "../lib/store";
 import HouseFamilyDisplay from "../components/HouseFamilyDisplay";
@@ -43,12 +43,14 @@ const HouseDetail = () => {
   const [userRole, setUserRole] = useState<FamilyRole | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"money" | "cr">("money");
   const [telegram, setTelegram] = useState("");
+  const [userBalance, setUserBalance] = useState<number | null>(null);
 
   useEffect(() => {
     store.getHouses().then(houses => {
       const found = houses.find(h => h.id === Number(id));
       if (found) setHouse(found);
     });
+    if (nick) getBalanceFromDB(nick).then(setUserBalance);
   }, [id]);
 
   useEffect(() => {
@@ -89,6 +91,8 @@ const HouseDetail = () => {
   const getPrice = (ratio: number) => house ? Math.round(house.price * ratio) : 0;
   const selectedOption = RENTAL_OPTIONS.find(o => o.days === rentalDays) || RENTAL_OPTIONS[1];
   const selectedPrice = house ? getPrice(selectedOption.ratio) : 0;
+  const selectedPriceCR = selectedPrice * 3;
+  const hasSufficientCR = userBalance !== null && userBalance >= selectedPriceCR;
 
   const copyPayment = () => {
     navigator.clipboard.writeText(PAYMENT_USER);
@@ -98,13 +102,13 @@ const HouseDetail = () => {
 
   const handleConfirmPayment = async () => {
     if (!nick.trim()) return toast.error("Нік не знайдено");
-    // TG обов'язковий ТІЛЬКИ для оплати у €
     if (paymentMethod === "money" && !telegram.trim()) {
       return toast.error("Вкажіть Telegram (обов'язково при оплаті €)");
     }
     setLoading(true);
     try {
       if (paymentMethod === "cr") {
+        // передаємо selectedPrice (€), buyHouseWithCR сам помножить на 3
         const res = await store.buyHouseWithCR(house.id, nick, selectedPrice, rentalDays);
         if (!res.ok) { toast.error(res.error || "Помилка"); setLoading(false); return; }
         toast.success("🏠 Будинок ваш!");
@@ -125,18 +129,32 @@ const HouseDetail = () => {
     setLoading(false);
   };
 
-  // ── Успішна заявка ──
+  // ── Успішна заявка/покупка ──
   if (submitted) {
+    const isCRPurchase = paymentMethod === "cr";
     return (
       <div className="min-h-screen pb-20 px-4 pt-4">
         <PageHeader title={house.name} backTo="/houses" />
         <div className="flex flex-col items-center justify-center py-12 animate-fade-in">
           <div className="w-28 h-28 rounded-3xl flex items-center justify-center mb-6"
-            style={{ background: "hsl(142 71% 45% / 0.12)", border: "2px solid hsl(142 71% 45% / 0.4)", boxShadow: "0 0 60px hsl(142 71% 45% / 0.2)" }}>
-            <CheckCircle className="w-14 h-14" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 12px hsl(142 71% 45%))" }} />
+            style={{
+              background: isCRPurchase ? "hsl(200 80% 55% / 0.12)" : "hsl(142 71% 45% / 0.12)",
+              border: `2px solid ${isCRPurchase ? "hsl(200 80% 55% / 0.4)" : "hsl(142 71% 45% / 0.4)"}`,
+              boxShadow: `0 0 60px ${isCRPurchase ? "hsl(200 80% 55% / 0.2)" : "hsl(142 71% 45% / 0.2)"}`,
+            }}>
+            {isCRPurchase
+              ? <Coins className="w-14 h-14" style={{ color: "hsl(200 80% 60%)", filter: "drop-shadow(0 0 12px hsl(200 80% 55%))" }} />
+              : <CheckCircle className="w-14 h-14" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 12px hsl(142 71% 45%))" }} />
+            }
           </div>
-          <h2 className="font-display text-2xl font-black text-foreground mb-2 text-center">ЗАЯВКУ ВІДПРАВЛЕНО</h2>
-          <p className="text-xs text-muted-foreground text-center mb-5 max-w-xs">Адміністрація перевірить оплату і підтвердить оренду</p>
+          <h2 className="font-display text-2xl font-black text-foreground mb-2 text-center">
+            {isCRPurchase ? "БУДИНОК ПРИДБАНО!" : "ЗАЯВКУ ВІДПРАВЛЕНО"}
+          </h2>
+          <p className="text-xs text-muted-foreground text-center mb-5 max-w-xs">
+            {isCRPurchase
+              ? "CR списано, будинок вже у вашому профілі"
+              : "Адміністрація перевірить оплату і підтвердить оренду"}
+          </p>
           <div className="liquid-glass rounded-2xl p-4 w-full max-w-xs mb-4 space-y-2">
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Будинок</span>
@@ -147,18 +165,31 @@ const HouseDetail = () => {
               <span className="text-foreground font-semibold">{rentalDays} днів</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Сума</span>
-              <span className="text-yellow-400 font-bold">{selectedPrice.toLocaleString()}€</span>
+              <span className="text-muted-foreground">Сплачено</span>
+              {isCRPurchase
+                ? <span className="font-bold" style={{ color: "hsl(200 80% 60%)" }}>{selectedPriceCR.toLocaleString()} CR</span>
+                : <span className="text-yellow-400 font-bold">{selectedPrice.toLocaleString()}€</span>
+              }
             </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Оплата на</span>
-              <span className="text-primary font-semibold">{PAYMENT_USER}</span>
-            </div>
+            {!isCRPurchase && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Оплата на</span>
+                <span className="text-primary font-semibold">{PAYMENT_USER}</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 px-5 py-3 rounded-2xl"
-            style={{ background: "hsl(142 71% 45% / 0.08)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
-            <Clock className="w-4 h-4" style={{ color: "hsl(142 71% 45%)" }} />
-            <span className="text-xs font-medium" style={{ color: "hsl(142 71% 45%)" }}>Очікуйте підтвердження в профілі</span>
+            style={{
+              background: isCRPurchase ? "hsl(200 80% 55% / 0.08)" : "hsl(142 71% 45% / 0.08)",
+              border: `1px solid ${isCRPurchase ? "hsl(200 80% 55% / 0.2)" : "hsl(142 71% 45% / 0.2)"}`,
+            }}>
+            {isCRPurchase
+              ? <Zap className="w-4 h-4 shrink-0" style={{ color: "hsl(200 80% 60%)" }} />
+              : <Clock className="w-4 h-4 shrink-0" style={{ color: "hsl(142 71% 45%)" }} />
+            }
+            <span className="text-xs font-medium" style={{ color: isCRPurchase ? "hsl(200 80% 60%)" : "hsl(142 71% 45%)" }}>
+              {isCRPurchase ? "Будинок вже в профілі — заходь і перевіряй!" : "Очікуйте підтвердження в профілі"}
+            </span>
           </div>
         </div>
       </div>
