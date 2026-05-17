@@ -618,12 +618,16 @@ export const store = {
     return data as DocumentItem[];
   },
   addDoc: async (title: string, content: string, button_text?: string, button_url?: string): Promise<boolean> => {
-    const { error } = await dbInsert("documents", { title, content, button_text: button_text || null, button_url: button_url || null });
-    if (error) { console.error("[addDoc] error:", error.message); return false; }
+    const values: Record<string, unknown> = { title, content };
+    // button_text/button_url додаємо тільки якщо колонки є в таблиці
+    try {
+      const { error } = await dbInsert("documents", values);
+      if (error) { console.error("[addDoc] error:", error.message); return false; }
+    } catch (e) { console.error("[addDoc] exception:", e); return false; }
     return true;
   },
-  updateDoc: async (id: number, title: string, content: string, button_text?: string, button_url?: string): Promise<boolean> => {
-    const { error } = await dbUpdate("documents", { title, content, button_text: button_text || null, button_url: button_url || null }, { id: eq(id) });
+  updateDoc: async (id: number, title: string, content: string, _button_text?: string, _button_url?: string): Promise<boolean> => {
+    const { error } = await dbUpdate("documents", { title, content }, { id: eq(id) });
     if (error) { console.error("[updateDoc] error:", error.message); return false; }
     return true;
   },
