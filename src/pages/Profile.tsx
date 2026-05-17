@@ -211,6 +211,10 @@ const Profile = () => {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
+        @keyframes shimmerSweep {
+          0%   { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
       `}</style>
 
       {/* Header */}
@@ -449,23 +453,66 @@ const Profile = () => {
           {showActivity ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
         </button>
         {showActivity && (
-          <div className="mt-1 liquid-glass rounded-2xl p-4 animate-fade-in" style={{ border: "1px solid hsl(var(--primary) / 0.15)" }}>
+          <div className="mt-2 space-y-3 animate-fade-in">
             {profileData.factionApps.length > 0 ? (
-              <div className="space-y-2">
-                {profileData.factionApps.slice(0, 5).map((a, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-xs text-foreground">{a.faction_name}</span>
+              profileData.factionApps.slice(0, 5).map((a, i) => {
+                const isApproved = a.status === "approved";
+                const isPending = a.status === "pending" || a.status === "review";
+                const accent = isApproved
+                  ? { h: "var(--primary)", solid: "hsl(var(--primary))", label: "АКТИВНО" }
+                  : isPending
+                    ? { h: "45 100% 55%", solid: "hsl(45 100% 55%)", label: "ОЧІКУЄ" }
+                    : { h: "0 75% 55%", solid: "hsl(0 75% 60%)", label: "ВІДХИЛЕНО" };
+                const borderGrad = `linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(${accent.h} / 0.45) 100%)`;
+                const radial = `radial-gradient(circle at 50% 100%, hsl(${accent.h} / 0.55) 0%, transparent 80%)`;
+                return (
+                  <div key={i} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
+                       style={{ background: borderGrad, animation: `fadeSlideIn 0.4s ${i * 60}ms ease both` }}>
+                    <div className="relative rounded-[15px] overflow-hidden px-5 py-4 flex items-center gap-4"
+                         style={{ background: passportBg }}>
+                      <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-45"
+                           style={{ background: radial }} />
+                      {isApproved && (
+                        <div className="absolute inset-0 pointer-events-none opacity-60"
+                             style={{
+                               background: `linear-gradient(110deg, transparent 0%, transparent 40%, hsl(${accent.h} / 0.18) 50%, transparent 60%, transparent 100%)`,
+                               backgroundSize: "200% 100%",
+                               animation: "shimmerSweep 3.5s linear infinite",
+                             }} />
+                      )}
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg shrink-0 z-10"
+                           style={{
+                             background: `hsl(${accent.h} / 0.12)`,
+                             border: `1px solid hsl(${accent.h} / 0.35)`,
+                             boxShadow: `0 0 14px hsl(${accent.h} / 0.35)`,
+                           }}>
+                        <Shield className="w-5 h-5" style={{ color: accent.solid, filter: `drop-shadow(0 0 6px ${accent.solid})` }} />
+                      </div>
+                      <div className="flex-1 min-w-0 z-10">
+                        <p className="text-[8px] uppercase tracking-[0.2em] font-black mb-1.5 opacity-70"
+                           style={{ color: accent.solid }}>
+                          {accent.label}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="px-2.5 py-1 rounded-lg backdrop-blur-md"
+                               style={{ border: `1px solid hsl(${accent.h} / 0.3)`, background: `hsl(${accent.h} / 0.1)` }}>
+                            <span className="text-[10px] font-black uppercase tracking-tight italic whitespace-nowrap"
+                                  style={{ color: accent.solid }}>
+                              {a.faction_name}
+                            </span>
+                          </div>
+                          <span className="text-[9px] font-bold opacity-60" style={{ color: accent.solid }}>
+                            · {statusLabels[a.status] || a.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="opacity-[0.04] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
                     </div>
-                    <span className={`text-[10px] font-semibold ${statusColors[a.status] || "text-muted-foreground"}`}>
-                      {statusLabels[a.status] || a.status}
-                    </span>
                   </div>
-                ))}
-              </div>
+                );
+              })
             ) : (
-              <div>
+              <div className="liquid-glass rounded-2xl p-4" style={{ border: "1px solid hsl(var(--primary) / 0.15)" }}>
                 <p className="text-xs text-muted-foreground text-center py-2 mb-3">Немає активної діяльності</p>
                 <GradientButton variant="green" className="w-full text-xs py-2" onClick={() => navigate("/factions")}>
                   Переглянути фракції
