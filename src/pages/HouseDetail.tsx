@@ -306,7 +306,7 @@ const HouseDetail = () => {
               </div>
             </div>
 
-            {/* Термін */}
+            {/* ── Термін ── */}
             <div className="rounded-2xl overflow-hidden"
               style={{ background: "hsl(0 0% 0% / 0.4)", border: "1px solid hsl(0 0% 100% / 0.08)", backdropFilter: "blur(20px)" }}>
               <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "hsl(0 0% 100% / 0.06)" }}>
@@ -314,65 +314,186 @@ const HouseDetail = () => {
                 <span className="text-sm font-semibold">Термін оренди</span>
               </div>
               <div className="p-3 grid grid-cols-4 gap-2">
-                {RENTAL_OPTIONS.map(({ days, label, ratio }) => (
-                  <button key={days} onClick={() => setRentalDays(days)}
-                    className="flex flex-col items-center py-3 rounded-xl border transition-all active:scale-95"
-                    style={{
-                      background: rentalDays === days ? "hsl(var(--primary) / 0.15)" : "hsl(0 0% 100% / 0.03)",
-                      borderColor: rentalDays === days ? "hsl(var(--primary) / 0.5)" : "hsl(0 0% 100% / 0.08)",
-                      boxShadow: rentalDays === days ? "0 0 14px hsl(var(--primary) / 0.2)" : "none",
-                    }}>
-                    <span className={`text-[11px] font-bold ${rentalDays === days ? "text-primary" : "text-foreground/70"}`}>{label}</span>
-                    <span className={`text-[10px] font-bold mt-1 ${rentalDays === days ? "text-yellow-400" : "text-muted-foreground"}`}>
-                      {house ? Math.round(house.price * ratio).toLocaleString() : 0}€
-                    </span>
-                  </button>
-                ))}
+                {RENTAL_OPTIONS.map(({ days, label, ratio }) => {
+                  const priceEur = house ? Math.round(house.price * ratio) : 0;
+                  const priceCr = priceEur * 3;
+                  return (
+                    <button key={days} onClick={() => setRentalDays(days)}
+                      className="flex flex-col items-center py-3 rounded-xl border transition-all active:scale-95"
+                      style={{
+                        background: rentalDays === days ? "hsl(var(--primary) / 0.15)" : "hsl(0 0% 100% / 0.03)",
+                        borderColor: rentalDays === days ? "hsl(var(--primary) / 0.5)" : "hsl(0 0% 100% / 0.08)",
+                        boxShadow: rentalDays === days ? "0 0 14px hsl(var(--primary) / 0.2)" : "none",
+                      }}>
+                      <span className={`text-[11px] font-bold ${rentalDays === days ? "text-primary" : "text-foreground/70"}`}>{label}</span>
+                      <span className={`text-[10px] font-bold mt-0.5 ${rentalDays === days ? "text-yellow-400" : "text-muted-foreground"}`}>
+                        {priceEur.toLocaleString()}€
+                      </span>
+                      <span className={`text-[9px] mt-0.5 ${rentalDays === days ? "text-blue-400" : "text-muted-foreground/50"}`}>
+                        {priceCr.toLocaleString()} CR
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Оплата */}
+            {/* ── Спосіб оплати ── */}
             <div className="rounded-2xl overflow-hidden"
-              style={{ background: "hsl(45 100% 55% / 0.05)", border: "1px solid hsl(45 100% 55% / 0.2)" }}>
-              <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "hsl(45 100% 55% / 0.12)" }}>
-                <Euro className="w-4 h-4 text-yellow-400" />
-                <span className="text-sm font-semibold">Оплата</span>
+              style={{ background: "hsl(0 0% 0% / 0.4)", border: "1px solid hsl(0 0% 100% / 0.08)", backdropFilter: "blur(20px)" }}>
+              <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "hsl(0 0% 100% / 0.06)" }}>
+                <Coins className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold">Спосіб оплати</span>
               </div>
-              <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">{rentalDays} днів</span>
+              <div className="p-3 grid grid-cols-2 gap-2">
+                {/* Євро */}
+                <button onClick={() => setPaymentMethod("money")}
+                  className="flex flex-col items-center gap-1.5 py-4 rounded-xl border transition-all active:scale-95"
+                  style={{
+                    background: paymentMethod === "money" ? "hsl(45 100% 55% / 0.12)" : "hsl(0 0% 100% / 0.03)",
+                    borderColor: paymentMethod === "money" ? "hsl(45 100% 55% / 0.5)" : "hsl(0 0% 100% / 0.08)",
+                    boxShadow: paymentMethod === "money" ? "0 0 16px hsl(45 100% 55% / 0.2)" : "none",
+                  }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: paymentMethod === "money" ? "hsl(45 100% 55% / 0.2)" : "hsl(0 0% 100% / 0.06)" }}>
+                    <Euro className="w-5 h-5" style={{ color: paymentMethod === "money" ? "hsl(45 100% 60%)" : "hsl(0 0% 50%)" }} />
                   </div>
-                  <span className="text-2xl font-black text-yellow-400">{selectedPrice.toLocaleString()}€</span>
-                </div>
-                <div className="flex items-center gap-2 liquid-glass rounded-xl px-3 py-2.5">
-                  <span className="text-xs text-muted-foreground shrink-0">На акаунт:</span>
-                  <span className="text-sm font-bold text-primary flex-1">{PAYMENT_USER}</span>
-                  <button onClick={copyPayment} className="p-1.5 liquid-glass rounded-lg active:scale-90 transition-all">
-                    {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
-                  </button>
-                </div>
-                <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
-                  style={{ background: "hsl(45 100% 55% / 0.08)", border: "1px solid hsl(45 100% 55% / 0.18)" }}>
-                  <AlertCircle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-yellow-400/80 leading-relaxed">
-                    Вкажи у коментарі до переказу свій нік: <span className="font-bold text-yellow-400">{nick}</span>
-                  </p>
-                </div>
+                  <span className="text-[11px] font-bold" style={{ color: paymentMethod === "money" ? "hsl(45 100% 60%)" : "hsl(0 0% 55%)" }}>Євро</span>
+                  <span className="text-[13px] font-black" style={{ color: paymentMethod === "money" ? "hsl(45 100% 65%)" : "hsl(0 0% 60%)" }}>
+                    {selectedPrice.toLocaleString()}€
+                  </span>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full"
+                    style={{ background: "hsl(45 100% 55% / 0.1)", color: "hsl(45 100% 60%)" }}>
+                    Заявка → адмін
+                  </span>
+                </button>
+
+                {/* CR */}
+                <button onClick={() => setPaymentMethod("cr")}
+                  className="flex flex-col items-center gap-1.5 py-4 rounded-xl border transition-all active:scale-95"
+                  style={{
+                    background: paymentMethod === "cr" ? "hsl(200 80% 55% / 0.12)" : "hsl(0 0% 100% / 0.03)",
+                    borderColor: paymentMethod === "cr" ? "hsl(200 80% 55% / 0.5)" : "hsl(0 0% 100% / 0.08)",
+                    boxShadow: paymentMethod === "cr" ? "0 0 16px hsl(200 80% 55% / 0.2)" : "none",
+                  }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: paymentMethod === "cr" ? "hsl(200 80% 55% / 0.2)" : "hsl(0 0% 100% / 0.06)" }}>
+                    <Coins className="w-5 h-5" style={{ color: paymentMethod === "cr" ? "hsl(200 80% 60%)" : "hsl(0 0% 50%)" }} />
+                  </div>
+                  <span className="text-[11px] font-bold" style={{ color: paymentMethod === "cr" ? "hsl(200 80% 60%)" : "hsl(0 0% 55%)" }}>CR</span>
+                  <span className="text-[13px] font-black" style={{ color: paymentMethod === "cr" ? "hsl(200 80% 65%)" : "hsl(0 0% 60%)" }}>
+                    {selectedPriceCR.toLocaleString()} CR
+                  </span>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full"
+                    style={{ background: "hsl(200 80% 55% / 0.1)", color: "hsl(200 80% 60%)" }}>
+                    Миттєво
+                  </span>
+                </button>
               </div>
+
+              {/* Баланс при CR */}
+              {paymentMethod === "cr" && (
+                <div className="mx-3 mb-3 px-3 py-2.5 rounded-xl flex items-center justify-between"
+                  style={{
+                    background: hasSufficientCR ? "hsl(200 80% 55% / 0.08)" : "hsl(0 70% 50% / 0.08)",
+                    border: `1px solid ${hasSufficientCR ? "hsl(200 80% 55% / 0.2)" : "hsl(0 70% 50% / 0.2)"}`,
+                  }}>
+                  <div className="flex items-center gap-2">
+                    <Coins className="w-3.5 h-3.5" style={{ color: hasSufficientCR ? "hsl(200 80% 60%)" : "hsl(0 70% 60%)" }} />
+                    <span className="text-[11px] text-muted-foreground">Ваш баланс</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[13px] font-bold" style={{ color: hasSufficientCR ? "hsl(200 80% 60%)" : "hsl(0 70% 60%)" }}>
+                      {userBalance !== null ? userBalance.toLocaleString() : "..."} CR
+                    </span>
+                    {!hasSufficientCR && userBalance !== null && (
+                      <p className="text-[9px] text-destructive">
+                        Не вистачає {(selectedPriceCR - userBalance).toLocaleString()} CR
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <GradientButton variant="green" className="w-full" onClick={handleConfirmPayment} disabled={loading || !nick.trim()}>
+            {/* ── Деталі оплати ── */}
+            {paymentMethod === "money" ? (
+              <div className="rounded-2xl overflow-hidden"
+                style={{ background: "hsl(45 100% 55% / 0.05)", border: "1px solid hsl(45 100% 55% / 0.2)" }}>
+                <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "hsl(45 100% 55% / 0.12)" }}>
+                  <Euro className="w-4 h-4 text-yellow-400" />
+                  <span className="text-sm font-semibold">Куди переводити</span>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center gap-2 liquid-glass rounded-xl px-3 py-2.5">
+                    <span className="text-xs text-muted-foreground shrink-0">На акаунт:</span>
+                    <span className="text-sm font-bold text-primary flex-1">{PAYMENT_USER}</span>
+                    <button onClick={copyPayment} className="p-1.5 liquid-glass rounded-lg active:scale-90 transition-all">
+                      {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
+                    </button>
+                  </div>
+                  <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
+                    style={{ background: "hsl(45 100% 55% / 0.08)", border: "1px solid hsl(45 100% 55% / 0.18)" }}>
+                    <AlertCircle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-yellow-400/80 leading-relaxed">
+                      Вкажи у коментарі до переказу свій нік: <span className="font-bold text-yellow-400">{nick}</span>
+                    </p>
+                  </div>
+
+                  {/* Telegram */}
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <span className="text-blue-400 font-bold text-xs">TG</span> Ваш Telegram (обов'язково)
+                    </label>
+                    <div className="flex items-center gap-2 liquid-glass rounded-xl px-3 py-2.5 border"
+                      style={{ borderColor: telegram.trim() ? "hsl(200 80% 55% / 0.3)" : "hsl(0 0% 100% / 0.08)" }}>
+                      <span className="text-muted-foreground text-sm">@</span>
+                      <input
+                        type="text"
+                        value={telegram}
+                        onChange={e => setTelegram(e.target.value.replace(/^@/, ""))}
+                        placeholder="username"
+                        className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/40"
+                      />
+                      {telegram.trim() && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                    </div>
+                    <p className="text-[9px] text-muted-foreground/50 mt-1 px-1">Адмін напише для підтвердження оплати</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* CR — підсумок */
+              <div className="rounded-2xl px-4 py-3 flex items-center justify-between"
+                style={{ background: "hsl(200 80% 55% / 0.06)", border: "1px solid hsl(200 80% 55% / 0.18)" }}>
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4" style={{ color: "hsl(200 80% 60%)" }} />
+                  <span className="text-xs text-muted-foreground">Буде списано</span>
+                </div>
+                <span className="text-lg font-black" style={{ color: "hsl(200 80% 65%)" }}>
+                  {selectedPriceCR.toLocaleString()} CR
+                </span>
+              </div>
+            )}
+
+            <GradientButton
+              variant="green"
+              className="w-full"
+              onClick={handleConfirmPayment}
+              disabled={loading || !nick.trim() || (paymentMethod === "cr" && !hasSufficientCR)}>
               {loading
                 ? <span className="flex items-center gap-2 justify-center">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Відправляю...
                   </span>
-                : <span className="flex items-center gap-2 justify-center">
-                    <CheckCircle className="w-4 h-4" />
-                    Підтвердити оплату
-                  </span>
+                : paymentMethod === "cr"
+                  ? <span className="flex items-center gap-2 justify-center">
+                      <Coins className="w-4 h-4" />
+                      Купити за {selectedPriceCR.toLocaleString()} CR
+                    </span>
+                  : <span className="flex items-center gap-2 justify-center">
+                      <CheckCircle className="w-4 h-4" />
+                      Відправити заявку
+                    </span>
               }
             </GradientButton>
           </div>
