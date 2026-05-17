@@ -766,6 +766,12 @@ export const store = {
     _saveNotifs(notifs);
   },
 
+  // Alias — позначити всі нотифікації як прочитані (використовується в Profile)
+  markNotificationsRead: async (_nick: string) => {
+    const notifs = _getNotifs().map(n => ({ ...n, read: true }));
+    _saveNotifs(notifs);
+  },
+
   // ── REALTIME ──────────────────────────────────────────────────────────────
   onNewSos: (cb: (msg: SosMessage) => void) => {
     return supabase.channel("sos_live")
@@ -875,12 +881,16 @@ export const store = {
     section: "main" | "separate" = "main",
   ): Promise<boolean> => {
     try {
-      await secureInsert("factions", {
+      const { error } = await dbInsert("factions", {
         name, color,
         logo_url: logoUrl || null,
         gradient: gradient || null,
         section,
       });
+      if (error) {
+        console.error("addFaction DB error:", error.message, error.details, error.hint);
+        return false;
+      }
       return true;
     } catch (e) {
       console.error("addFaction:", e);
@@ -966,7 +976,7 @@ export const store = {
         { house_id: eq(houseId), username: ilike(formerOwner), status: eq("approved") },
       );
       // 4. Нотифікація гравцю
-      await store.addNotification(formerOwner, `🚨 Ваш будинок конфіскований адміністрацією. Причина: ${reason}`);
+      await store.addNotification(formerOwner, `Ваш будинок конфіскований адміністрацією. Причина: ${reason}`);
       return true;
     } catch (e) {
       console.error("confiscateHouse:", e);
@@ -1020,7 +1030,7 @@ export const store = {
           license_type: telegram ? `${licenseType} | TG: ${telegram}` : licenseType,
           status: "approved",
         });
-        await store.addNotification(username, `✅ Ліцензію видано (оплата ${LICENSE_CR_PRICE.toLocaleString()} CR)`);
+        await store.addNotification(username, `Ліцензію видано (оплата ${LICENSE_CR_PRICE.toLocaleString()} CR)`);
         return { ok: true, auto: true };
       } catch (e: any) {
         // повертаємо CR
@@ -1072,12 +1082,12 @@ export const store = {
           candidate_username: app.username, description: app.program, bio: app.bio,
           created_by: "admin", votes: 0,
         });
-        await store.addNotification(app.username, "✅ Вашу кандидатуру на мера прийнято! Гравці можуть голосувати.");
+        await store.addNotification(app.username, "Вашу кандидатуру на мера прийнято! Гравці можуть голосувати.");
       }
     } else {
       const { data: app } = await supabase
         .from("mayor_candidate_applications").select("username").eq("id", id).maybeSingle();
-      if (app?.username) await store.addNotification(app.username, "❌ Вашу заявку на мера відхилено.");
+      if (app?.username) await store.addNotification(app.username, "Вашу заявку на мера відхилено.");
     }
     await dbUpdate("mayor_candidate_applications", { status }, { id: eq(id) });
   },
@@ -1136,7 +1146,7 @@ export const store = {
         .eq("owner_nick", nick).eq("nft_id", nftId).maybeSingle();
       if (existing) return true; // вже є — теж "успіх"
       await secureInsert("nft_owners", { owner_nick: nick, nft_id: nftId });
-      await store.addNotification(nick, "🎁 Ви отримали NFT-нагороду!");
+      await store.addNotification(nick, "Ви отримали NFT-нагороду!");
       return true;
     } catch (e) {
       console.error("giveNftToUser:", e);
