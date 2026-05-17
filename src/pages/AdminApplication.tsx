@@ -200,6 +200,7 @@ const AdminApplication = () => {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-background pb-20 px-4 pt-4">
       <PageHeader title="ЗАЯВКА В АДМІН" subtitle="Стань адміністратором" backTo="/" />
       <div className="animate-fade-in">
@@ -284,6 +285,7 @@ const AdminApplication = () => {
         </div>
       </div>
     )}
+    </>
   );
 };
 
