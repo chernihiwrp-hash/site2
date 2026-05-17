@@ -396,8 +396,14 @@ export const store = {
       const nick = String(payload.nick || localStorage.getItem("crp_nick") || "").trim();
       if (!nick) throw new Error("Nick is required");
 
+      const factionIdRaw = payload.factionId || "";
+      // Зберігаємо faction_id як число якщо можливо (для DB-фракцій)
+      const factionIdValue = !isNaN(Number(factionIdRaw)) && factionIdRaw !== ""
+        ? Number(factionIdRaw)
+        : factionIdRaw;
+
       await secureInsert("faction_applications", {
-        faction_id: String(payload.factionId || ""),
+        faction_id: factionIdValue,
         faction_name: String(payload.factionName || ""),
         username: nick,
         status: "pending",
@@ -1154,4 +1160,3 @@ export const store = {
     }
   },
 };
-
