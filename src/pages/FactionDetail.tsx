@@ -279,6 +279,14 @@ const handleResign = async () => {
     if (unanswered !== -1) return toast.error(`Дайте відповідь на питання ${unanswered + 1}`);
     setAppStatus("sending");
 
+    // Перевіряємо чи набір відкритий
+    const isOpen = await store.isRecruitmentOpen(faction.name);
+    if (!isOpen) {
+      toast.error("Набір у цю фракцію наразі закрито. Дочекайтеся відкриття набору.");
+      setAppStatus("idle");
+      return;
+    }
+
     const message = questions.map((q, i) => `${i + 1}. ${q}\n→ ${answers[i] || ""}`).join("\n\n");
 
     const ok = await store.submitFactionApp({
