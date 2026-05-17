@@ -53,9 +53,11 @@ const Factions = () => {
       const countById: Record<string, number> = {};
       const countByName: Record<string, number> = {};
       (appData || []).forEach((a: Record<string, unknown>) => {
-        const fid = String(a.faction_id || "");
-        const fname = (a.faction_name as string || "").toLowerCase();
-        if (fid) countById[fid] = (countById[fid] || 0) + 1;
+        const fid = String(a.faction_id ?? "");
+        const fname = (a.faction_name as string || "").toLowerCase().trim();
+        if (fid && fid !== "" && fid !== "null" && fid !== "undefined") {
+          countById[fid] = (countById[fid] || 0) + 1;
+        }
         if (fname) countByName[fname] = (countByName[fname] || 0) + 1;
       });
 
