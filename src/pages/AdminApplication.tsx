@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageHeader from "../components/PageHeader";
 import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
-import { ChevronRight, ChevronLeft, Send, CheckCircle, Clock } from "lucide-react";
+import { ChevronRight, ChevronLeft, Send, CheckCircle, Clock, Lock } from "lucide-react";
 import { store } from "../lib/store";
 
 const ages = ["10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25+"];
@@ -13,6 +13,17 @@ const AdminApplication = () => {
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [recruitClosed, setRecruitClosed] = useState(false);
+  const [recruitOpen, setRecruitOpen] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    store.isRecruitmentOpen("admin").then(open => {
+      if (!mounted) return;
+      setRecruitOpen(open);
+      if (!open) setRecruitClosed(true);
+    });
+    return () => { mounted = false; };
+  }, []);
   const [form, setForm] = useState({
     realName: "", roblox: "", age: "", country: "", telegram: "",
     timePerDay: "", playTime: "", hasMic: "",
@@ -196,6 +207,75 @@ const AdminApplication = () => {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // Якщо набір закрито — рендеримо тільки заблоковану сторінку + модалку, без форми
+  if (recruitOpen === false) {
+    return (
+      <>
+        <div className="min-h-screen bg-background pb-20 px-4 pt-4">
+          <PageHeader title="ЗАЯВКА В АДМІН" subtitle="Стань адміністратором" backTo="/" />
+          <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
+            <div className="relative w-28 h-28 rounded-3xl flex items-center justify-center mb-6"
+              style={{
+                background: "linear-gradient(135deg, hsl(0 70% 15% / 0.9), hsl(0 0% 5% / 0.95))",
+                border: "2px solid hsl(0 75% 50% / 0.55)",
+                boxShadow: "0 0 50px hsl(0 70% 45% / 0.45), inset 0 0 30px hsl(0 70% 35% / 0.25)",
+              }}>
+              <Lock className="w-14 h-14" style={{ color: "hsl(0 85% 62%)", filter: "drop-shadow(0 0 12px hsl(0 85% 55%))" }} />
+            </div>
+            <h2 className="font-display text-xl font-bold mb-2" style={{ color: "hsl(0 80% 70%)", textShadow: "0 0 12px hsl(0 70% 45% / 0.6)" }}>
+              Набір закрито
+            </h2>
+            <p className="text-xs text-muted-foreground text-center max-w-xs mb-6">
+              Набір адміністраторів наразі закрито адміністрацією. Дочекайтеся відкриття та спробуйте знову.
+            </p>
+            <button
+              onClick={() => setRecruitClosed(true)}
+              className="rounded-2xl px-5 py-3 text-sm font-semibold active:scale-95 transition-all"
+              style={{ background: "hsl(0 70% 20% / 0.6)", border: "1px solid hsl(0 70% 45% / 0.5)", color: "hsl(0 80% 70%)" }}
+            >
+              Показати деталі
+            </button>
+          </div>
+        </div>
+
+        {recruitClosed && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center px-4"
+            style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
+            onClick={() => setRecruitClosed(false)}
+          >
+            <div
+              className="relative w-full max-w-sm rounded-3xl p-6 text-center animate-fade-in"
+              style={{
+                background: "linear-gradient(135deg, hsl(0 70% 10% / 0.95), hsl(0 0% 5% / 0.98))",
+                border: "1.5px solid hsl(0 70% 45% / 0.5)",
+                boxShadow: "0 0 40px hsl(0 70% 40% / 0.3), 0 0 80px hsl(0 70% 30% / 0.15)",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"
+                style={{ background: "hsl(0 70% 45% / 0.15)", border: "1.5px solid hsl(0 70% 45% / 0.4)", boxShadow: "0 0 24px hsl(0 70% 45% / 0.4)" }}>
+                <Lock className="w-8 h-8" style={{ color: "hsl(0 85% 62%)" }} />
+              </div>
+              <h2 className="text-lg font-bold mb-1" style={{ color: "hsl(0, 70%, 65%)" }}>Набір закрито</h2>
+              <p className="text-sm text-muted-foreground mb-1">
+                Набір адміністраторів наразі <span className="font-semibold" style={{ color: "hsl(0, 70%, 65%)" }}>закрито</span> адміністрацією.
+              </p>
+              <p className="text-xs text-muted-foreground/60 mb-5">Дочекайтеся відкриття набору та спробуйте знову.</p>
+              <button
+                onClick={() => setRecruitClosed(false)}
+                className="w-full rounded-2xl py-3 text-sm font-semibold transition-all active:scale-95"
+                style={{ background: "hsl(0, 70%, 20%)", border: "1px solid hsl(0, 70%, 45% / 0.5)", color: "hsl(0, 70%, 65%)" }}
+              >
+                Зрозуміло
+              </button>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
