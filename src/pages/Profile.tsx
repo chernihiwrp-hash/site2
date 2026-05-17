@@ -126,17 +126,6 @@ const Profile = () => {
       // Завантажуємо всі NFT для магазину нагород
       const { data: allNfts } = await supabase.from('nft_gifts').select('*');
       setRewardNfts(allNfts || []);
-        if (nfts) {
-          setAvailableNfts(nfts);
-          const saved = localStorage.getItem("orbit_nft_ids");
-          const parsedSaved = saved ? JSON.parse(saved) : [];
-          const validSelected = parsedSaved.filter((id: string) => ownedIds.includes(id));
-          setSelectedNftIds(validSelected.length > 0 ? validSelected : nfts.slice(0, 6).map(n => n.id));
-        }
-      } else {
-        setAvailableNfts([]);
-        setSelectedNftIds([]);
-      }
       setProfileData({ ...data, cars: carsData || [] });
       const realBalance = await getBalanceFromDB(nick);
       setBalanceState(realBalance);
