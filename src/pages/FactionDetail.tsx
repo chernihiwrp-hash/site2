@@ -67,6 +67,7 @@ const FactionDetail = () => {
   const [isMember, setIsMember] = useState(false);
   const [resignConfirm, setResignConfirm] = useState(false);
   const [resignLoading, setResignLoading] = useState(false);
+  const [recruitClosed, setRecruitClosed] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -278,14 +279,6 @@ const handleResign = async () => {
     if (unanswered !== -1) return toast.error(`Дайте відповідь на питання ${unanswered + 1}`);
     setAppStatus("sending");
 
-    // Перевіряємо чи набір відкритий
-    const isOpen = await store.isRecruitmentOpen(faction.name);
-    if (!isOpen) {
-      toast.error("Набір у цю фракцію наразі закрито. Дочекайтеся відкриття набору.");
-      setAppStatus("idle");
-      return;
-    }
-
     const message = questions.map((q, i) => `${i + 1}. ${q}\n→ ${answers[i] || ""}`).join("\n\n");
 
     const ok = await store.submitFactionApp({
@@ -453,7 +446,11 @@ const handleResign = async () => {
                 </div>
               </div>
             ) : appStatus === "idle" && (
-              <GradientButton variant={btnVariant} className="w-full" onClick={() => setShowForm(true)}>
+              <GradientButton variant={btnVariant} className="w-full" onClick={async () => {
+                const isOpen = await store.isRecruitmentOpen(faction.name);
+                if (!isOpen) { setRecruitClosed(true); return; }
+                setShowForm(true);
+              }}>
                 Подати анкету
               </GradientButton>
             )}
@@ -518,6 +515,57 @@ const handleResign = async () => {
         </div>
 
       </div>
+
+      {/* ── МОДАЛКА: НАБІР ЗАКРИТО ── */}
+      {recruitClosed && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
+          onClick={() => setRecruitClosed(false)}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-3xl p-6 text-center animate-fade-in"
+            style={{
+              background: "linear-gradient(135deg, hsl(0 70% 10% / 0.95), hsl(0 0% 5% / 0.98))",
+              border: "1.5px solid hsl(0 70% 45% / 0.5)",
+              boxShadow: "0 0 40px hsl(0 70% 40% / 0.3), 0 0 80px hsl(0 70% 30% / 0.15)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"
+              style={{
+                background: "hsl(0 70% 45% / 0.15)",
+                border: "1.5px solid hsl(0 70% 45% / 0.4)",
+                boxShadow: "0 0 24px hsl(0 70% 45% / 0.4)",
+              }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="hsl(0, 70%, 60%)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold mb-1" style={{ color: "hsl(0, 70%, 65%)" }}>
+              Набір закрито
+            </h2>
+            <p className="text-sm text-muted-foreground mb-1">
+              Набір у фракцію <span className="font-semibold" style={{ color: faction.color }}>{faction.name}</span> наразі закрито адміністрацією.
+            </p>
+            <p className="text-xs text-muted-foreground/60 mb-5">
+              Дочекайтеся відкриття набору та спробуйте знову.
+            </p>
+            <button
+              onClick={() => setRecruitClosed(false)}
+              className="w-full rounded-2xl py-3 text-sm font-semibold transition-all active:scale-95"
+              style={{
+                background: "hsl(0, 70%, 45% / 0.2)",
+                border: "1px solid hsl(0, 70%, 45% / 0.4)",
+                color: "hsl(0, 70%, 65%)",
+              }}
+            >
+              Зрозуміло
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
