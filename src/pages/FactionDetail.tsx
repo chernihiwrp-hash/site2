@@ -306,6 +306,7 @@ const handleResign = async () => {
   const btnVariant = faction.dangerous ? "danger" : "green";
 
   return (
+    <>
     <div className="min-h-screen pb-20 px-4 pt-4">
       <PageHeader title={faction.name} subtitle={faction.desc} backTo="/factions" />
       <div className="animate-fade-in">
@@ -567,6 +568,7 @@ const handleResign = async () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 
