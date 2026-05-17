@@ -1140,7 +1140,7 @@ export const store = {
         house_id: houseId, username, status: "approved", rental_days: rentalDays,
       });
       await dbUpdate("houses", { owner_username: username, is_for_sale: false }, { id: eq(houseId) });
-      await store.addNotification(username, `Будинок придбано за ${crPrice.toLocaleString()} CR`);
+      await store.addNotification(username, `🏠 Будинок придбано за ${crPrice.toLocaleString()} CR`);
       return { ok: true };
     } catch (e: any) {
       await addBalance(username, crPrice);
