@@ -50,27 +50,27 @@ type TabId =
   "confiscation" | "mayor_apps" | "debug" | "bans";
 
 const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boolean; category: string }[] = [
-  { id: "sos",            label: "SOS Сигнали",           icon: AlertTriangle, sub: "Realtime",    danger: true,  category: "🚨 Термінове" },
-  { id: "applications",   label: "Заявки адміністратора", icon: Users,          sub: "Заявки",                    category: "📋 Заявки" },
-  { id: "factions",       label: "Заявки у фракції",      icon: Shield,         sub: "Заявки",                    category: "📋 Заявки" },
-  { id: "mayor_apps",      label: "Заявки на мера",        icon: Crown,          sub: "Заявки",                    category: "📋 Заявки" },
-  { id: "licenses",       label: "Ліцензії",              icon: FileCheck,      sub: "Управління",                category: "⚙️ Управління" },
-  { id: "plates",         label: "Номери авто",           icon: Car,            sub: "Управління",                category: "⚙️ Управління" },
-  { id: "house_requests", label: "Купівля будинків",      icon: Home,           sub: "Управління",                category: "⚙️ Управління" },
-  { id: "houses",         label: "Управління будинками",  icon: Building2,      sub: "Управління",                category: "⚙️ Управління" },
-  { id: "confiscation",   label: "Конфіскація будинків",  icon: Gavel,          sub: "Управління", danger: true,  category: "⚙️ Управління" },
-  { id: "documents",      label: "Документи",             icon: ScrollText,     sub: "Управління",                category: "⚙️ Управління" },
-  { id: "news",           label: "Новини та оновлення",   icon: Newspaper,      sub: "Управління",                category: "📢 Контент" },
-  { id: "voice",          label: "Голос міста",           icon: Megaphone,      sub: "Управління",                category: "📢 Контент" },
-  { id: "election",       label: "Вибори мера",           icon: Vote,           sub: "Управління",                category: "📢 Контент" },
-  { id: "wanted",         label: "Розшук",                icon: Crosshair,      sub: "Управління", danger: true,  category: "🔒 Безпека" },
-  { id: "bans",           label: "Бани гравців",          icon: UserX,          sub: "Безпека",    danger: true,  category: "🔒 Безпека" },
-  { id: "tokens",         label: "Токени CR",             icon: Coins,          sub: "Фінанси",                   category: "💰 Фінанси" },
-  { id: "nft",            label: "NFT Подарунки",         icon: Gift,           sub: "Магазин",                   category: "💰 Фінанси" },
-  { id: "manage_factions", label: "Управління фракціями", icon: ShieldAlert,    sub: "Фракції",                   category: "🛡️ Фракції" },
-  { id: "recruitment",    label: "Набір у фракції",       icon: Lock,           sub: "Фракції",                   category: "🛡️ Фракції" },
-  { id: "add_faction",    label: "Додати фракцію",        icon: ShieldAlert,    sub: "Управління",                category: "🛡️ Фракції" },
-  { id: "debug",          label: "Діагностика",           icon: Settings,       sub: "Debug",                     category: "🔧 Система" },
+  { id: "sos",             label: "SOS Сигнали",           icon: AlertTriangle, sub: "Realtime",    danger: true,  category: "Виклики" },
+  { id: "factions",        label: "Заявки у фракції",      icon: Shield,        sub: "Заявки",                    category: "Заявки" },
+  { id: "applications",    label: "Заявки адміністратора", icon: Users,         sub: "Заявки",                    category: "Заявки" },
+  { id: "mayor_apps",      label: "Заявки на мера",        icon: Crown,         sub: "Заявки",                    category: "Заявки" },
+  { id: "licenses",        label: "Ліцензії",              icon: FileCheck,     sub: "Ліцензії",                  category: "Ліцензії" },
+  { id: "plates",          label: "Номери авто",           icon: Car,           sub: "Ліцензії",                  category: "Ліцензії" },
+  { id: "houses",          label: "Управління будинками",  icon: Building2,     sub: "Будинки",                   category: "Будинки" },
+  { id: "house_requests",  label: "Купівля будинків",      icon: Home,          sub: "Будинки",                   category: "Будинки" },
+  { id: "confiscation",    label: "Конфіскація будинків",  icon: Gavel,         sub: "Будинки",    danger: true,  category: "Будинки" },
+  { id: "documents",       label: "Документи",             icon: ScrollText,    sub: "Документи",                 category: "Документи" },
+  { id: "news",            label: "Новини та оновлення",   icon: Newspaper,     sub: "Новини",                    category: "Новини" },
+  { id: "voice",           label: "Голос міста",           icon: Megaphone,     sub: "Новини",                    category: "Новини" },
+  { id: "election",        label: "Вибори мера",           icon: Vote,          sub: "Новини",                    category: "Новини" },
+  { id: "wanted",          label: "Розшук",                icon: Crosshair,     sub: "Важливе",    danger: true,  category: "Важливе" },
+  { id: "bans",            label: "Бани гравців",          icon: UserX,         sub: "Важливе",    danger: true,  category: "Важливе" },
+  { id: "nft",             label: "NFT Подарунки",         icon: Gift,          sub: "Фінанси",                   category: "Фінанси" },
+  { id: "tokens",          label: "Токени CR",             icon: Coins,         sub: "Фінанси",                   category: "Фінанси" },
+  { id: "recruitment",     label: "Набір у фракції",       icon: Lock,          sub: "Фракції",                   category: "Фракції" },
+  { id: "manage_factions", label: "Управління фракціями",  icon: ShieldAlert,   sub: "Фракції",                   category: "Фракції" },
+  { id: "add_faction",     label: "Додати фракцію",        icon: Plus,          sub: "Фракції",                   category: "Фракції" },
+  { id: "debug",           label: "Діагностика",           icon: Settings,      sub: "Система",                   category: "Система" },
 ];
 
 const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
@@ -333,34 +333,63 @@ const AdminPanel = () => {
 
       <div className="space-y-4 animate-fade-in">
         {(() => {
-          // Group tabs by category
+          const CAT_ICONS: Record<string, any> = {
+            "Виклики":   AlertTriangle,
+            "Заявки":    FileText,
+            "Ліцензії":  FileCheck,
+            "Будинки":   Home,
+            "Документи": ScrollText,
+            "Новини":    Newspaper,
+            "Важливе":   ShieldAlert,
+            "Фінанси":   Coins,
+            "Фракції":   Shield,
+            "Система":   Settings,
+          };
+          const CAT_DANGER: Record<string, boolean> = {
+            "Виклики": true, "Важливе": true,
+          };
+          // Group tabs by category preserving TAB_LIST order
+          const seen = new Set<string>();
+          const catOrder: string[] = [];
+          allowedTabs.forEach(t => {
+            const cat = t.category || "Інше";
+            if (!seen.has(cat)) { seen.add(cat); catOrder.push(cat); }
+          });
           const groups: Record<string, typeof allowedTabs> = {};
           allowedTabs.forEach(t => {
             const cat = t.category || "Інше";
             if (!groups[cat]) groups[cat] = [];
             groups[cat].push(t);
           });
-          return Object.entries(groups).map(([cat, tabs]) => (
-            <div key={cat}>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 px-1">{cat}</p>
-              <div className="space-y-1.5">
-                {tabs.map((t, i) => (
-                  <button key={t.id} onClick={() => setTab(t.id)} className="w-full animate-slide-up" style={{ animationDelay: `${i * 25}ms` }}>
-                    <div className={`liquid-glass-card rounded-2xl px-4 py-3 flex items-center justify-between transition-all duration-200 hover:scale-[1.01] active:scale-[0.98] ${t.danger ? "border-destructive/20 hover:border-destructive/30" : "hover:border-primary/20"}`}
-                      style={t.danger ? { boxShadow: "0 0 10px hsl(0 70% 50% / 0.07)" } : {}}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.danger ? "bg-destructive/10 border border-destructive/20" : "bg-primary/10 border border-primary/15"}`}>
-                          <t.icon className={`w-4 h-4 ${t.danger ? "text-destructive" : "text-primary"}`} />
+          return catOrder.map(cat => {
+            const tabs = groups[cat];
+            const CatIcon = CAT_ICONS[cat] || Settings;
+            const isDanger = CAT_DANGER[cat] || false;
+            return (
+              <div key={cat}>
+                <div className={`flex items-center gap-2 mb-2 px-1`}>
+                  <CatIcon className={`w-3.5 h-3.5 ${isDanger ? "text-destructive" : "text-muted-foreground"}`} />
+                  <p className={`text-[10px] font-bold uppercase tracking-widest ${isDanger ? "text-destructive/70" : "text-muted-foreground"}`}>{cat}</p>
+                </div>
+                <div className="space-y-1.5">
+                  {tabs.map((t, i) => (
+                    <button key={t.id} onClick={() => setTab(t.id)} className="w-full animate-slide-up" style={{ animationDelay: `${i * 25}ms` }}>
+                      <div className={`liquid-glass-card rounded-2xl px-4 py-3 flex items-center justify-between transition-all duration-200 hover:scale-[1.01] active:scale-[0.98] ${t.danger ? "border-destructive/20 hover:border-destructive/30" : "hover:border-primary/20"}`}
+                        style={t.danger ? { boxShadow: "0 0 10px hsl(0 70% 50% / 0.07)" } : {}}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.danger ? "bg-destructive/10 border border-destructive/20" : "bg-primary/10 border border-primary/15"}`}>
+                            <t.icon className={`w-4 h-4 ${t.danger ? "text-destructive" : "text-primary"}`} />
+                          </div>
+                          <span className={`text-sm font-medium ${t.danger ? "text-destructive" : "text-foreground"}`}>{t.label}</span>
                         </div>
-                        <span className={`text-sm font-medium ${t.danger ? "text-destructive" : "text-foreground"}`}>{t.label}</span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
                       </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ));
+            );
+          });
         })()}
 
         {allowedTabs.length === 0 && (
