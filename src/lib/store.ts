@@ -619,10 +619,15 @@ export const store = {
   },
   addDoc: async (title: string, content: string, button_text?: string, button_url?: string) => {
     // ✅ БЕЗОПАСНО: INSERT через сервер
-    await secureInsert("documents", { title, content, button_text: button_text || null, button_url: button_url || null });
+    const result = await secureInsert("documents", { title, content, button_text: button_text || null, button_url: button_url || null });
+    return result;
   },
   updateDoc: async (id: number, title: string, content: string, button_text?: string, button_url?: string) => {
-    await dbUpdate("documents", { title, content, button_text: button_text || null, button_url: button_url || null }, { id: eq(id) });
+    const result = await dbUpdate("documents", { title, content, button_text: button_text || null, button_url: button_url || null }, { id: eq(id) });
+    if (result.error) {
+      console.error("[updateDoc] error:", result.error.message);
+    }
+    return result;
   },
   deleteDoc: async (id: number) => { await dbDelete("documents", { id: eq(id) }); },
   setDocs: (_: DocumentItem[]) => {},
@@ -1135,7 +1140,7 @@ export const store = {
         house_id: houseId, username, status: "approved", rental_days: rentalDays,
       });
       await dbUpdate("houses", { owner_username: username, is_for_sale: false }, { id: eq(houseId) });
-      await store.addNotification(username, `🏠 Будинок придбано за ${crPrice.toLocaleString()} CR`);
+      await store.addNotification(username, `Будинок придбано за ${crPrice.toLocaleString()} CR`);
       return { ok: true };
     } catch (e: any) {
       await addBalance(username, crPrice);
