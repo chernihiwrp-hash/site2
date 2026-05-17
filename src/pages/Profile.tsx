@@ -434,83 +434,53 @@ const Profile = () => {
       {/* Діяльність */}
       <div className="mb-2" style={blockAnim(contentVisible, 160)}>
         <button onClick={() => setShowActivity(!showActivity)}
-          className="w-full liquid-glass-card rounded-2xl px-4 py-3.5 flex items-center justify-between transition-all active:scale-[0.98]"
-          style={showActivity ? { boxShadow: "0 0 18px hsl(var(--primary) / 0.25)", borderColor: "hsl(var(--primary) / 0.3)" } : {}}>
-          <div className="flex items-center gap-3">
+          className="relative w-full liquid-glass-card rounded-2xl px-4 py-3.5 flex items-center justify-between transition-all active:scale-[0.98] overflow-hidden"
+          style={activeFaction ? {
+            borderColor: "hsl(var(--primary) / 0.55)",
+            boxShadow: "0 0 22px hsl(var(--primary) / 0.45), inset 0 0 18px hsl(var(--primary) / 0.08)",
+            background: "linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))",
+          } : showActivity ? { boxShadow: "0 0 18px hsl(var(--primary) / 0.25)", borderColor: "hsl(var(--primary) / 0.3)" } : {}}>
+          {activeFaction && (
+            <div className="absolute inset-0 pointer-events-none opacity-70"
+                 style={{
+                   background: "linear-gradient(110deg, transparent 0%, transparent 40%, hsl(var(--primary) / 0.18) 50%, transparent 60%, transparent 100%)",
+                   backgroundSize: "200% 100%",
+                   animation: "shimmerSweep 3.5s linear infinite",
+                 }} />
+          )}
+          <div className="relative flex items-center gap-3 z-10">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-              style={showActivity
-                ? { background: "hsl(var(--primary) / 0.18)", border: "1px solid hsl(var(--primary) / 0.4)", boxShadow: "0 0 12px hsl(var(--primary) / 0.3)" }
-                : { background: "hsl(var(--primary) / 0.1)", border: "1px solid hsl(var(--primary) / 0.12)" }}>
-              <Briefcase className="w-4 h-4 text-primary" />
+              style={activeFaction
+                ? { background: "hsl(var(--primary) / 0.22)", border: "1px solid hsl(var(--primary) / 0.5)", boxShadow: "0 0 14px hsl(var(--primary) / 0.55)" }
+                : showActivity
+                  ? { background: "hsl(var(--primary) / 0.18)", border: "1px solid hsl(var(--primary) / 0.4)", boxShadow: "0 0 12px hsl(var(--primary) / 0.3)" }
+                  : { background: "hsl(var(--primary) / 0.1)", border: "1px solid hsl(var(--primary) / 0.12)" }}>
+              <Briefcase className="w-4 h-4 text-primary" style={activeFaction ? { filter: "drop-shadow(0 0 6px hsl(var(--primary)))" } : {}} />
             </div>
             <div className="text-left">
-              <p className="text-sm font-medium" style={showActivity ? { color: "hsl(var(--primary))" } : {}}>Моя діяльність</p>
+              <p className="text-sm font-semibold" style={activeFaction || showActivity ? { color: "hsl(var(--primary))" } : {}}>Моя діяльність</p>
               <p className="text-[10px] text-muted-foreground">
                 {activeFaction ? `Фракція: ${activeFaction}` : pendingFaction ? `Очікує: ${pendingFaction}` : "Немає активної діяльності"}
               </p>
             </div>
           </div>
-          {showActivity ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+          {showActivity ? <ChevronDown className="w-4 h-4 text-primary relative z-10" /> : <ChevronRight className="w-4 h-4 text-muted-foreground relative z-10" />}
         </button>
         {showActivity && (
-          <div className="mt-2 space-y-3 animate-fade-in">
+          <div className="mt-2 space-y-2 animate-fade-in">
             {profileData.factionApps.length > 0 ? (
-              profileData.factionApps.slice(0, 5).map((a, i) => {
-                const isApproved = a.status === "approved";
-                const isPending = a.status === "pending" || a.status === "review";
-                const accent = isApproved
-                  ? { h: "var(--primary)", solid: "hsl(var(--primary))", label: "АКТИВНО" }
-                  : isPending
-                    ? { h: "45 100% 55%", solid: "hsl(45 100% 55%)", label: "ОЧІКУЄ" }
-                    : { h: "0 75% 55%", solid: "hsl(0 75% 60%)", label: "ВІДХИЛЕНО" };
-                const borderGrad = `linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(${accent.h} / 0.45) 100%)`;
-                const radial = `radial-gradient(circle at 50% 100%, hsl(${accent.h} / 0.55) 0%, transparent 80%)`;
-                return (
-                  <div key={i} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
-                       style={{ background: borderGrad, animation: `fadeSlideIn 0.4s ${i * 60}ms ease both` }}>
-                    <div className="relative rounded-[15px] overflow-hidden px-5 py-4 flex items-center gap-4"
-                         style={{ background: passportBg }}>
-                      <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-45"
-                           style={{ background: radial }} />
-                      {isApproved && (
-                        <div className="absolute inset-0 pointer-events-none opacity-60"
-                             style={{
-                               background: `linear-gradient(110deg, transparent 0%, transparent 40%, hsl(${accent.h} / 0.18) 50%, transparent 60%, transparent 100%)`,
-                               backgroundSize: "200% 100%",
-                               animation: "shimmerSweep 3.5s linear infinite",
-                             }} />
-                      )}
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg shrink-0 z-10"
-                           style={{
-                             background: `hsl(${accent.h} / 0.12)`,
-                             border: `1px solid hsl(${accent.h} / 0.35)`,
-                             boxShadow: `0 0 14px hsl(${accent.h} / 0.35)`,
-                           }}>
-                        <Shield className="w-5 h-5" style={{ color: accent.solid, filter: `drop-shadow(0 0 6px ${accent.solid})` }} />
-                      </div>
-                      <div className="flex-1 min-w-0 z-10">
-                        <p className="text-[8px] uppercase tracking-[0.2em] font-black mb-1.5 opacity-70"
-                           style={{ color: accent.solid }}>
-                          {accent.label}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="px-2.5 py-1 rounded-lg backdrop-blur-md"
-                               style={{ border: `1px solid hsl(${accent.h} / 0.3)`, background: `hsl(${accent.h} / 0.1)` }}>
-                            <span className="text-[10px] font-black uppercase tracking-tight italic whitespace-nowrap"
-                                  style={{ color: accent.solid }}>
-                              {a.faction_name}
-                            </span>
-                          </div>
-                          <span className="text-[9px] font-bold opacity-60" style={{ color: accent.solid }}>
-                            · {statusLabels[a.status] || a.status}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="opacity-[0.04] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
-                    </div>
+              profileData.factionApps.slice(0, 5).map((a, i) => (
+                <div key={i} className="liquid-glass rounded-xl px-4 py-3 flex items-center justify-between"
+                     style={{ border: "1px solid hsl(var(--primary) / 0.15)" }}>
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-4 h-4 text-primary" />
+                    <p className="text-xs font-medium">{a.faction_name}</p>
                   </div>
-                );
-              })
+                  <span className={`text-[10px] font-semibold ${statusColors[a.status] || "text-muted-foreground"}`}>
+                    {statusLabels[a.status] || a.status}
+                  </span>
+                </div>
+              ))
             ) : (
               <div className="liquid-glass rounded-2xl p-4" style={{ border: "1px solid hsl(var(--primary) / 0.15)" }}>
                 <p className="text-xs text-muted-foreground text-center py-2 mb-3">Немає активної діяльності</p>
