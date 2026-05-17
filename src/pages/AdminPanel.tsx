@@ -1148,32 +1148,58 @@ const DocumentsTab = () => {
   const [btnText, setBtnText] = useState("");
   const [btnUrl, setBtnUrl] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
   useEffect(() => { store.getDocs().then(setDocs); }, []);
   const save = async () => {
     if (!title || !content) return toast.error("Заповніть поля");
-    if (editId) {
-      await store.updateDoc(editId, title, content, btnText, btnUrl);
-    } else {
-      await store.addDoc(title, content, btnText, btnUrl);
+    setSaving(true);
+    try {
+      if (editId !== null) {
+        const result = await store.updateDoc(editId, title, content, btnText, btnUrl);
+        if (result && result.error) {
+          toast.error("Помилка збереження: " + result.error.message);
+          setSaving(false);
+          return;
+        }
+      } else {
+        await store.addDoc(title, content, btnText, btnUrl);
+      }
+      const freshDocs = await store.getDocs();
+      setDocs(freshDocs);
+      setTitle(""); setContent(""); setBtnText(""); setBtnUrl(""); setEditId(null);
+      toast.success("Збережено!");
+    } catch (e: any) {
+      toast.error("Помилка: " + (e?.message || "невідома"));
+    } finally {
+      setSaving(false);
     }
-    setDocs(await store.getDocs());
-    setTitle(""); setContent(""); setBtnText(""); setBtnUrl(""); setEditId(null);
-    toast.success("Збережено!");
   };
   const openEdit = (d: DocumentItem) => {
     setEditId(d.id); setTitle(d.title); setContent(d.content);
     setBtnText(d.button_text || ""); setBtnUrl(d.button_url || "");
+    // Скролимо вгору до форми
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
   return (
     <div className="space-y-3 animate-fade-in">
       <NeonCard glowColor="lime">
+        {editId !== null && (
+          <div className="mb-2 px-1 py-1.5 rounded-xl flex items-center gap-2"
+            style={{ background: "hsl(84 81% 44% / 0.08)", border: "1px solid hsl(84 81% 44% / 0.2)" }}>
+            <span className="text-[10px] text-primary font-semibold">✏️ Редагування документу #{editId}</span>
+            <button onClick={() => { setEditId(null); setTitle(""); setContent(""); setBtnText(""); setBtnUrl(""); }}
+              className="ml-auto text-[10px] text-muted-foreground underline">скасувати</button>
+          </div>
+        )}
         <div className="space-y-2">
           <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Назва документу" className={inputClass} />
           <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Зміст..." className={`${inputClass} resize-none h-24`} />
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider pt-1">Кнопка-посилання (необов'язково)</p>
           <input value={btnText} onChange={e => setBtnText(e.target.value)} placeholder="Текст кнопки (напр. Дивитися)" className={inputClass} />
           <input value={btnUrl} onChange={e => setBtnUrl(e.target.value)} placeholder="https://посилання..." className={inputClass} />
-          <GradientButton variant="green" className="w-full text-xs py-2" onClick={save}>{editId ? "Зберегти" : "Додати документ"}</GradientButton>
+          <GradientButton variant="green" className="w-full text-xs py-2" onClick={save} disabled={saving}>
+            {saving ? "Збереження..." : editId !== null ? "💾 Зберегти зміни" : "Додати документ"}
+          </GradientButton>
         </div>
       </NeonCard>
       <a href="https://sleepmancybr.github.io/chernihiv" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 liquid-glass-card rounded-2xl px-4 py-3 text-xs text-primary">
