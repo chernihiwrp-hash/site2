@@ -132,39 +132,111 @@ const FactionDetail = () => {
     const loadMembers = async () => {
       setMembersLoading(true);
 
-      // 1. Load ALL approved faction applications
-      const { data: apps } = await supabase
+      // Дізнаємося ім'я фракції (DB або статичне)
+      const staticFaction = factionsData[id || ""];
+      const staticName = staticFaction?.name?.toLowerCase() || "";
+
+      let dbFactionName = "";
+      let numericId: number | null = null;
+      if (id && !isNaN(Number(id))) {
+        numericId = Number(id);
+        const { data: fData } = await supabase.from("factions").select("name").eq("id", numericId).maybeSingle();
+        if (fData?.name) dbFactionName = (fData.name as string).toLowerCase();
+      }
+
+      // Підбираємо всі варіанти імені для запиту
+      const nameVariants = [staticName, dbFactionName, id?.toLowerCase() || ""].filter(Boolean);
+
+      // Запит з фільтром на рівні БД — набагато швидше і надійніше
+      let query = supabase
         .from("faction_applications")
         .select("username, form_data, faction_id, faction_name")
         .eq("status", "approved");
 
-      if (!apps) { setMembersLoading(false); return; }
+      if (numericId !== null) {
+        // Для DB-фракцій фільтруємо по faction_id (число) або faction_name
+        const { data: byId } = await supabase
+          .from("faction_applications")
+          .select("username, form_data, faction_id, faction_name")
+          .eq("status", "approved")
+          .eq("faction_id", numericId);
 
-      const staticFaction = factionsData[id || ""];
-      const staticName = staticFaction?.name?.toLowerCase() || "";
+        const { data: byName } = nameVariants.length > 0
+          ? await supabase
+              .from("faction_applications")
+              .select("username, form_data, faction_id, faction_name")
+              .eq("status", "approved")
+              .in("faction_name", nameVariants.map(n => n))
+          : { data: [] };
 
-      // Also try to get the DB faction name in case id is numeric
-      let dbFactionName = "";
-      if (id && !isNaN(Number(id))) {
-        const { data: fData } = await supabase.from("factions").select("name").eq("id", Number(id)).maybeSingle();
-        if (fData?.name) dbFactionName = (fData.name as string).toLowerCase();
+        // Об'єднуємо і дедуплікуємо
+        const combined = [...(byId || []), ...(byName || [])];
+        const seen = new Set<string>();
+        const apps = combined.filter((a: Record<string, unknown>) => {
+          const key = (a.username as string) + String(a.faction_id);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        if (apps.length === 0) { setMembers([]); setMembersLoading(false); return; }
+
+        // Аватари
+        const usernames = apps.map((a: Record<string, unknown>) => {
+          const fd = (a.form_data as Record<string, unknown>) || {};
+          return (fd.nick as string) || (a.username as string) || "";
+        }).filter(Boolean);
+
+        const { data: usersData } = await supabase
+          .from("users")
+          .select("username, avatar_url")
+          .in("username", usernames);
+
+        const avatarMap: Record<string, string | null> = {};
+        (usersData || []).forEach((u: Record<string, unknown>) => {
+          avatarMap[(u.username as string).toLowerCase()] = (u.avatar_url as string) || null;
+        });
+
+        // Лідер
+        let leaderUsername = "";
+        const factionNameForLeader = dbFactionName || staticName;
+        if (factionNameForLeader) {
+          const { data: leaderData } = await supabase
+            .from("faction_leaders")
+            .select("leader_username")
+            .eq("faction_name", factionNameForLeader)
+            .maybeSingle();
+          if (leaderData?.leader_username) leaderUsername = leaderData.leader_username as string;
+        }
+        if (!leaderUsername) {
+          const { data: fData2 } = await supabase.from("factions").select("leader_username").eq("id", numericId).maybeSingle();
+          if (fData2?.leader_username) leaderUsername = fData2.leader_username as string;
+        }
+
+        const mems: Member[] = apps.map((a: Record<string, unknown>) => {
+          const fd = (a.form_data as Record<string, unknown>) || {};
+          const name = (fd.nick as string) || (a.username as string) || "Гравець";
+          return {
+            name,
+            rank: "Учасник",
+            avatar: avatarMap[name.toLowerCase()] || null,
+            isLeader: !!leaderUsername && name.toLowerCase() === leaderUsername.toLowerCase(),
+          };
+        });
+        mems.sort((a, b) => (b.isLeader ? 1 : 0) - (a.isLeader ? 1 : 0));
+        setMembers(mems);
+        if (nick) setIsMember(mems.some(m => m.name.toLowerCase() === nick.toLowerCase()));
+        setMembersLoading(false);
+        return;
       }
 
-      const matched = (apps as Record<string, unknown>[]).filter(a => {
-        const fid = String(a.faction_id || "");
-        const fname = (a.faction_name as string || "").toLowerCase().trim();
-        return (
-          fid === id ||
-          fname === staticName ||
-          fname === id?.toLowerCase() ||
-          (dbFactionName && fname === dbFactionName)
-        );
-      });
+      // Статичні фракції — фільтр по faction_name
+      const { data: apps } = await query.in("faction_name", nameVariants.length ? nameVariants : [""]);
 
-      if (matched.length === 0) { setMembers([]); setMembersLoading(false); return; }
+      if (!apps || apps.length === 0) { setMembers([]); setMembersLoading(false); return; }
 
-      // 2. Load avatars from users table
-      const usernames = matched.map(a => {
+      // Аватари для статичних фракцій
+      const usernames2 = (apps as Record<string, unknown>[]).map(a => {
         const fd = (a.form_data as Record<string, unknown>) || {};
         return (fd.nick as string) || (a.username as string) || "";
       }).filter(Boolean);
@@ -172,61 +244,38 @@ const FactionDetail = () => {
       const { data: usersData } = await supabase
         .from("users")
         .select("username, avatar_url")
-        .in("username", usernames);
+        .in("username", usernames2);
 
-      const avatarMap: Record<string, string | null> = {};
+      const avatarMap2: Record<string, string | null> = {};
       (usersData || []).forEach((u: Record<string, unknown>) => {
-        avatarMap[(u.username as string).toLowerCase()] = (u.avatar_url as string) || null;
+        avatarMap2[(u.username as string).toLowerCase()] = (u.avatar_url as string) || null;
       });
 
-      // 3. Get leader from faction_leaders table (works for all factions)
-      let leaderUsername = "";
-      const factionNameForLeader = staticFaction?.name || "";
-      // Try by faction name first (covers all factions)
-      if (factionNameForLeader) {
+      // Лідер для статичних фракцій
+      let leaderUsername2 = "";
+      const factionNameForLeader2 = staticFaction?.name || "";
+      if (factionNameForLeader2) {
         const { data: leaderData } = await supabase
           .from("faction_leaders")
           .select("leader_username")
-          .eq("faction_name", factionNameForLeader.toLowerCase())
+          .eq("faction_name", factionNameForLeader2.toLowerCase())
           .maybeSingle();
-        if (leaderData?.leader_username) {
-          leaderUsername = leaderData.leader_username as string;
-        }
-      }
-      // Also check by DB faction name
-      if (!leaderUsername) {
-        const { data: fData } = await supabase.from("factions").select("leader_username, name").eq("id", Number(id)).maybeSingle();
-        if (fData?.leader_username) {
-          leaderUsername = fData.leader_username as string;
-        } else if (fData?.name) {
-          const { data: leaderData2 } = await supabase
-            .from("faction_leaders")
-            .select("leader_username")
-            .eq("faction_name", (fData.name as string).toLowerCase())
-            .maybeSingle();
-          if (leaderData2?.leader_username) leaderUsername = leaderData2.leader_username as string;
-        }
+        if (leaderData?.leader_username) leaderUsername2 = leaderData.leader_username as string;
       }
 
-      const mems: Member[] = matched.map(a => {
+      const mems2: Member[] = (apps as Record<string, unknown>[]).map(a => {
         const fd = (a.form_data as Record<string, unknown>) || {};
         const name = (fd.nick as string) || (a.username as string) || "Гравець";
         return {
           name,
           rank: "Учасник",
-          avatar: avatarMap[name.toLowerCase()] || null,
-          isLeader: !!leaderUsername && name.toLowerCase() === leaderUsername.toLowerCase(),
+          avatar: avatarMap2[name.toLowerCase()] || null,
+          isLeader: !!leaderUsername2 && name.toLowerCase() === leaderUsername2.toLowerCase(),
         };
       });
-
-      // Sort: leader first
-      mems.sort((a, b) => (b.isLeader ? 1 : 0) - (a.isLeader ? 1 : 0));
-
-      setMembers(mems);
-      // Check if current user is a member
-      if (nick) {
-        setIsMember(mems.some(m => m.name.toLowerCase() === nick.toLowerCase()));
-      }
+      mems2.sort((a, b) => (b.isLeader ? 1 : 0) - (a.isLeader ? 1 : 0));
+      setMembers(mems2);
+      if (nick) setIsMember(mems2.some(m => m.name.toLowerCase() === nick.toLowerCase()));
       setMembersLoading(false);
     };
 
