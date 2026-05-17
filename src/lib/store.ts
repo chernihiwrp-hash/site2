@@ -618,16 +618,12 @@ export const store = {
     return data as DocumentItem[];
   },
   addDoc: async (title: string, content: string, button_text?: string, button_url?: string): Promise<boolean> => {
-    const values: Record<string, unknown> = { title, content };
-    // button_text/button_url додаємо тільки якщо колонки є в таблиці
-    try {
-      const { error } = await dbInsert("documents", values);
-      if (error) { console.error("[addDoc] error:", error.message); return false; }
-    } catch (e) { console.error("[addDoc] exception:", e); return false; }
+    const { error } = await dbInsert("documents", { title, content, button_text: button_text || null, button_url: button_url || null });
+    if (error) { console.error("[addDoc] error:", error.message); return false; }
     return true;
   },
-  updateDoc: async (id: number, title: string, content: string, _button_text?: string, _button_url?: string): Promise<boolean> => {
-    const { error } = await dbUpdate("documents", { title, content }, { id: eq(id) });
+  updateDoc: async (id: number, title: string, content: string, button_text?: string, button_url?: string): Promise<boolean> => {
+    const { error } = await dbUpdate("documents", { title, content, button_text: button_text || null, button_url: button_url || null }, { id: eq(id) });
     if (error) { console.error("[updateDoc] error:", error.message); return false; }
     return true;
   },
@@ -940,14 +936,16 @@ export const store = {
 
   isRecruitmentOpen: async (target: string): Promise<boolean> => {
     try {
-      // Шукаємо по lowercase назві фракції
+      const targetKey = target.toLowerCase().trim();
+      // Завантажуємо всю таблицю і шукаємо в JS — надійніше
       const { data, error } = await supabase
-        .from("recruitment_settings").select("is_open, target")
-        .eq("target", target.toLowerCase()).maybeSingle();
-      console.log("[isRecruitmentOpen] target:", target.toLowerCase(), "data:", data, "error:", error);
-      // Якщо запису немає — за замовчуванням відкрито
-      if (!data) return true;
-      return data.is_open !== false;
+        .from("recruitment_settings").select("is_open, target");
+      if (error) { console.error("[isRecruitmentOpen] db error:", error.message); return true; }
+      if (!data || data.length === 0) return true;
+      const row = data.find((r: any) => String(r.target).toLowerCase().trim() === targetKey);
+      console.log("[isRecruitmentOpen] target:", targetKey, "row:", row, "all:", data);
+      if (!row) return true; // запису немає — відкрито
+      return row.is_open !== false;
     } catch (e) {
       console.error("[isRecruitmentOpen] exception:", e);
       return true;
