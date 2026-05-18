@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import {
   User, Briefcase, Home, Car, FileCheck, Wallet, Lock,
   Bell, ChevronDown, ChevronRight, Shield, CheckCircle,
-  LogIn, RefreshCw, Coins, Clock, Settings, X
+  LogIn, RefreshCw, Coins, Clock, Settings, X,
+  Crown, Sparkles, Zap, Star, Timer, CreditCard
 } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { useNavigate } from "react-router-dom";
@@ -97,6 +98,14 @@ const Profile = () => {
   const [houseModalId, setHouseModalId] = useState<number | null>(null);
   const [nftVisible, setNftVisible] = useState(false);
   const [contentVisible, setContentVisible] = useState(false);
+
+  // ── VIP ───────────────────────────────────────────────────────────────────
+  const [showVipModal, setShowVipModal] = useState(false);
+  const [vipPlan, setVipPlan] = useState<"month" | "year">("month");
+  const [vipLoading, setVipLoading] = useState(false);
+  const [vipExpiresAt, setVipExpiresAt] = useState<string | null>(null);
+  const [isVip, setIsVip] = useState(false);
+  const [vipTimeLeft, setVipTimeLeft] = useState("");
   const [orbitSpeed, setOrbitSpeed] = useState<number>(() => {
     const s = localStorage.getItem("orbit_speed"); return s ? Number(s) : 14;
   });
@@ -124,6 +133,21 @@ const Profile = () => {
       setProfileData({ ...data, cars: carsData || [] });
       const realBalance = await getBalanceFromDB(nick);
       setBalanceState(realBalance);
+
+      // ── Завантажуємо VIP статус ────────────────────────────────────────
+      const { data: userData } = await supabase
+        .from("users")
+        .select("role, vip_expires_at")
+        .ilike("username", nick)
+        .maybeSingle();
+      if (userData) {
+        const vipActive =
+          userData.role === "vip" &&
+          userData.vip_expires_at &&
+          new Date(userData.vip_expires_at).getTime() > Date.now();
+        setIsVip(Boolean(vipActive));
+        setVipExpiresAt(userData.vip_expires_at || null);
+      }
     } catch (e) {
       console.error("Помилка:", e);
     } finally {
@@ -139,12 +163,29 @@ const Profile = () => {
       if (tg?.WebApp) setIsTg(true);
     }
     loadData();
-    // Контент з'являється одразу (невелика затримка щоб DOM встиг)
     const t2 = setTimeout(() => setContentVisible(true), 80);
-    // NFT орбіта з'являється пізніше
     const t = setTimeout(() => setNftVisible(true), 450);
     return () => { clearTimeout(t); clearTimeout(t2); };
   }, [loadData]);
+
+  // ── VIP таймер (оновлення щосекунди) ─────────────────────────────────────
+  useEffect(() => {
+    if (!vipExpiresAt || !isVip) return;
+    const tick = () => {
+      const diff = new Date(vipExpiresAt).getTime() - Date.now();
+      if (diff <= 0) { setVipTimeLeft("Закінчилась"); setIsVip(false); return; }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      if (d > 0) setVipTimeLeft(`${d}д ${h}г`);
+      else if (h > 0) setVipTimeLeft(`${h}г ${m}хв`);
+      else setVipTimeLeft(`${m}хв ${s}с`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [vipExpiresAt, isVip]);
 
   const unread = notifications.filter(n => !n.read).length;
   const markRead = async () => { await store.markNotificationsRead(nick); setNotifications(notifications.map(n => ({ ...n, read: true }))); };
@@ -176,6 +217,28 @@ const Profile = () => {
     if (adminCode === "5319son") { navigate("/admin-panel"); toast.success("Доступ відкрито"); }
     else toast.error("Невірний код");
     setAdminCode(""); setShowAdminInput(false);
+  };
+
+  const handleBuyVip = async () => {
+    if (!nick) return;
+    setVipLoading(true);
+    try {
+      const res = await fetch("/api/anypay-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: nick, duration: vipPlan }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.payment_url) {
+        toast.error(data.error || "Помилка створення платежу");
+        return;
+      }
+      window.location.href = data.payment_url;
+    } catch {
+      toast.error("Мережева помилка");
+    } finally {
+      setVipLoading(false);
+    }
   };
 
   const name = tgUser ? `${tgUser.first_name}${tgUser.last_name ? " " + tgUser.last_name : ""}` : nick;
@@ -214,6 +277,31 @@ const Profile = () => {
         @keyframes shimmerSweep {
           0%   { background-position: 200% 0; }
           100% { background-position: -200% 0; }
+        }
+
+        @keyframes vipShimmer {
+          0%   { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        @keyframes vipPulse {
+          0%, 100% { box-shadow: 0 0 8px #f59e0b66, 0 0 16px #f59e0b33; }
+          50%       { box-shadow: 0 0 14px #f59e0baa, 0 0 28px #f59e0b55; }
+        }
+        @keyframes vipGlitter {
+          0%,100% { opacity: 0.6; transform: scale(1) rotate(0deg); }
+          50%      { opacity: 1;   transform: scale(1.3) rotate(20deg); }
+        }
+        @keyframes modalSlideUp {
+          from { opacity: 0; transform: translateY(100%); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes crownFloat {
+          0%, 100% { transform: translateY(0px) rotate(-5deg); }
+          50%       { transform: translateY(-6px) rotate(5deg); }
+        }
+        @keyframes planGlow {
+          0%, 100% { box-shadow: 0 0 0px transparent; }
+          50%       { box-shadow: 0 0 20px #f59e0b44; }
         }
       `}</style>
 
@@ -383,7 +471,52 @@ const Profile = () => {
             {/* Текст */}
             <div className="flex-1 min-w-0 pt-1">
               <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
-              <p className="text-base font-bold text-foreground truncate mb-1.5">{name}</p>
+              <div className="flex items-center gap-2 mb-1.5">
+                <p className="text-base font-bold text-foreground truncate">{name}</p>
+                {/* ── VIP BADGE ── */}
+                <button
+                  onClick={() => setShowVipModal(true)}
+                  style={{
+                    flexShrink: 0,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: isVip ? "3px 9px 3px 6px" : "3px 9px 3px 6px",
+                    borderRadius: 20,
+                    border: isVip ? "1px solid #f59e0baa" : "1px solid #f59e0b44",
+                    background: isVip
+                      ? "linear-gradient(90deg, #78350f, #b45309, #d97706, #f59e0b, #d97706, #b45309, #78350f)"
+                      : "linear-gradient(90deg, #1c1008, #2d1a08, #3d2410, #2d1a08, #1c1008)",
+                    backgroundSize: "200% 100%",
+                    animation: isVip
+                      ? "vipShimmer 2.5s linear infinite, vipPulse 2s ease-in-out infinite"
+                      : "vipShimmer 4s linear infinite",
+                    cursor: "pointer",
+                    transition: "transform 0.15s",
+                  }}
+                  onMouseDown={e => (e.currentTarget.style.transform = "scale(0.93)")}
+                  onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
+                >
+                  <Crown
+                    size={11}
+                    style={{
+                      color: isVip ? "#fff" : "#f59e0b",
+                      filter: isVip ? "drop-shadow(0 0 4px #fff8)" : "none",
+                      animation: isVip ? "vipGlitter 1.8s ease-in-out infinite" : "none",
+                    }}
+                  />
+                  <span style={{
+                    fontSize: 9,
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    color: isVip ? "#fff" : "#f59e0b",
+                    textShadow: isVip ? "0 0 8px #fff6" : "none",
+                    textTransform: "uppercase",
+                  }}>
+                    {isVip ? "VIP" : "VIP?"}
+                  </span>
+                </button>
+              </div>
               {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
               <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
               <div className="flex items-center gap-1.5 mb-1.5">
@@ -391,6 +524,21 @@ const Profile = () => {
                 <span className="text-xs text-primary font-semibold">Верифіковано</span>
                 <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
               </div>
+              {isVip && vipTimeLeft && (
+                <div className="flex items-center gap-1.5 mb-1" style={{
+                  padding: "3px 8px",
+                  borderRadius: 8,
+                  background: "#f59e0b15",
+                  border: "1px solid #f59e0b33",
+                  display: "inline-flex",
+                  width: "fit-content",
+                }}>
+                  <Timer size={10} style={{ color: "#f59e0b" }} />
+                  <span style={{ fontSize: 9, fontWeight: 700, color: "#f59e0b", letterSpacing: "0.04em" }}>
+                    {vipTimeLeft}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-1">
                 <Coins className="w-3 h-3 text-yellow-400/70" />
                 <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
@@ -792,6 +940,218 @@ const Profile = () => {
             </div>
             <ChevronRight className="w-4 h-4 text-primary" />
           </button>
+        </div>
+      )}
+
+      {/* ═══ VIP МОДАЛКА ═══ */}
+      {showVipModal && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-end justify-center"
+          style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)" }}
+          onClick={() => setShowVipModal(false)}
+        >
+          <div
+            className="w-full max-w-md pb-6"
+            style={{ animation: "modalSlideUp 0.38s cubic-bezier(0.34,1.3,0.64,1) both" }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* ── Картка модалки ── */}
+            <div style={{
+              margin: "0 8px",
+              borderRadius: "28px 28px 20px 20px",
+              overflow: "hidden",
+              background: "linear-gradient(170deg, #0f0a04 0%, #1a1005 40%, #0f0a04 100%)",
+              border: "1px solid #f59e0b33",
+              boxShadow: "0 -8px 60px #f59e0b22, 0 0 0 1px #f59e0b18",
+            }}>
+
+              {/* ── Header з переливаючимся золотом ── */}
+              <div style={{ position: "relative", overflow: "hidden", padding: "28px 24px 20px" }}>
+                {/* Фон шимер */}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(135deg, #f59e0b08 0%, #f59e0b18 30%, #fbbf2428 50%, #f59e0b18 70%, #f59e0b08 100%)",
+                  backgroundSize: "300% 100%",
+                  animation: "vipShimmer 3s linear infinite",
+                }} />
+                {/* Радіальне сяйво знизу */}
+                <div style={{
+                  position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)",
+                  width: 260, height: 80,
+                  background: "radial-gradient(ellipse, #f59e0b30 0%, transparent 70%)",
+                  filter: "blur(16px)",
+                }} />
+
+                {/* Close */}
+                <button
+                  onClick={() => setShowVipModal(false)}
+                  style={{
+                    position: "absolute", top: 16, right: 16,
+                    width: 30, height: 30, borderRadius: 10,
+                    background: "#ffffff0a", border: "1px solid #ffffff10",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", zIndex: 2,
+                  }}
+                >
+                  <X size={14} style={{ color: "#ffffff60" }} />
+                </button>
+
+                {/* Crown + title */}
+                <div style={{ position: "relative", textAlign: "center", zIndex: 1 }}>
+                  <div style={{
+                    width: 64, height: 64, borderRadius: "50%", margin: "0 auto 14px",
+                    background: "linear-gradient(135deg, #78350f, #d97706, #fbbf24, #d97706, #78350f)",
+                    backgroundSize: "200% 200%",
+                    animation: "vipShimmer 2s linear infinite",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: "0 0 32px #f59e0b66, 0 0 64px #f59e0b33",
+                  }}>
+                    <Crown size={28} style={{ color: "#fff", filter: "drop-shadow(0 0 8px #fff)", animation: "crownFloat 3s ease-in-out infinite" }} />
+                  </div>
+
+                  <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase",
+                    background: "linear-gradient(90deg, #b45309, #f59e0b, #fde68a, #f59e0b, #b45309)",
+                    backgroundSize: "200% 100%",
+                    WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                    animation: "vipShimmer 2.5s linear infinite",
+                  }}>VIP Підписка</div>
+                  <div style={{ fontSize: 12, color: "#f59e0b70", marginTop: 4, fontWeight: 500 }}>
+                    Ексклюзивний доступ для обраних
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Переваги ── */}
+              <div style={{ padding: "0 20px 16px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {[
+                    { icon: <Crown size={13} />, text: "VIP значок" },
+                    { icon: <Shield size={13} />, text: "VIP-зони" },
+                    { icon: <Zap size={13} />, text: "Подвійний досвід" },
+                    { icon: <Star size={13} />, text: "Ексклюзивний скін" },
+                  ].map((item, i) => (
+                    <div key={i} style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "8px 12px", borderRadius: 12,
+                      background: "#f59e0b0c", border: "1px solid #f59e0b22",
+                    }}>
+                      <span style={{ color: "#f59e0b", flexShrink: 0 }}>{item.icon}</span>
+                      <span style={{ fontSize: 11, color: "#e2c97e", fontWeight: 600 }}>{item.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Вибір плану ── */}
+              <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
+                {([
+                  { id: "month" as const, label: "1 Місяць", price: 99, sub: "UAH" },
+                  { id: "year" as const, label: "1 Рік", price: 799, sub: "UAH • -33%" },
+                ] as const).map(plan => {
+                  const sel = vipPlan === plan.id;
+                  return (
+                    <button
+                      key={plan.id}
+                      onClick={() => setVipPlan(plan.id)}
+                      style={{
+                        flex: 1, padding: "14px 8px", borderRadius: 16, cursor: "pointer",
+                        border: sel ? "1.5px solid #f59e0baa" : "1.5px solid #f59e0b33",
+                        background: sel
+                          ? "linear-gradient(135deg, #78350f30, #d9770620, #f59e0b18)"
+                          : "#f59e0b08",
+                        boxShadow: sel ? "0 0 20px #f59e0b33, inset 0 0 12px #f59e0b0a" : "none",
+                        animation: sel ? "planGlow 2s ease-in-out infinite" : "none",
+                        transition: "all 0.2s",
+                        position: "relative", overflow: "hidden",
+                      }}
+                    >
+                      {plan.id === "year" && (
+                        <div style={{
+                          position: "absolute", top: -1, right: -1,
+                          background: "linear-gradient(135deg, #d97706, #f59e0b)",
+                          fontSize: 8, fontWeight: 900, color: "#000",
+                          padding: "3px 8px", borderRadius: "0 14px 0 10px",
+                          letterSpacing: "0.05em", textTransform: "uppercase",
+                        }}>ТОП</div>
+                      )}
+                      {sel && (
+                        <div style={{
+                          position: "absolute", inset: 0,
+                          background: "linear-gradient(90deg, transparent, #f59e0b18, transparent)",
+                          backgroundSize: "200% 100%",
+                          animation: "vipShimmer 1.8s linear infinite",
+                        }} />
+                      )}
+                      <div style={{ position: "relative", zIndex: 1 }}>
+                        <div style={{ fontSize: 11, color: sel ? "#fde68a" : "#f59e0b99", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                          {plan.label}
+                        </div>
+                        <div style={{ fontSize: 22, fontWeight: 900,
+                          background: sel
+                            ? "linear-gradient(90deg, #f59e0b, #fde68a, #f59e0b)"
+                            : "none",
+                          backgroundSize: "200% 100%",
+                          animation: sel ? "vipShimmer 2s linear infinite" : "none",
+                          WebkitBackgroundClip: sel ? "text" : "initial",
+                          WebkitTextFillColor: sel ? "transparent" : "#f59e0b99",
+                          color: sel ? undefined : "#f59e0b99",
+                        }}>
+                          {plan.price}₴
+                        </div>
+                        <div style={{ fontSize: 9, color: sel ? "#f59e0b88" : "#f59e0b44", marginTop: 2, fontWeight: 600 }}>
+                          {plan.sub}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ── Кнопка оплати ── */}
+              <div style={{ padding: "0 20px 8px" }}>
+                <button
+                  onClick={handleBuyVip}
+                  disabled={vipLoading}
+                  style={{
+                    width: "100%", padding: "15px 20px",
+                    borderRadius: 16, border: "none", cursor: vipLoading ? "not-allowed" : "pointer",
+                    background: vipLoading
+                      ? "#2a1f0a"
+                      : "linear-gradient(90deg, #78350f, #b45309, #d97706, #f59e0b, #fbbf24, #f59e0b, #d97706, #b45309, #78350f)",
+                    backgroundSize: "200% 100%",
+                    animation: vipLoading ? "none" : "vipShimmer 2s linear infinite",
+                    boxShadow: vipLoading ? "none" : "0 0 24px #f59e0b66, 0 4px 20px #00000088",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                    transition: "all 0.2s",
+                  }}
+                >
+                  {vipLoading ? (
+                    <>
+                      <div style={{
+                        width: 16, height: 16, border: "2px solid #f59e0b44",
+                        borderTopColor: "#f59e0b", borderRadius: "50%",
+                        animation: "spin-slow 0.7s linear infinite",
+                      }} />
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b88" }}>Перенаправлення...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={16} style={{ color: "#000", filter: "drop-shadow(0 0 4px #fff4)" }} />
+                      <span style={{ fontSize: 15, fontWeight: 900, color: "#000", letterSpacing: "0.04em" }}>
+                        Оплатити {vipPlan === "month" ? "99" : "799"}₴ через AnyPay
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* ── Захист ── */}
+              <div style={{ padding: "8px 20px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <Shield size={11} style={{ color: "#f59e0b55" }} />
+                <span style={{ fontSize: 10, color: "#f59e0b55", fontWeight: 500 }}>Захищена оплата • Visa / MC / Google Pay</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
