@@ -24,6 +24,7 @@ import AdminApplication from "./pages/AdminApplication";
 import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import BalanceTop from "./pages/BalanceTop";
+import Vip from "./pages/Vip";
 import { supabase } from "./lib/store";
 import { dbUpsert } from "./lib/db";
 import { User, CheckCircle, X, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react";
@@ -680,6 +681,7 @@ const App = () => {
               <Route path="/admin-panel" element={<AdminPanel />} />
              <Route path="/profile" element={<Profile />} />
              <Route path="/top" element={<BalanceTop />} />
+             <Route path="/vip" element={<Vip />} />
              <Route path="*" element={<NotFound />} />
             </Routes>
             <BottomNav />
