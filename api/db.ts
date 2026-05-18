@@ -1,32 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
 const ALLOWED_TABLES = new Set<string>([
-  "users",
-  "license_applications",
-  "car_plates",
-  "faction_applications",
-  "admin_applications",
-  "admin_perms",
-  "house_purchase_requests",
-  "city_voice",
-  "sos_signals",
-  "wanted",
-  "factions",
-  "faction_leaders",
-  "faction_overrides",
-  "mayor_election",
-  "nft_gifts",
-  "nft_owners",
-  "news",
-  "houses",
-  "documents",
-  "bans",
-  "house_families",
-  // ── НОВІ таблиці адмін-фічей ──
-  "recruitment_settings",       // закриття набору у фракцію / адміни
-  "house_confiscations",        // історія конфіскацій будинків
-  "mayor_candidate_applications", // заявки на кандидата у мери
-  "notifications",              // server-side нотифікації (замість localStorage)
+  "users","license_applications","car_plates","faction_applications",
+  "admin_applications","admin_perms","house_purchase_requests","city_voice",
+  "sos_signals","wanted","factions","faction_leaders","faction_overrides",
+  "mayor_election","nft_gifts","nft_owners","news","houses","documents",
+  "bans","house_families","recruitment_settings","house_confiscations",
+  "mayor_candidate_applications","notifications",
 ]);
 
 const ALLOWED_OPS = new Set(["insert", "update", "delete", "upsert"]);
@@ -43,25 +23,32 @@ interface Body {
   returning?: boolean;
 }
 
+// timingSafeEqual без побочного канала
+function safeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
 export default async function handler(req: any, res: any) {
-  // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-secret");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  const EXPECTED = process.env.ADMIN_SHARED_SECRET;
+  const PROVIDED = String(req.headers["x-admin-secret"] || "");
+  if (!EXPECTED || !PROVIDED || !safeEqual(PROVIDED, EXPECTED)) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
   if (!SUPABASE_URL || !SERVICE_KEY) {
-    return res.status(500).json({ error: "Server not configured: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" });
+    return res.status(500).json({ error: "Server not configured" });
   }
 
   let body: Body;
@@ -87,16 +74,10 @@ export default async function handler(req: any, res: any) {
 
   try {
     let q: any = supabaseAdmin.from(table);
-
-    if (op === "insert") {
-      q = q.insert(values as any);
-    } else if (op === "upsert") {
-      q = q.upsert(values as any, onConflict ? { onConflict } : undefined);
-    } else if (op === "update") {
-      q = q.update(values as any);
-    } else if (op === "delete") {
-      q = q.delete();
-    }
+    if (op === "insert") q = q.insert(values as any);
+    else if (op === "upsert") q = q.upsert(values as any, onConflict ? { onConflict } : undefined);
+    else if (op === "update") q = q.update(values as any);
+    else if (op === "delete") q = q.delete();
 
     if (match && typeof match === "object") {
       for (const [col, cond] of Object.entries(match)) {
