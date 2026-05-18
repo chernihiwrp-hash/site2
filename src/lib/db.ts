@@ -1,6 +1,9 @@
-// Клиентские хелперы для мутаций. Все insert/update/delete/upsert
-// идут через /api/db, который на сервере использует SERVICE_ROLE_KEY
-// и обходит RLS. Чтения — напрямую через supabase (anon).
+// Клієнтські хелпери для мутацій. Всі insert/update/delete/upsert
+// йдуть через /api/db, який на сервері перевіряє нік+пароль і
+// виконує запит через SERVICE_ROLE_KEY.
+//
+// ✅ VITE_ADMIN_SHARED_SECRET більше не використовується — видали з Vercel!
+// Читання — напряму через supabase (anon).
 
 type Filter = { op: "eq" | "ilike"; value: unknown };
 type Match = Record<string, Filter>;
@@ -19,15 +22,26 @@ interface Result<T = any> {
   error: { message: string } | null;
 }
 
+function getCredentials(): { nick: string; password: string } | null {
+  // Нік і пароль вже зберігаються в localStorage після логіну
+  const nick     = localStorage.getItem("crp_nick");
+  const password = localStorage.getItem("crp_password");
+  if (!nick || !password) return null;
+  return { nick, password };
+}
+
 async function call<T = any>(payload: Payload): Promise<Result<T>> {
+  const creds = getCredentials();
+  if (!creds) {
+    return { data: null, error: { message: "Not logged in" } };
+  }
+
   try {
     const res = await fetch("/api/db", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-secret": import.meta.env.VITE_ADMIN_SHARED_SECRET as string,
-      },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+      // Сервер перевіряє нік+пароль сам — жодного секрету у фронтенді
+      body: JSON.stringify({ ...payload, ...creds }),
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -68,6 +82,6 @@ export const dbUpdate = <T = any>(
 export const dbDelete = <T = any>(table: string, match: Match) =>
   call<T>({ table, op: "delete", match });
 
-// Удобные сокращения для match
-export const eq = (value: unknown): Filter => ({ op: "eq", value });
+// Зручні скорочення для match
+export const eq    = (value: unknown): Filter => ({ op: "eq",    value });
 export const ilike = (value: unknown): Filter => ({ op: "ilike", value });
