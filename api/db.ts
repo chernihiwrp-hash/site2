@@ -1,3 +1,13 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════╗
+ * ║  /api/db.ts — захищений проксі для мутацій БД                  ║
+ * ║                                                                  ║
+ * ║  Клієнт надсилає: nick + password (з localStorage)              ║
+ * ║  Сервер сам перевіряє юзера в Supabase — жодного секрету        ║
+ * ║  у фронтенді більше немає.                                       ║
+ * ╚══════════════════════════════════════════════════════════════════╝
+ */
+
 import { createClient } from "@supabase/supabase-js";
 
 const ALLOWED_TABLES = new Set<string>([
@@ -9,44 +19,48 @@ const ALLOWED_TABLES = new Set<string>([
   "mayor_candidate_applications","notifications",
 ]);
 
-const ALLOWED_OPS = new Set(["insert", "update", "delete", "upsert"]);
+const ALLOWED_OPS  = new Set(["insert", "update", "delete", "upsert"]);
 const ALLOWED_FILTERS = new Set(["eq", "ilike"]);
+
+// Таблиці, дозволені для звичайних гравців (без адмін-прав)
+const PLAYER_TABLES = new Set<string>([
+  "users","license_applications","car_plates","faction_applications",
+  "admin_applications","house_purchase_requests","city_voice","sos_signals",
+  "wanted","nft_gifts","nft_owners","house_families","mayor_candidate_applications",
+  "notifications",
+]);
+
+// Таблиці тільки для адмінів/супер-адміна
+const ADMIN_ONLY_TABLES = new Set<string>([
+  "admin_perms","bans","news","houses","documents","factions","faction_leaders",
+  "faction_overrides","mayor_election","recruitment_settings","house_confiscations",
+]);
+
+const SUPER_ADMIN_NICK = "t1kron1x"; // має збігатись з AdminPanel.tsx
 
 type Match = Record<string, { op: "eq" | "ilike"; value: unknown }> | undefined;
 
 interface Body {
-  table: string;
-  op: "insert" | "update" | "delete" | "upsert";
-  values?: unknown;
-  match?: Match;
+  nick:     string;        // ← тепер клієнт надсилає нік і пароль
+  password: string;        //   замість статичного секрету
+  table:    string;
+  op:       "insert" | "update" | "delete" | "upsert";
+  values?:  unknown;
+  match?:   Match;
   onConflict?: string;
-  returning?: boolean;
-}
-
-// timingSafeEqual без побочного канала
-function safeEqual(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let r = 0;
-  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return r === 0;
+  returning?:  boolean;
 }
 
 export default async function handler(req: any, res: any) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-secret");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST")   return res.status(405).json({ error: "Method not allowed" });
 
-  const EXPECTED = process.env.ADMIN_SHARED_SECRET;
-  const PROVIDED = String(req.headers["x-admin-secret"] || "");
-  if (!EXPECTED || !PROVIDED || !safeEqual(PROVIDED, EXPECTED)) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const SUPABASE_URL  = process.env.SUPABASE_URL;
+  const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_KEY) {
     return res.status(500).json({ error: "Server not configured" });
   }
@@ -58,9 +72,13 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: "Invalid JSON" });
   }
 
-  const { op, values, match, onConflict, returning } = body || ({} as Body);
+  const { nick, password, op, values, match, onConflict, returning } = body || {} as Body;
   const table = String(body?.table || "").trim();
 
+  // ── 1. Перевірка вхідних даних ─────────────────────────────────────────────
+  if (!nick || !password) {
+    return res.status(401).json({ error: "Unauthorized: no credentials" });
+  }
   if (!table || !ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ error: `Table not allowed: ${table || "empty"}` });
   }
@@ -68,13 +86,49 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: "Op not allowed" });
   }
 
+  // ── 2. Перевірка нік/пароль у Supabase ────────────────────────────────────
   const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  const { data: userRow, error: userErr } = await supabaseAdmin
+    .from("users")
+    .select("username, password, role")
+    .ilike("username", nick.trim())
+    .maybeSingle();
+
+  if (userErr || !userRow) {
+    return res.status(401).json({ error: "Unauthorized: user not found" });
+  }
+  if (userRow.password !== password) {
+    return res.status(401).json({ error: "Unauthorized: wrong password" });
+  }
+
+  // ── 3. Перевірка прав доступу до таблиці ──────────────────────────────────
+  const normalizedNick = userRow.username.toLowerCase().trim();
+  const isSuperAdmin   = normalizedNick === SUPER_ADMIN_NICK.toLowerCase();
+
+  if (ADMIN_ONLY_TABLES.has(table)) {
+    // Тільки адміни та супер-адмін
+    if (!isSuperAdmin && userRow.role !== "admin") {
+      // Перевіримо admin_perms
+      const { data: permRow } = await supabaseAdmin
+        .from("admin_perms")
+        .select("perms")
+        .ilike("nick", nick.trim())
+        .maybeSingle();
+
+      if (!permRow) {
+        return res.status(403).json({ error: "Forbidden: admin access required" });
+      }
+    }
+  }
+
+  // ── 4. Виконання запиту ────────────────────────────────────────────────────
   try {
     let q: any = supabaseAdmin.from(table);
-    if (op === "insert") q = q.insert(values as any);
+
+    if      (op === "insert") q = q.insert(values as any);
     else if (op === "upsert") q = q.upsert(values as any, onConflict ? { onConflict } : undefined);
     else if (op === "update") q = q.update(values as any);
     else if (op === "delete") q = q.delete();
