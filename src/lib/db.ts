@@ -23,7 +23,10 @@ async function call<T = any>(payload: Payload): Promise<Result<T>> {
   try {
     const res = await fetch("/api/db", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-secret": import.meta.env.VITE_ADMIN_SHARED_SECRET as string,
+      },
       body: JSON.stringify(payload),
     });
     const json = await res.json().catch(() => ({}));
