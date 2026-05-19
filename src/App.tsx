@@ -26,7 +26,6 @@ import NotFound from "./pages/NotFound";
 import BalanceTop from "./pages/BalanceTop";
 import Vip from "./pages/Vip";
 import { supabase } from "./lib/store";
-import { dbSelect } from "./lib/db";
 import { User, CheckCircle, X, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react";
 import GradientButton from "./components/GradientButton";
 
@@ -77,21 +76,30 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
     if (!password) return;
     setLoading(true);
     setError("");
-    const { data } = await dbSelect<{ password: string }>("users", { columns: "password", filters: [{ col: "username", op: "ilike", value: savedNick }], single: true });
-    if (!data?.password) {
-      // Старий акаунт без пароля — пускаємо без пароля
-      onDone();
-      return;
-    }
-    if (data.password !== password) {
-      setError("Невірний пароль!");
+
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ op: "verify", nick: savedNick, password }),
+      });
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        // Якщо 401 — невірний пароль; якщо щось інше — помилка сервера
+        setError(json?.error === "Wrong password" ? "Невірний пароль!" : (json?.error || "Помилка входу"));
+        setLoading(false);
+        return;
+      }
+
+      // ✅ Зберігаємо для серверних запитів (api/db)
+      localStorage.setItem("crp_password", password);
       setLoading(false);
-      return;
+      onDone();
+    } catch (e: any) {
+      setError("Помилка з'єднання: " + (e?.message || "Network error"));
+      setLoading(false);
     }
-    // ✅ Зберігаємо для серверних запитів (api/db)
-    localStorage.setItem("crp_password", password);
-    setLoading(false);
-    onDone();
   };
 
   return (
@@ -600,20 +608,16 @@ const App = () => {
       const nick = localStorage.getItem("crp_nick") || "";
 
       if (tgId || nick) {
-        // Перевіряємо бан по telegram_id або username (через захищений сервер)
-        let banFilters: any[] = [];
+        // Перевіряємо бан через прямий supabase (anon key — read-only, до логіну)
+        let q = supabase.from("bans").select("reason, expires_at, is_permanent").limit(1);
         if (tgId && nick) {
-          banFilters = [{ op: "or", value: `identifier.eq.${tgId},identifier.ilike.${nick}` }];
+          q = q.or(`identifier.eq.${tgId},identifier.ilike.${nick}`) as any;
         } else if (tgId) {
-          banFilters = [{ col: "identifier", op: "eq", value: tgId }];
+          q = q.eq("identifier", tgId) as any;
         } else {
-          banFilters = [{ col: "identifier", op: "ilike", value: nick }];
+          q = q.ilike("identifier", nick) as any;
         }
-        const { data: bans } = await dbSelect("bans", {
-          columns: "reason, expires_at, is_permanent",
-          filters: banFilters,
-          limit: 1,
-        });
+        const { data: bans } = await q;
 
         if (bans && bans.length > 0) {
           const ban = bans[0] as { reason: string; expires_at: string | null; is_permanent: boolean };
