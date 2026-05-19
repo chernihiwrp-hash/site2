@@ -35,8 +35,7 @@ import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import BalanceTop from "./pages/BalanceTop";
 import Vip from "./pages/Vip";
-import { supabase } from "./lib/store";
-import { dbUpsert } from "./lib/db";
+import { authLogin, authRegister, authTelegramLookup, authUserLookup, authBanCheck } from "./lib/db";
 import { User, CheckCircle, X, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react";
 import GradientButton from "./components/GradientButton";
 
@@ -87,18 +86,14 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
     if (!password) return;
     setLoading(true);
     setError("");
-    const { data } = await supabase.from("users").select("password").ilike("username", savedNick).maybeSingle();
-    if (!data?.password) {
-      // Старий акаунт без пароля — пускаємо без пароля
-      onDone();
-      return;
-    }
-    if (data.password !== password) {
-      setError("Невірний пароль!");
+    // ✅ Перевірка пароля повністю на сервері — нічого не витягуємо в браузер
+    const { data, error: lerr } = await authLogin(savedNick, password);
+    if (lerr || !data?.ok) {
+      setError(lerr?.message === "wrong password" ? "Невірний пароль!" : (lerr?.message || "Помилка входу"));
       setLoading(false);
       return;
     }
-    // ✅ Зберігаємо для серверних запитів (api/db)
+    // legacy-акаунт без пароля — все одно зберігаємо введений, щоб /api/db працював
     localStorage.setItem("crp_password", password);
     setLoading(false);
     onDone();
@@ -204,11 +199,7 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
 
     // Перевірка — чи цей Telegram вже прив'язаний до іншого акаунту
     if (tgUser?.id) {
-      const { data: tgBound } = await supabase
-        .from("users")
-        .select("username")
-        .eq("telegram_id", String(tgUser.id))
-        .maybeSingle();
+      const { data: tgBound } = await authTelegramLookup(String(tgUser.id));
       if (tgBound?.username && tgBound.username.toLowerCase() !== nick.trim().toLowerCase()) {
         setError(`Твій Telegram вже прив'язаний до акаунту "${tgBound.username}". 1 TG = 1 акаунт.`);
         setLoading(false);
@@ -217,13 +208,8 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
     }
 
     // Перевірка нікнейму T1kron1x
-    const reserved = "t1kron1x";
-    if (nick.trim().toLowerCase() === reserved) {
-      const { data: existing } = await supabase
-        .from("users")
-        .select("id, telegram_id")
-        .ilike("username", "T1kron1x")
-        .maybeSingle();
+    if (nick.trim().toLowerCase() === "t1kron1x") {
+      const { data: existing } = await authUserLookup("T1kron1x");
       if (existing && tgUser && String(tgUser.id) !== String(existing.telegram_id)) {
         setError("Цей нікнейм зарезервований!");
         setLoading(false);
@@ -231,34 +217,24 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
       }
     }
 
-    // Перевірка дублікату ніку
-    const { data: existingNick } = await supabase
-      .from("users")
-      .select("id, telegram_id")
-      .ilike("username", nick.trim())
-      .maybeSingle();
-    if (existingNick && tgUser && String(tgUser.id) !== String(existingNick.telegram_id)) {
-      setError("Цей нік вже зайнятий!");
-      setLoading(false);
-      return;
-    }
-
-    // Зберігаємо в Supabase з паролем (через сервер, обхід RLS)
-    const { error: dbError } = await dbUpsert("users", {
-      username: nick.trim(),
+    // Реєстрація на сервері (включно з перевіркою дублікатів)
+    const { data: regData, error: dbError } = await authRegister({
+      nick: nick.trim(),
+      password,
       telegram_id: tgUser ? String(tgUser.id) : null,
       avatar_url: tgUser?.photo_url || null,
-      role: "player",
-      balance: 0,
-      password: password,
-    }, { onConflict: "username" });
+    });
 
-    if (!dbError) {
+    if (!dbError && regData?.ok) {
       localStorage.setItem("crp_registered", "1");
       localStorage.setItem("crp_nick", nick.trim());
+      localStorage.setItem("crp_password", password);
       onDone(nick.trim());
     } else {
-      setError("Помилка реєстрації: " + dbError.message);
+      const msg = dbError?.message || "";
+      if (msg === "nick taken")           setError("Цей нік вже зайнятий!");
+      else if (msg === "telegram bound")  setError("Твій Telegram вже прив'язаний до іншого акаунту.");
+      else                                 setError("Помилка реєстрації: " + (msg || "невідома"));
     }
     setLoading(false);
   };
@@ -597,20 +573,9 @@ const App = () => {
       const nick = localStorage.getItem("crp_nick") || "";
 
       if (tgId || nick) {
-        // Перевіряємо бан по telegram_id або username
-        let banQuery = supabase.from("bans").select("reason, expires_at, is_permanent");
-        if (tgId && nick) {
-          banQuery = banQuery.or(`identifier.eq.${tgId},identifier.ilike.${nick}`);
-        } else if (tgId) {
-          banQuery = banQuery.eq("identifier", tgId);
-        } else {
-          banQuery = banQuery.ilike("identifier", nick);
-        }
-        const { data: bans } = await banQuery.limit(1);
-
-        if (bans && bans.length > 0) {
-          const ban = bans[0] as { reason: string; expires_at: string | null; is_permanent: boolean };
-          // Перевіряємо чи бан ще активний
+        // Перевірка бану — публічний серверний ендпоінт
+        const { data: ban } = await authBanCheck(nick, tgId);
+        if (ban) {
           if (ban.is_permanent || !ban.expires_at || new Date(ban.expires_at) > new Date()) {
             setBanInfo({ reason: ban.reason, expiresAt: ban.expires_at, isPermanent: ban.is_permanent });
             return;
@@ -723,8 +688,7 @@ import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import BalanceTop from "./pages/BalanceTop";
 import Vip from "./pages/Vip";
-import { supabase } from "./lib/store";
-import { dbUpsert } from "./lib/db";
+import { authLogin, authRegister, authTelegramLookup, authUserLookup, authBanCheck } from "./lib/db";
 import { User, CheckCircle, X, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react";
 import GradientButton from "./components/GradientButton";
 
@@ -775,17 +739,13 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
     if (!password) return;
     setLoading(true);
     setError("");
-    const { data } = await supabase.from("users").select("password").ilike("username", savedNick).maybeSingle();
-    if (!data?.password) {
-      // Старий акаунт без пароля — пускаємо без пароля
-      onDone();
-      return;
-    }
-    if (data.password !== password) {
-      setError("Невірний пароль!");
+    const { data, error: lerr } = await authLogin(savedNick, password);
+    if (lerr || !data?.ok) {
+      setError(lerr?.message === "wrong password" ? "Невірний пароль!" : (lerr?.message || "Помилка входу"));
       setLoading(false);
       return;
     }
+    localStorage.setItem("crp_password", password);
     setLoading(false);
     onDone();
   };
@@ -890,11 +850,7 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
 
     // Перевірка — чи цей Telegram вже прив'язаний до іншого акаунту
     if (tgUser?.id) {
-      const { data: tgBound } = await supabase
-        .from("users")
-        .select("username")
-        .eq("telegram_id", String(tgUser.id))
-        .maybeSingle();
+      const { data: tgBound } = await authTelegramLookup(String(tgUser.id));
       if (tgBound?.username && tgBound.username.toLowerCase() !== nick.trim().toLowerCase()) {
         setError(`Твій Telegram вже прив'язаний до акаунту "${tgBound.username}". 1 TG = 1 акаунт.`);
         setLoading(false);
@@ -902,14 +858,8 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
       }
     }
 
-    // Перевірка нікнейму T1kron1x
-    const reserved = "t1kron1x";
-    if (nick.trim().toLowerCase() === reserved) {
-      const { data: existing } = await supabase
-        .from("users")
-        .select("id, telegram_id")
-        .ilike("username", "T1kron1x")
-        .maybeSingle();
+    if (nick.trim().toLowerCase() === "t1kron1x") {
+      const { data: existing } = await authUserLookup("T1kron1x");
       if (existing && tgUser && String(tgUser.id) !== String(existing.telegram_id)) {
         setError("Цей нікнейм зарезервований!");
         setLoading(false);
@@ -917,34 +867,23 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
       }
     }
 
-    // Перевірка дублікату ніку
-    const { data: existingNick } = await supabase
-      .from("users")
-      .select("id, telegram_id")
-      .ilike("username", nick.trim())
-      .maybeSingle();
-    if (existingNick && tgUser && String(tgUser.id) !== String(existingNick.telegram_id)) {
-      setError("Цей нік вже зайнятий!");
-      setLoading(false);
-      return;
-    }
-
-    // Зберігаємо в Supabase з паролем (через сервер, обхід RLS)
-    const { error: dbError } = await dbUpsert("users", {
-      username: nick.trim(),
+    const { data: regData, error: dbError } = await authRegister({
+      nick: nick.trim(),
+      password,
       telegram_id: tgUser ? String(tgUser.id) : null,
       avatar_url: tgUser?.photo_url || null,
-      role: "player",
-      balance: 0,
-      password: password,
-    }, { onConflict: "username" });
+    });
 
-    if (!dbError) {
+    if (!dbError && regData?.ok) {
       localStorage.setItem("crp_registered", "1");
       localStorage.setItem("crp_nick", nick.trim());
+      localStorage.setItem("crp_password", password);
       onDone(nick.trim());
     } else {
-      setError("Помилка реєстрації: " + dbError.message);
+      const msg = dbError?.message || "";
+      if (msg === "nick taken")          setError("Цей нік вже зайнятий!");
+      else if (msg === "telegram bound") setError("Твій Telegram вже прив'язаний до іншого акаунту.");
+      else                                setError("Помилка реєстрації: " + (msg || "невідома"));
     }
     setLoading(false);
   };
@@ -1283,20 +1222,8 @@ const App = () => {
       const nick = localStorage.getItem("crp_nick") || "";
 
       if (tgId || nick) {
-        // Перевіряємо бан по telegram_id або username
-        let banQuery = supabase.from("bans").select("reason, expires_at, is_permanent");
-        if (tgId && nick) {
-          banQuery = banQuery.or(`identifier.eq.${tgId},identifier.ilike.${nick}`);
-        } else if (tgId) {
-          banQuery = banQuery.eq("identifier", tgId);
-        } else {
-          banQuery = banQuery.ilike("identifier", nick);
-        }
-        const { data: bans } = await banQuery.limit(1);
-
-        if (bans && bans.length > 0) {
-          const ban = bans[0] as { reason: string; expires_at: string | null; is_permanent: boolean };
-          // Перевіряємо чи бан ще активний
+        const { data: ban } = await authBanCheck(nick, tgId);
+        if (ban) {
           if (ban.is_permanent || !ban.expires_at || new Date(ban.expires_at) > new Date()) {
             setBanInfo({ reason: ban.reason, expiresAt: ban.expires_at, isPermanent: ban.is_permanent });
             return;
