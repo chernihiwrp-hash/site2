@@ -1,4 +1,5 @@
 
+
 import { createClient } from "@supabase/supabase-js";
 
 const ALLOWED_TABLES = new Set<string>([
