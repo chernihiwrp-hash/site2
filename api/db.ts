@@ -1,20 +1,18 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║  /api/db.ts — єдина точка доступу до БД                          ║
+ * ║  /api/db.ts — серверный прокси к Supabase                        ║
  * ║                                                                  ║
- * ║  Працює ТІЛЬКИ якщо у Vercel заданi:                             ║
- * ║     • SUPABASE_URL                                               ║
- * ║     • SUPABASE_SERVICE_ROLE_KEY  (server-only, не VITE_*)        ║
+ * ║  ВСЁ (insert/update/delete/upsert + SELECT) идёт через           ║
+ * ║  SUPABASE_SERVICE_ROLE_KEY на сервере. На клиенте сервисного     ║
+ * ║  ключа НЕТ — даже anon ключа больше не нужно.                    ║
  * ║                                                                  ║
- * ║  Анонімний ключ більше не використовується у фронтенді —         ║
- * ║  усі SELECT/INSERT/UPDATE/DELETE/UPSERT йдуть через цей роут     ║
- * ║  з service_role_key, який ніколи не потрапляє у браузер.         ║
+ * ║  Пароли пользователей НИКОГДА не уходят клиенту — колонка        ║
+ * ║  `password` вырезается из любой выдачи, а селект её колонки      ║
+ * ║  явно запрещён. Логин делается через op:"verify".                ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
 import { createClient } from "@supabase/supabase-js";
-
-/* ───────────── whitelists ───────────── */
 
 const ALLOWED_TABLES = new Set<string>([
   "users","license_applications","car_plates","faction_applications",
@@ -25,12 +23,19 @@ const ALLOWED_TABLES = new Set<string>([
   "mayor_candidate_applications","notifications",
 ]);
 
-const MUTATION_OPS = new Set(["insert", "update", "delete", "upsert"]);
-const FILTER_OPS   = new Set([
-  "eq","neq","gt","gte","lt","lte","ilike","like","is","in","or",
+const ALLOWED_MUTATIONS = new Set(["insert","update","delete","upsert"]);
+const ALLOWED_FILTERS   = new Set(["eq","ilike","in","or","filter"]);
+const ALLOWED_FILTER_OPS = new Set([
+  "eq","neq","gt","gte","lt","lte","like","ilike","is","in",
 ]);
 
-// Таблиці тільки для адмінів/супер-адміна (для мутацій)
+const PLAYER_TABLES = new Set<string>([
+  "users","license_applications","car_plates","faction_applications",
+  "admin_applications","house_purchase_requests","city_voice","sos_signals",
+  "wanted","nft_gifts","nft_owners","house_families","mayor_candidate_applications",
+  "notifications",
+]);
+
 const ADMIN_ONLY_TABLES = new Set<string>([
   "admin_perms","bans","news","houses","documents","factions","faction_leaders",
   "faction_overrides","mayor_election","recruitment_settings","house_confiscations",
@@ -38,40 +43,80 @@ const ADMIN_ONLY_TABLES = new Set<string>([
 
 const SUPER_ADMIN_NICK = "t1kron1x";
 
-// Поля, які НЕ можна повертати клієнту навіть авторизованому.
-// (захист від випадкового витоку повного hash-паролю іншого юзера).
-const SENSITIVE_COLUMNS: Record<string, Set<string>> = {
-  users: new Set(["password"]),
-};
+type FilterEntry =
+  | { op: "eq" | "ilike"; col: string; val: unknown }
+  | { op: "in"; col: string; val: unknown[] }
+  | { op: "or"; expr: string }
+  | { op: "filter"; col: string; operator: string; val: unknown };
 
-/* ───────────── types ───────────── */
-
-type FilterCond = { op: string; col?: string; value: unknown };
-type LegacyMatch = Record<string, { op: "eq" | "ilike"; value: unknown }>;
-
-interface Body {
-  nick?: string;
-  password?: string;
-  op: string;
-  table?: string;
-  // select
+interface SelectPayload {
+  op: "select";
+  table: string;
   columns?: string;
-  filters?: FilterCond[];
-  match?: LegacyMatch;
-  order?: { column: string; ascending?: boolean };
+  filters?: FilterEntry[];
+  order?: { col: string; ascending?: boolean }[];
   limit?: number;
+  range?: { from: number; to: number };
   single?: boolean;
   maybeSingle?: boolean;
-  // mutations
+  count?: "exact" | "planned" | "estimated";
+  head?: boolean;
+  nick: string;
+  password: string;
+}
+
+interface MutationPayload {
+  op: "insert" | "update" | "delete" | "upsert";
+  table: string;
   values?: unknown;
+  match?: Record<string, { op: "eq" | "ilike"; value: unknown }>;
   onConflict?: string;
   returning?: boolean;
-  // auth helpers
+  nick: string;
+  password: string;
+}
+
+interface VerifyPayload   { op: "verify";   nick: string; password: string; }
+interface CheckUserPayload     { op: "check_user";     nick: string; }
+interface CheckTelegramPayload { op: "check_telegram"; telegram_id: string | number; }
+interface RegisterPayload {
+  op: "register";
+  nick: string;
+  password: string;
   telegram_id?: string | null;
   avatar_url?: string | null;
 }
 
-/* ───────────── handler ───────────── */
+type AnyPayload =
+  | SelectPayload | MutationPayload | VerifyPayload
+  | CheckUserPayload | CheckTelegramPayload | RegisterPayload;
+
+function stripPassword<T>(rows: T): T {
+  if (!rows) return rows;
+  if (Array.isArray(rows)) {
+    return rows.map((r) => {
+      if (r && typeof r === "object" && "password" in (r as any)) {
+        const { password: _p, ...rest } = r as any;
+        return rest;
+      }
+      return r;
+    }) as unknown as T;
+  }
+  if (typeof rows === "object" && rows && "password" in (rows as any)) {
+    const { password: _p, ...rest } = rows as any;
+    return rest as T;
+  }
+  return rows;
+}
+
+function columnsRequestPassword(columns?: string): boolean {
+  if (!columns) return false;
+  if (columns.trim() === "*") return false; // мы вырежем сами
+  return columns
+    .split(",")
+    .map((c) => c.trim().toLowerCase())
+    .some((c) => c === "password" || c.endsWith(".password"));
+}
 
 export default async function handler(req: any, res: any) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -81,253 +126,220 @@ export default async function handler(req: any, res: any) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST")    return res.status(405).json({ error: "Method not allowed" });
 
+  // ── 0. Сервер обязан иметь SERVICE_ROLE_KEY. Без него — отказ. ───────────
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_KEY) {
-    // Жодних запитів без service_role_key
     return res.status(500).json({
-      error: "Server not configured: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing",
+      error:
+        "Server not configured: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY " +
+        "must be set in Vercel Environment Variables.",
     });
   }
 
-  let body: Body;
+  let body: AnyPayload;
   try {
     body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
   } catch {
     return res.status(400).json({ error: "Invalid JSON" });
   }
-  if (!body || typeof body !== "object") {
-    return res.status(400).json({ error: "Empty body" });
+  if (!body || typeof body !== "object" || !("op" in body)) {
+    return res.status(400).json({ error: "Bad payload" });
   }
 
-  const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
+  const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  // ── Хелпер: проверка нік+пароль ──────────────────────────────────────────
+  async function authUser(nick: string, password: string) {
+    if (!nick || !password) return { ok: false as const, code: 401, msg: "no credentials" };
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .select("username, password, role")
+      .ilike("username", nick.trim())
+      .maybeSingle();
+    if (error || !data) return { ok: false as const, code: 401, msg: "user not found" };
+    if (data.password !== password) return { ok: false as const, code: 401, msg: "wrong password" };
+    return { ok: true as const, user: data };
+  }
+
   try {
-    /* ── публічні auth-ендпоінти (до логіну) ─────────────────────── */
-    switch (body.op) {
-      case "auth_check": {
-        const nick = String(body.nick || "").trim();
-        if (!nick) return res.status(400).json({ error: "nick required" });
-        const { data } = await admin
-          .from("users").select("password, telegram_id, role")
-          .ilike("username", nick).maybeSingle();
-        return res.status(200).json({
-          data: {
-            exists: !!data,
-            hasPassword: !!(data && data.password),
-            telegram_id: data?.telegram_id ?? null,
-            role: data?.role ?? null,
-          },
-        });
-      }
-      case "auth_login": {
-        const nick = String(body.nick || "").trim();
-        const password = String(body.password || "");
-        if (!nick || !password) return res.status(400).json({ error: "nick+password required" });
-        const { data } = await admin
-          .from("users").select("password, role")
-          .ilike("username", nick).maybeSingle();
-        if (!data)               return res.status(404).json({ error: "user not found" });
-        if (!data.password)      return res.status(200).json({ data: { ok: true, role: data.role, hasPassword: false } });
-        if (data.password !== password)
-          return res.status(401).json({ error: "wrong password" });
-        return res.status(200).json({ data: { ok: true, role: data.role, hasPassword: true } });
-      }
-      case "auth_telegram_lookup": {
-        const tg = String(body.telegram_id || "").trim();
-        if (!tg) return res.status(400).json({ error: "telegram_id required" });
-        const { data } = await admin
-          .from("users").select("username, telegram_id")
-          .eq("telegram_id", tg).maybeSingle();
-        return res.status(200).json({ data: data || null });
-      }
-      case "auth_user_lookup": {
-        const nick = String(body.nick || "").trim();
-        if (!nick) return res.status(400).json({ error: "nick required" });
-        const { data } = await admin
-          .from("users").select("id, username, telegram_id")
-          .ilike("username", nick).maybeSingle();
-        return res.status(200).json({ data: data || null });
-      }
-      case "auth_register": {
-        const nick = String(body.nick || "").trim();
-        const password = String(body.password || "");
-        if (!nick || nick.length < 2) return res.status(400).json({ error: "bad nick" });
-        if (password.length < 6)      return res.status(400).json({ error: "weak password" });
-        const tg = body.telegram_id ? String(body.telegram_id) : null;
+    // ── verify: проверка логина (без авторизации, это и есть авторизация)
+    if (body.op === "verify") {
+      const { nick, password } = body;
+      if (!nick) return res.status(400).json({ error: "nick required" });
+      const { data, error } = await supabaseAdmin
+        .from("users")
+        .select("username, password, role")
+        .ilike("username", String(nick).trim())
+        .maybeSingle();
+      if (error) return res.status(500).json({ error: error.message });
+      if (!data) return res.status(200).json({ data: { ok: false, exists: false, hasPassword: false, role: null } });
+      const hasPassword = !!data.password;
+      const ok = !hasPassword || data.password === password;
+      return res.status(200).json({
+        data: { ok, exists: true, hasPassword, role: ok ? data.role ?? null : null },
+      });
+    }
 
-        // Перевірка зайнятості ніку чужим telegram_id
-        const { data: existingNick } = await admin
-          .from("users").select("username, telegram_id")
-          .ilike("username", nick).maybeSingle();
-        if (existingNick && tg && existingNick.telegram_id && String(existingNick.telegram_id) !== tg) {
-          return res.status(409).json({ error: "nick taken" });
-        }
-        // Перевірка зайнятості Telegram іншим ніком
-        if (tg) {
-          const { data: tgBound } = await admin
-            .from("users").select("username")
-            .eq("telegram_id", tg).maybeSingle();
-          if (tgBound?.username && tgBound.username.toLowerCase() !== nick.toLowerCase()) {
-            return res.status(409).json({ error: "telegram bound", username: tgBound.username });
-          }
-        }
+    // ── check_user: занят ли ник (для регистрации) ──────────────────────────
+    if (body.op === "check_user") {
+      const nick = String((body as CheckUserPayload).nick || "").trim();
+      if (!nick) return res.status(400).json({ error: "nick required" });
+      const { data, error } = await supabaseAdmin
+        .from("users")
+        .select("id, username, telegram_id")
+        .ilike("username", nick)
+        .maybeSingle();
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({
+        data: data
+          ? { exists: true, telegram_id: data.telegram_id ?? null, username: data.username }
+          : { exists: false, telegram_id: null, username: null },
+      });
+    }
 
-        const { error } = await admin.from("users").upsert({
+    // ── check_telegram: есть ли уже аккаунт с этим телеграмом ───────────────
+    if (body.op === "check_telegram") {
+      const tg = (body as CheckTelegramPayload).telegram_id;
+      if (tg === undefined || tg === null || tg === "") {
+        return res.status(400).json({ error: "telegram_id required" });
+      }
+      const { data, error } = await supabaseAdmin
+        .from("users")
+        .select("username")
+        .eq("telegram_id", String(tg))
+        .maybeSingle();
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ data: { username: data?.username ?? null } });
+    }
+
+    // ── register: создание аккаунта (без авторизации) ───────────────────────
+    if (body.op === "register") {
+      const p = body as RegisterPayload;
+      const nick = String(p.nick || "").trim();
+      const password = String(p.password || "");
+      if (nick.length < 2)      return res.status(400).json({ error: "nick too short" });
+      if (password.length < 6)  return res.status(400).json({ error: "password too short" });
+      const { error } = await supabaseAdmin.from("users").upsert(
+        {
           username: nick,
-          telegram_id: tg,
-          avatar_url: body.avatar_url ?? null,
+          telegram_id: p.telegram_id ? String(p.telegram_id) : null,
+          avatar_url:  p.avatar_url ?? null,
           role: "player",
           balance: 0,
           password,
-        }, { onConflict: "username" });
-        if (error) return res.status(400).json({ error: error.message });
-        return res.status(200).json({ data: { ok: true } });
-      }
-      case "auth_ban_check": {
-        const nick = String(body.nick || "").trim();
-        const tg   = String(body.telegram_id || "").trim();
-        if (!nick && !tg) return res.status(200).json({ data: null });
-        let q: any = admin.from("bans").select("reason, expires_at, is_permanent");
-        if (tg && nick) q = q.or(`identifier.eq.${tg},identifier.ilike.${nick}`);
-        else if (tg)    q = q.eq("identifier", tg);
-        else            q = q.ilike("identifier", nick);
-        const { data } = await q.limit(1);
-        const ban = (data && data[0]) || null;
-        return res.status(200).json({ data: ban });
-      }
+        },
+        { onConflict: "username" }
+      );
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ data: { ok: true } });
     }
 
-    /* ── далі — операції, що вимагають логіну ────────────────────── */
-    const nick     = String(body.nick || "").trim();
-    const password = String(body.password || "");
-    if (!nick || !password) {
-      return res.status(401).json({ error: "Unauthorized: no credentials" });
-    }
+    // ── Дальше: select и мутации — требуют авторизации ──────────────────────
+    const { nick, password } = body as { nick: string; password: string };
+    const auth = await authUser(nick, password);
+    if (!auth.ok) return res.status(auth.code).json({ error: `Unauthorized: ${auth.msg}` });
 
-    const table = String(body.table || "").trim();
-    if (!table || !ALLOWED_TABLES.has(table)) {
-      return res.status(400).json({ error: `Table not allowed: ${table || "empty"}` });
-    }
+    const isSuperAdmin = auth.user.username.toLowerCase().trim() === SUPER_ADMIN_NICK.toLowerCase();
+    const isAdmin = isSuperAdmin || auth.user.role === "admin";
 
-    // Verify creds
-    const { data: userRow, error: userErr } = await admin
-      .from("users").select("username, password, role")
-      .ilike("username", nick).maybeSingle();
-    if (userErr || !userRow) return res.status(401).json({ error: "Unauthorized: user not found" });
-    if (userRow.password && userRow.password !== password) {
-      return res.status(401).json({ error: "Unauthorized: wrong password" });
-    }
-
-    const isSuperAdmin = userRow.username.toLowerCase() === SUPER_ADMIN_NICK;
-    const isAdmin = isSuperAdmin || userRow.role === "admin";
-
-    /* ── SELECT ─────────────────────────────────────────────────── */
+    // ── SELECT ──────────────────────────────────────────────────────────────
     if (body.op === "select") {
-      // sanitize columns — заборонити пароль для звичайних користувачів
-      let columns = (body.columns && String(body.columns).trim()) || "*";
-      const sensitive = SENSITIVE_COLUMNS[table];
-      if (sensitive && !isAdmin) {
-        if (columns === "*") {
-          // нехай повертає все, але потім зачистимо
-        } else {
-          const parts = columns.split(",").map((s) => s.trim()).filter(Boolean);
-          const filtered = parts.filter((c) => !sensitive.has(c.split(/\s+/)[0]));
-          if (filtered.length === 0) {
-            return res.status(403).json({ error: "Forbidden columns" });
+      const s = body as SelectPayload;
+      const table = String(s.table || "").trim();
+      if (!table || !ALLOWED_TABLES.has(table)) {
+        return res.status(400).json({ error: `Table not allowed: ${table || "empty"}` });
+      }
+
+      // Нельзя запрашивать колонку password ни при каких условиях
+      if (columnsRequestPassword(s.columns)) {
+        return res.status(403).json({ error: "Column 'password' is not selectable" });
+      }
+
+      // Жесткое ограничение: админские таблицы читают только админы
+      if (ADMIN_ONLY_TABLES.has(table) && !isAdmin) {
+        const { data: permRow } = await supabaseAdmin
+          .from("admin_perms").select("perms").ilike("nick", nick.trim()).maybeSingle();
+        if (!permRow) return res.status(403).json({ error: "Forbidden: admin read required" });
+      }
+
+      const columns = s.columns && s.columns.trim() ? s.columns : "*";
+      const opts: any = {};
+      if (s.count) opts.count = s.count;
+      if (s.head)  opts.head  = true;
+
+      let q: any = supabaseAdmin.from(table).select(columns, opts);
+
+      if (Array.isArray(s.filters)) {
+        for (const f of s.filters) {
+          if (!f || typeof f !== "object") continue;
+          if (f.op === "eq"    && typeof f.col === "string") q = q.eq(f.col, (f as any).val);
+          else if (f.op === "ilike" && typeof f.col === "string") q = q.ilike(f.col, (f as any).val);
+          else if (f.op === "in"    && typeof f.col === "string" && Array.isArray((f as any).val)) q = q.in(f.col, (f as any).val);
+          else if (f.op === "or"    && typeof (f as any).expr === "string") q = q.or((f as any).expr);
+          else if (f.op === "filter" && typeof f.col === "string" && ALLOWED_FILTER_OPS.has((f as any).operator)) {
+            q = q.filter(f.col, (f as any).operator, (f as any).val);
           }
-          columns = filtered.join(", ");
         }
       }
 
-      let q: any = admin.from(table).select(columns);
-
-      // filters[]
-      if (Array.isArray(body.filters)) {
-        for (const f of body.filters) {
-          if (!f || !FILTER_OPS.has(f.op)) continue;
-          if (f.op === "or") {
-            q = q.or(String(f.value));
-          } else if (f.op === "in") {
-            q = q.in(String(f.col), f.value as any[]);
-          } else if (f.op === "is") {
-            q = q.is(String(f.col), f.value as any);
-          } else {
-            q = (q as any)[f.op](String(f.col), f.value as any);
-          }
+      if (Array.isArray(s.order)) {
+        for (const o of s.order) {
+          if (o && typeof o.col === "string") q = q.order(o.col, { ascending: o.ascending !== false });
         }
       }
-      // legacy match
-      if (body.match && typeof body.match === "object") {
-        for (const [col, cond] of Object.entries(body.match)) {
-          if (!cond || !FILTER_OPS.has(cond.op)) continue;
-          q = (q as any)[cond.op](col, cond.value);
+      if (typeof s.limit === "number") q = q.limit(s.limit);
+      if (s.range && typeof s.range.from === "number" && typeof s.range.to === "number") {
+        q = q.range(s.range.from, s.range.to);
+      }
+      if (s.single)      q = q.single();
+      if (s.maybeSingle) q = q.maybeSingle();
+
+      const { data, error, count } = await q;
+      if (error) {
+        // .maybeSingle на нескольких строках и т.п. — пробрасываем как 400
+        return res.status(400).json({ error: error.message });
+      }
+      const safe = table === "users" ? stripPassword(data) : data;
+      return res.status(200).json({ data: safe ?? null, count: count ?? null });
+    }
+
+    // ── Мутации ─────────────────────────────────────────────────────────────
+    if (ALLOWED_MUTATIONS.has(body.op as string)) {
+      const m = body as MutationPayload;
+      const table = String(m.table || "").trim();
+      if (!table || !ALLOWED_TABLES.has(table)) {
+        return res.status(400).json({ error: `Table not allowed: ${table || "empty"}` });
+      }
+      if (ADMIN_ONLY_TABLES.has(table) && !isAdmin) {
+        const { data: permRow } = await supabaseAdmin
+          .from("admin_perms").select("perms").ilike("nick", nick.trim()).maybeSingle();
+        if (!permRow) return res.status(403).json({ error: "Forbidden: admin write required" });
+      }
+
+      let q: any = supabaseAdmin.from(table);
+      if      (m.op === "insert") q = q.insert(m.values as any);
+      else if (m.op === "upsert") q = q.upsert(m.values as any, m.onConflict ? { onConflict: m.onConflict } : undefined);
+      else if (m.op === "update") q = q.update(m.values as any);
+      else if (m.op === "delete") q = q.delete();
+
+      if (m.match && typeof m.match === "object") {
+        for (const [col, cond] of Object.entries(m.match)) {
+          if (!cond || !ALLOWED_FILTERS.has(cond.op)) continue;
+          q = (q as any)[cond.op](col, cond.value as any);
         }
       }
-      if (body.order?.column) {
-        q = q.order(body.order.column, { ascending: body.order.ascending !== false });
-      }
-      if (typeof body.limit === "number") q = q.limit(body.limit);
+      if (m.returning) q = q.select();
 
-      let result;
-      if (body.single)            result = await q.single();
-      else if (body.maybeSingle)  result = await q.maybeSingle();
-      else                        result = await q;
-
-      if (result.error) return res.status(400).json({ error: result.error.message });
-
-      // post-filter sensitive колонки (для * select)
-      let data: any = result.data;
-      if (sensitive && !isAdmin && data) {
-        const strip = (row: any) => {
-          if (!row || typeof row !== "object") return row;
-          const o: any = { ...row };
-          for (const k of sensitive) delete o[k];
-          return o;
-        };
-        data = Array.isArray(data) ? data.map(strip) : strip(data);
-      }
-      return res.status(200).json({ data: data ?? null });
+      const { data, error } = await q;
+      if (error) return res.status(400).json({ error: error.message });
+      const safe = table === "users" ? stripPassword(data) : data;
+      return res.status(200).json({ data: safe ?? null });
     }
 
-    /* ── MUTATIONS ──────────────────────────────────────────────── */
-    if (!MUTATION_OPS.has(body.op)) {
-      return res.status(400).json({ error: `Op not allowed: ${body.op}` });
-    }
-    if (ADMIN_ONLY_TABLES.has(table) && !isAdmin) {
-      const { data: permRow } = await admin
-        .from("admin_perms").select("perms")
-        .ilike("nick", nick).maybeSingle();
-      if (!permRow) return res.status(403).json({ error: "Forbidden: admin access required" });
-    }
-
-    let q: any = admin.from(table);
-    if      (body.op === "insert") q = q.insert(body.values as any);
-    else if (body.op === "upsert") q = q.upsert(body.values as any, body.onConflict ? { onConflict: body.onConflict } : undefined);
-    else if (body.op === "update") q = q.update(body.values as any);
-    else                            q = q.delete();
-
-    if (body.match && typeof body.match === "object") {
-      for (const [col, cond] of Object.entries(body.match)) {
-        if (!cond || !FILTER_OPS.has(cond.op)) continue;
-        q = (q as any)[cond.op](col, cond.value);
-      }
-    }
-    if (Array.isArray(body.filters)) {
-      for (const f of body.filters) {
-        if (!f || !FILTER_OPS.has(f.op)) continue;
-        if (f.op === "in")      q = q.in(String(f.col), f.value as any[]);
-        else if (f.op === "or") q = q.or(String(f.value));
-        else                    q = (q as any)[f.op](String(f.col), f.value as any);
-      }
-    }
-    if (body.returning) q = q.select();
-
-    const { data, error } = await q;
-    if (error) return res.status(400).json({ error: error.message });
-    return res.status(200).json({ data: data ?? null });
+    return res.status(400).json({ error: `Unknown op: ${(body as any).op}` });
   } catch (e: any) {
     console.error("[api/db] exception:", e?.message);
     return res.status(500).json({ error: e?.message || "Server error" });
