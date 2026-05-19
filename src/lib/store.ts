@@ -1,18 +1,10 @@
-// ⚠️ Никаких ключей в браузере. Всё (включая SELECT) идёт через /api/db,
-// который использует SUPABASE_SERVICE_ROLE_KEY на сервере Vercel.
-import {
-  supabase,
-  dbInsert, dbUpdate, dbDelete, dbUpsert,
-  dbVerify, dbCheckUser, dbCheckTelegram, dbRegister,
-  eq, ilike,
-} from './db';
+import { createClient } from '@supabase/supabase-js';
+import { dbInsert, dbUpdate, dbDelete, dbUpsert, dbSelect, eq, ilike } from './db';
 
-export {
-  supabase,
-  dbInsert, dbUpdate, dbDelete, dbUpsert,
-  dbVerify, dbCheckUser, dbCheckTelegram, dbRegister,
-  eq, ilike,
-};
+const SUPABASE_URL = "https://kafivvwxqulxmkpyqinz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthZml2dnd4cXVseG1rcHlxaW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTgyNDIsImV4cCI6MjA4OTg3NDI0Mn0.HD_Gxn5UIVxov0-7U4aVhtYXhGvYTsVqLlycE5ctBpg";
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export { dbInsert, dbUpdate, dbDelete, dbUpsert, eq, ilike };
 
 // Все мутации идут через сервер (api/db.ts) — обходит RLS через SERVICE_ROLE_KEY.
 const secureInsert = async (table: string, data: object): Promise<void> => {
@@ -97,11 +89,11 @@ export const getBalance = (_nick: string): number => 0;
 
 export const getBalanceFromDB = async (nick: string): Promise<number> => {
   try {
-    const { data } = await supabase
-      .from("users")
-      .select("balance")
-      .ilike("username", nick)
-      .maybeSingle();
+    const { data } = await dbSelect<{ balance: number }>("users", {
+      columns: "balance",
+      filters: [{ col: "username", op: "ilike", value: nick }],
+      single: true,
+    });
     return (data?.balance as number) || 0;
   } catch { return 0; }
 };
@@ -144,10 +136,9 @@ export const store = {
 
   // ─── NFT GIFTS LOGIC ──────────────────────────────────────────────────────
   getNftGifts: async (): Promise<NftGift[]> => {
-    const { data, error } = await supabase
-      .from("nft_gifts")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await dbSelect<NftGift[]>("nft_gifts", {
+      order: { col: "created_at", dir: "desc" },
+    });
     if (error) { console.error("Помилка завантаження NFT:", error.message); return []; }
     return (data || []) as NftGift[];
   },
@@ -189,12 +180,15 @@ export const store = {
 
   getUserGifts: async (nick: string): Promise<NftGift[]> => {
     try {
-      const { data: owners, error: ownerError } = await supabase
-        .from("nft_owners").select("nft_id").eq("owner_nick", nick);
+      const { data: owners, error: ownerError } = await dbSelect<{ nft_id: string }[]>("nft_owners", {
+        columns: "nft_id",
+        filters: [{ col: "owner_nick", op: "eq", value: nick }],
+      });
       if (ownerError || !owners || owners.length === 0) return [];
       const giftIds = owners.map(o => o.nft_id);
-      const { data: nfts, error: nftError } = await supabase
-        .from("nft_gifts").select("*").in("id", giftIds);
+      const { data: nfts, error: nftError } = await dbSelect<NftGift[]>("nft_gifts", {
+        filters: [{ col: "id", op: "in", value: giftIds }],
+      });
       if (nftError) { console.error("Помилка отримання даних NFT:", nftError.message); return []; }
       return (nfts || []) as NftGift[];
     } catch (e) {
@@ -211,8 +205,9 @@ export const store = {
 
   // ── LICENSES & PLATES ──────────────────────────────────────────────────────
   getLicenseApplications: async (): Promise<LicenseApplication[]> => {
-    const { data } = await supabase
-      .from("license_applications").select("*").order("created_at", { ascending: false });
+    const { data } = await dbSelect("license_applications", {
+      order: { col: "created_at", dir: "desc" },
+    });
     if (!data) return [];
     return data.map((r: any) => ({
       id: r.id, username: r.username, license_type: r.license_type,
@@ -222,7 +217,7 @@ export const store = {
 
   // ── NEWS ──────────────────────────────────────────────────────────────────
   getNews: async (): Promise<NewsItem[]> => {
-    const { data } = await supabase.from("news").select("*").order("created_at", { ascending: false });
+    const { data } = await dbSelect("news", { order: { col: "created_at", dir: "desc" } });
     if (!data) return [];
     return data.map((r: Record<string, unknown>) => ({
       id: r.id as number, title: r.title as string, text: r.content as string,
@@ -247,10 +242,10 @@ export const store = {
   // Помечает запись в house_purchase_requests как expired и возвращает дом в продажу.
   releaseExpiredHouses: async (): Promise<void> => {
     try {
-      const { data } = await supabase
-        .from("house_purchase_requests")
-        .select("id, house_id, created_at, rental_days, status")
-        .eq("status", "approved");
+      const { data } = await dbSelect("house_purchase_requests", {
+        columns: "id, house_id, created_at, rental_days, status",
+        filters: [{ col: "status", op: "eq", value: "approved" }],
+      });
       if (!data || data.length === 0) return;
       const now = Date.now();
       const expired = data.filter((r: any) => {
@@ -268,7 +263,7 @@ export const store = {
   getHouses: async (username?: string): Promise<HouseItem[]> => {
     // Подчищаем просроченные аренды перед чтением, чтобы дом не висел "занятым".
     await (store as any).releaseExpiredHouses?.();
-    const { data: housesData } = await supabase.from("houses").select("*").order("created_at", { ascending: false });
+    const { data: housesData } = await dbSelect("houses", { order: { col: "created_at", dir: "desc" } });
     if (!housesData) return [];
     const allHouses = housesData.map((r: Record<string, unknown>) => ({
       id: r.id as number, name: r.name as string, price: r.price as number,
@@ -277,9 +272,13 @@ export const store = {
       photos: r.image_url ? [r.image_url as string] : [], rental_days: 0,
     }));
     if (username) {
-      const { data: requests } = await supabase
-        .from("house_purchase_requests").select("house_id, rental_days")
-        .eq("username", username).eq("status", "approved");
+      const { data: requests } = await dbSelect("house_purchase_requests", {
+        columns: "house_id, rental_days",
+        filters: [
+          { col: "username", op: "eq", value: username },
+          { col: "status", op: "eq", value: "approved" },
+        ],
+      });
       if (requests && requests.length > 0) {
         const rentalMap = new Map(requests.map(req => [req.house_id, req.rental_days]));
         return allHouses.map(h => ({ ...h, rental_days: rentalMap.get(h.id) || 0 }));
@@ -290,7 +289,9 @@ export const store = {
 
   getCarPlates: async (nick: string) => {
     try {
-      const { data, error } = await supabase.from("car_plates").select("*").eq("username", nick);
+      const { data, error } = await dbSelect("car_plates", {
+        filters: [{ col: "username", op: "eq", value: nick }],
+      });
       if (error) { console.error("Помилка БД car_plates:", error.message); return []; }
       return data || [];
     } catch (e) { console.error("Критична помилка getCarPlates:", e); return []; }
@@ -305,8 +306,8 @@ export const store = {
   },
 
   deleteHouse: async (id: number) => {
-    // First clean up any linked purchase requests
-    await supabase.from("house_purchase_requests").delete().eq("house_id", id);
+    // Clean up linked purchase requests first
+    await dbDelete("house_purchase_requests", { house_id: eq(id) });
     const { error } = await dbDelete("houses", { id: eq(id) });
     if (error) throw error;
   },
@@ -336,13 +337,15 @@ export const store = {
   },
 
   getHousePurchaseRequests: async (): Promise<HousePurchaseRequest[]> => {
-    const { data } = await supabase.from("house_purchase_requests").select("*").order("created_at", { ascending: false });
+    const { data } = await dbSelect("house_purchase_requests", { order: { col: "created_at", dir: "desc" } });
     if (!data) return [];
-    // Fetch house details to get image, description
     const houseIds = [...new Set(data.map((r: Record<string, unknown>) => r.house_id as number).filter(Boolean))];
     let housesMap: Record<number, Record<string, unknown>> = {};
     if (houseIds.length > 0) {
-      const { data: houses } = await supabase.from("houses").select("id, name, description, price, image_url").in("id", houseIds);
+      const { data: houses } = await dbSelect("houses", {
+        columns: "id, name, description, price, image_url",
+        filters: [{ col: "id", op: "in", value: houseIds }],
+      });
       if (houses) houses.forEach((h: Record<string, unknown>) => { housesMap[h.id as number] = h; });
     }
     return data.map((r: Record<string, unknown>) => {
@@ -371,7 +374,7 @@ export const store = {
 
   // ── FACTION APPLICATIONS ──────────────────────────────────────────────────
   getFactionApps: async (): Promise<FactionApplication[]> => {
-    const { data } = await supabase.from("faction_applications").select("*").order("created_at", { ascending: false });
+    const { data } = await dbSelect("faction_applications", { order: { col: "created_at", dir: "desc" } });
     if (!data) return [];
     return data.map((r: Record<string, unknown>) => {
       const fd = (r.form_data as Record<string, unknown>) || {};
@@ -453,12 +456,10 @@ export const store = {
 
   // ── WANTED ────────────────────────────────────────────────────────────────
   getWanted: async (): Promise<WantedPerson[]> => {
-    // У БД nick зберігається в колонці target_username + фільтруємо активні або без статусу
-    const { data, error } = await supabase
-      .from("wanted")
-      .select("*")
-      .or("status.eq.active,status.is.null")
-      .order("stars", { ascending: false });
+    const { data, error } = await dbSelect("wanted", {
+      filters: [{ op: "or", value: "status.eq.active,status.is.null" }],
+      order: { col: "stars", dir: "desc" },
+    });
     if (error) { console.error("getWanted:", error.message); return []; }
     return (data || []).map((r: Record<string, unknown>) => ({
       id: r.id as number,
@@ -498,7 +499,7 @@ export const store = {
 
   // ── ADMIN APPLICATIONS ────────────────────────────────────────────────────
   getAdminApps: async (): Promise<AdminApplication[]> => {
-    const { data } = await supabase.from("admin_applications").select("*").order("created_at", { ascending: false });
+    const { data } = await dbSelect("admin_applications", { order: { col: "created_at", dir: "desc" } });
     if (!data) return [];
     return data.map((r: Record<string, unknown>) => {
       const fd = (r.form_data as Record<string, unknown>) || {};
@@ -536,18 +537,7 @@ export const store = {
       return true;
     } catch (serverError) {
       console.error("submitAdminApp /api/db ERROR:", serverError);
-
-      // Fallback for old deployments where /api/db still blocks admin_applications.
-      // If RLS allows public application inserts, this keeps the form working
-      // even before api/db.ts is replaced on the host.
-      try {
-        const { error } = await supabase.from("admin_applications").insert(row);
-        if (error) throw error;
-        return true;
-      } catch (directError) {
-        console.error("submitAdminApp direct Supabase ERROR:", directError);
-        return false;
-      }
+      return false;
     }
   },
 
@@ -558,7 +548,7 @@ export const store = {
 
   // ── CITY VOICE ────────────────────────────────────────────────────────────
   getCityVoice: async (): Promise<CityVoiceItem[]> => {
-    const { data } = await supabase.from("city_voice").select("*").order("created_at", { ascending: false });
+    const { data } = await dbSelect("city_voice", { order: { col: "created_at", dir: "desc" } });
     if (!data) return [];
     return data.map((r: any) => ({
       id: r.id, author: r.username, text: r.message, type: r.type || "idea",
@@ -568,19 +558,27 @@ export const store = {
   },
 
   incrementCityVoiceLikes: async (id: number) => {
-    const { data } = await supabase.from("city_voice").select("likes").eq("id", id).single();
+    const { data } = await dbSelect<{ likes: number }>("city_voice", {
+      columns: "likes", filters: [{ col: "id", op: "eq", value: id }], single: true,
+    });
     await dbUpdate("city_voice", { likes: (data?.likes || 0) + 1 }, { id: eq(id) });
   },
   decrementCityVoiceLikes: async (id: number) => {
-    const { data } = await supabase.from("city_voice").select("likes").eq("id", id).single();
+    const { data } = await dbSelect<{ likes: number }>("city_voice", {
+      columns: "likes", filters: [{ col: "id", op: "eq", value: id }], single: true,
+    });
     await dbUpdate("city_voice", { likes: Math.max(0, (data?.likes || 0) - 1) }, { id: eq(id) });
   },
   incrementCityVoiceDislikes: async (id: number) => {
-    const { data } = await supabase.from("city_voice").select("dislikes").eq("id", id).single();
+    const { data } = await dbSelect<{ dislikes: number }>("city_voice", {
+      columns: "dislikes", filters: [{ col: "id", op: "eq", value: id }], single: true,
+    });
     await dbUpdate("city_voice", { dislikes: (data?.dislikes || 0) + 1 }, { id: eq(id) });
   },
   decrementCityVoiceDislikes: async (id: number) => {
-    const { data } = await supabase.from("city_voice").select("dislikes").eq("id", id).single();
+    const { data } = await dbSelect<{ dislikes: number }>("city_voice", {
+      columns: "dislikes", filters: [{ col: "id", op: "eq", value: id }], single: true,
+    });
     await dbUpdate("city_voice", { dislikes: Math.max(0, (data?.dislikes || 0) - 1) }, { id: eq(id) });
   },
 
@@ -596,7 +594,7 @@ export const store = {
 
   // ── MAYOR ELECTION ────────────────────────────────────────────────────────
   getCandidates: async (): Promise<MayorCandidate[]> => {
-    const { data } = await supabase.from("mayor_election").select("*").order("votes", { ascending: false });
+    const { data } = await dbSelect("mayor_election", { order: { col: "votes", dir: "desc" } });
     if (!data) return [];
     return data.map((r: Record<string, unknown>) => ({
       id: r.id as number, name: r.candidate_username as string,
@@ -610,14 +608,16 @@ export const store = {
   },
   deleteCandidate: async (id: number) => { await dbDelete("mayor_election", { id: eq(id) }); },
   voteCandidate: async (id: number) => {
-    const { data } = await supabase.from("mayor_election").select("votes").eq("id", id).single();
+    const { data } = await dbSelect<{ votes: number }>("mayor_election", {
+      columns: "votes", filters: [{ col: "id", op: "eq", value: id }], single: true,
+    });
     await dbUpdate("mayor_election", { votes: ((data?.votes as number) || 0) + 1 }, { id: eq(id) });
   },
   setCandidates: (_: MayorCandidate[]) => {},
 
   // ── DOCUMENTS ─────────────────────────────────────────────────────────────
   getDocs: async (): Promise<DocumentItem[]> => {
-    const { data } = await supabase.from("documents").select("*").order("id", { ascending: true });
+    const { data } = await dbSelect("documents", { order: { col: "id", dir: "asc" } });
     if (!data || data.length === 0) return [
       { id: 1, title: "Конституція міста", content: "Основний закон Чернігів RP." },
       { id: 2, title: "Правила сервера", content: "Загальні правила гри." },
@@ -639,9 +639,9 @@ export const store = {
   setDocs: (_: DocumentItem[]) => {},
 
   getCars: async (nick?: string): Promise<CarRecord[]> => {
-    let query = supabase.from("car_plates").select("*").eq("status", "approved");
-    if (nick) query = query.eq("username", nick);
-    const { data, error } = await query;
+    const filters: any[] = [{ col: "status", op: "eq", value: "approved" }];
+    if (nick) filters.push({ col: "username", op: "eq", value: nick });
+    const { data, error } = await dbSelect("car_plates", { filters });
     if (error) { console.error("Ошибка в getCars:", error.message); return []; }
     return data.map((r: any) => ({
       plate: r.plate_number, model: r.car_model || "Транспорт", owner: r.username,
@@ -670,7 +670,10 @@ export const store = {
 
   // ── SOS ───────────────────────────────────────────────────────────────────
   getSos: async (): Promise<SosMessage[]> => {
-    const { data } = await supabase.from("sos_signals").select("*").eq("status", "active").order("created_at", { ascending: false });
+    const { data } = await dbSelect("sos_signals", {
+      filters: [{ col: "status", op: "eq", value: "active" }],
+      order: { col: "created_at", dir: "desc" },
+    });
     if (!data) return [];
     return data.map((r: Record<string, unknown>) => ({
       id: r.id as number, reason: r.type as string, description: r.message as string,
@@ -686,7 +689,9 @@ export const store = {
 
   // ── TOKENS / BALANCE ──────────────────────────────────────────────────────
   giveTokens: async (nick: string, amount: number): Promise<boolean> => {
-    const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
+    const { data: user } = await dbSelect<{ balance: number }>("users", {
+      columns: "balance", filters: [{ col: "username", op: "ilike", value: nick }], single: true,
+    });
     const currentBalance = (user?.balance as number) || 0;
     const newBalance = currentBalance + amount;
     const { error } = await dbUpdate("users", { balance: newBalance }, { username: ilike(nick) });
@@ -697,7 +702,9 @@ export const store = {
   },
 
   takeTokens: async (nick: string, amount: number): Promise<boolean> => {
-    const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
+    const { data: user } = await dbSelect<{ balance: number }>("users", {
+      columns: "balance", filters: [{ col: "username", op: "ilike", value: nick }], single: true,
+    });
     const currentBalance = (user?.balance as number) || 0;
     if (currentBalance < amount) return false;
     const newBalance = currentBalance - amount;
@@ -710,7 +717,9 @@ export const store = {
 
   // ── THEMES ────────────────────────────────────────────────────────────────
   getOwnedThemes: async (nick: string): Promise<string[]> => {
-    const { data, error } = await supabase.from("users").select("owned_themes").ilike("username", nick).maybeSingle();
+    const { data, error } = await dbSelect<{ owned_themes: string[] }>("users", {
+      columns: "owned_themes", filters: [{ col: "username", op: "ilike", value: nick }], single: true,
+    });
     if (error || !data || !data.owned_themes) return ["lime"];
     return data.owned_themes;
   },
@@ -729,9 +738,9 @@ export const store = {
   // ── PULSE CITY ────────────────────────────────────────────────────────────
   getPulse: async (): Promise<{ citizens: number; houses: number; factions: number }> => {
     const [usersRes, housesRes, factionsRes] = await Promise.all([
-      supabase.from("users").select("id", { count: "exact", head: true }),
-      supabase.from("houses").select("id", { count: "exact", head: true }).eq("is_for_sale", false),
-      supabase.from("faction_applications").select("id", { count: "exact", head: true }).eq("status", "approved"),
+      dbSelect("users", { columns: "id", count: true }),
+      dbSelect("houses", { columns: "id", filters: [{ col: "is_for_sale", op: "eq", value: false }], count: true }),
+      dbSelect("faction_applications", { columns: "id", filters: [{ col: "status", op: "eq", value: "approved" }], count: true }),
     ]);
     return { citizens: usersRes.count || 0, houses: housesRes.count || 0, factions: factionsRes.count || 0 };
   },
@@ -742,15 +751,31 @@ export const store = {
     // Перед чтением профиля чистим просроченные дома, чтобы их не показывало в "моих".
     await (store as any).releaseExpiredHouses?.();
     const [houseRes, factionRes, licRes, platesRes] = await Promise.all([
-      supabase.from("house_purchase_requests").select("id, rental_days, created_at, house_id").eq("username", nick).eq("status", "approved"),
-      supabase.from("faction_applications").select("faction_name, status").ilike("username", nick).order("created_at", { ascending: false }),
-      supabase.from("license_applications").select("id, license_type, status").ilike("username", nick).ilike("status", "approved"),
-      supabase.from("car_plates").select("id, plate_number, car_model, status").ilike("username", nick).ilike("status", "approved"),
+      dbSelect("house_purchase_requests", {
+        columns: "id, rental_days, created_at, house_id",
+        filters: [{ col: "username", op: "eq", value: nick }, { col: "status", op: "eq", value: "approved" }],
+      }),
+      dbSelect("faction_applications", {
+        columns: "faction_name, status",
+        filters: [{ col: "username", op: "ilike", value: nick }],
+        order: { col: "created_at", dir: "desc" },
+      }),
+      dbSelect("license_applications", {
+        columns: "id, license_type, status",
+        filters: [{ col: "username", op: "ilike", value: nick }, { col: "status", op: "ilike", value: "approved" }],
+      }),
+      dbSelect("car_plates", {
+        columns: "id, plate_number, car_model, status",
+        filters: [{ col: "username", op: "ilike", value: nick }, { col: "status", op: "ilike", value: "approved" }],
+      }),
     ]);
     let housesWithDetails: any[] = [];
     if (houseRes.data && houseRes.data.length > 0) {
-      const houseIds = houseRes.data.map(h => h.house_id);
-      const { data: housesData } = await supabase.from("houses").select("id, name, price, image_url").in("id", houseIds);
+      const houseIds = houseRes.data.map((h: any) => h.house_id);
+      const { data: housesData } = await dbSelect("houses", {
+        columns: "id, name, price, image_url",
+        filters: [{ col: "id", op: "in", value: houseIds }],
+      });
       housesWithDetails = houseRes.data.map((req: any) => {
         const details = housesData?.find(d => d.id === req.house_id);
         return {
@@ -872,16 +897,16 @@ export const store = {
     const q = (query || "").trim();
     if (!q) return [];
     try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("username, avatar_url")
-        .ilike("username", `${q}%`)
-        .limit(limit);
+      const { data, error } = await dbSelect("users", {
+        columns: "username, avatar_url",
+        filters: [{ col: "username", op: "ilike", value: `${q}%` }],
+        limit,
+      });
       if (error) { console.error("searchUsers:", error.message); return []; }
       return (data || []).map((r: any) => ({
         username: String(r.username || ""),
         avatar_url: r.avatar_url || undefined,
-      })).filter(u => u.username);
+      })).filter((u: any) => u.username);
     } catch (e) { console.error("searchUsers:", e); return []; }
   },
 
@@ -935,7 +960,7 @@ export const store = {
   // target = "admin" для адмін-набору, або точна назва фракції (lowercase).
   getRecruitmentMap: async (): Promise<Record<string, boolean>> => {
     try {
-      const { data } = await supabase.from("recruitment_settings").select("*");
+      const { data } = await dbSelect("recruitment_settings");
       const map: Record<string, boolean> = {};
       (data || []).forEach((r: any) => { map[String(r.target).toLowerCase()] = r.is_open !== false; });
       return map;
@@ -946,8 +971,9 @@ export const store = {
     try {
       const targetKey = target.toLowerCase().trim();
       // Завантажуємо всю таблицю і шукаємо в JS — надійніше
-      const { data, error } = await supabase
-        .from("recruitment_settings").select("is_open, target");
+      const { data, error } = await dbSelect("recruitment_settings", {
+        columns: "is_open, target",
+      });
       if (error) { console.error("[isRecruitmentOpen] db error:", error.message); return true; }
       if (!data || data.length === 0) return true;
       const row = data.find((r: any) => String(r.target).toLowerCase().trim() === targetKey);
@@ -1010,14 +1036,15 @@ export const store = {
   },
 
   getConfiscations: async (): Promise<HouseConfiscation[]> => {
-    const { data } = await supabase
-      .from("house_confiscations").select("*").order("created_at", { ascending: false });
+    const { data } = await dbSelect("house_confiscations", { order: { col: "created_at", dir: "desc" } });
     if (!data) return [];
-    // підтягуємо назви будинків
     const ids = [...new Set(data.map((r: any) => r.house_id).filter(Boolean))];
     let names: Record<number, string> = {};
     if (ids.length) {
-      const { data: hs } = await supabase.from("houses").select("id, name").in("id", ids);
+      const { data: hs } = await dbSelect("houses", {
+        columns: "id, name",
+        filters: [{ col: "id", op: "in", value: ids }],
+      });
       (hs || []).forEach((h: any) => { names[h.id] = h.name; });
     }
     return data.map((r: any) => ({
@@ -1092,16 +1119,16 @@ export const store = {
   },
 
   getMayorApplications: async (): Promise<MayorCandidateApplication[]> => {
-    const { data } = await supabase
-      .from("mayor_candidate_applications").select("*").order("created_at", { ascending: false });
+    const { data } = await dbSelect("mayor_candidate_applications", { order: { col: "created_at", dir: "desc" } });
     return (data || []) as MayorCandidateApplication[];
   },
 
   updateMayorApplicationStatus: async (id: number, status: "approved" | "rejected") => {
     // Якщо схвалено — додаємо як кандидата на вибори
     if (status === "approved") {
-      const { data: app } = await supabase
-        .from("mayor_candidate_applications").select("*").eq("id", id).maybeSingle();
+      const { data: app } = await dbSelect("mayor_candidate_applications", {
+        filters: [{ col: "id", op: "eq", value: id }], single: true,
+      });
       if (app) {
         await secureInsert("mayor_election", {
           candidate_username: app.username, description: app.program, bio: app.bio,
@@ -1110,8 +1137,9 @@ export const store = {
         await store.addNotification(app.username, "Вашу кандидатуру на мера прийнято! Гравці можуть голосувати.");
       }
     } else {
-      const { data: app } = await supabase
-        .from("mayor_candidate_applications").select("username").eq("id", id).maybeSingle();
+      const { data: app } = await dbSelect<{ username: string }>("mayor_candidate_applications", {
+        columns: "username", filters: [{ col: "id", op: "eq", value: id }], single: true,
+      });
       if (app?.username) await store.addNotification(app.username, "Вашу заявку на мера відхилено.");
     }
     await dbUpdate("mayor_candidate_applications", { status }, { id: eq(id) });
@@ -1166,9 +1194,11 @@ export const store = {
   giveNftToUser: async (nick: string, nftId: string): Promise<boolean> => {
     try {
       // перевіряємо, чи вже є
-      const { data: existing } = await supabase
-        .from("nft_owners").select("nft_id")
-        .eq("owner_nick", nick).eq("nft_id", nftId).maybeSingle();
+      const { data: existing } = await dbSelect("nft_owners", {
+        columns: "nft_id",
+        filters: [{ col: "owner_nick", op: "eq", value: nick }, { col: "nft_id", op: "eq", value: nftId }],
+        single: true,
+      });
       if (existing) return true; // вже є — теж "успіх"
       await secureInsert("nft_owners", { owner_nick: nick, nft_id: nftId });
       await store.addNotification(nick, "Ви отримали NFT-нагороду!");
