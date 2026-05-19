@@ -1,14 +1,24 @@
 // Клієнтські хелпери для всіх операцій з БД.
-// Всі insert/update/delete/upsert/select йдуть через /api/db.
 //
-// SECRET_ROLE_KEY — ТІЛЬКИ на сервері (Vercel env, без VITE_ префіксу).
-// Браузер ніколи не бачить цей ключ.
-// Браузер надсилає лише nick + password — сервер перевіряє їх у Supabase.
+// АРХІТЕКТУРА БЕЗПЕКИ:
+//   /api/auth — verify, checkUser, checkTelegram, register  (SECRET_ROLE_KEY, сервер)
+//   /api/db   — insert, update, delete, upsert, select       (SECRET_ROLE_KEY, сервер)
 //
-// ✅ VITE_SUPABASE_ANON_KEY / VITE_ADMIN_SHARED_SECRET більше не потрібні
-//    для мутацій. Для SELECT — також використовуйте dbSelect замість
-//    прямого supabase.from(...).select().
+// Браузер НІКОЛИ не звертається до Supabase напряму для операцій з чутливими даними.
+// SECRET_ROLE_KEY і паролі користувачів залишаються виключно на сервері.
+//
+// supabase (anon) експортується ТІЛЬКИ для real-time каналів (supabase.channel())
+// та публічних read-запитів, де RLS обмежує доступ.
 
+import { createClient } from "@supabase/supabase-js";
+
+const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL      as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+// Тільки для real-time channels і публічних reads (news, factions тощо)
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── Типи ─────────────────────────────────────────────────────────────────────
 type FilterOp = "eq" | "neq" | "ilike" | "like" | "gt" | "gte" | "lt" | "lte" | "in";
 type Filter = { op: FilterOp; value: unknown };
 type Match = Record<string, Filter>;
@@ -43,6 +53,7 @@ interface Result<T = any> {
   count?: number;
 }
 
+// ── Внутрішній виклик /api/db ────────────────────────────────────────────────
 function getCredentials(): { nick: string; password: string } | null {
   const nick     = localStorage.getItem("crp_nick");
   const password = localStorage.getItem("crp_password");
@@ -52,9 +63,7 @@ function getCredentials(): { nick: string; password: string } | null {
 
 async function call<T = any>(payload: Payload): Promise<Result<T>> {
   const creds = getCredentials();
-  if (!creds) {
-    return { data: null, error: { message: "Not logged in" } };
-  }
+  if (!creds) return { data: null, error: { message: "Not logged in" } };
 
   try {
     const res = await fetch("/api/db", {
@@ -63,9 +72,7 @@ async function call<T = any>(payload: Payload): Promise<Result<T>> {
       body: JSON.stringify({ ...payload, ...creds }),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      return { data: null, error: { message: json?.error || `HTTP ${res.status}` } };
-    }
+    if (!res.ok) return { data: null, error: { message: json?.error || `HTTP ${res.status}` } };
     return {
       data: (json?.data ?? null) as T,
       error: null,
@@ -76,7 +83,25 @@ async function call<T = any>(payload: Payload): Promise<Result<T>> {
   }
 }
 
-// ── Мутації ─────────────────────────────────────────────────────────────────
+// ── Внутрішній виклик /api/auth ──────────────────────────────────────────────
+async function callAuth<T = any>(
+  body: Record<string, unknown>
+): Promise<{ data: T | null; error: { message: string } | null; exists?: boolean }> {
+  try {
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return { data: null, error: { message: json?.error || `HTTP ${res.status}` } };
+    return { data: (json?.data ?? null) as T, error: null, exists: json?.exists };
+  } catch (e: any) {
+    return { data: null, error: { message: e?.message || "Network error" } };
+  }
+}
+
+// ── Мутації ──────────────────────────────────────────────────────────────────
 
 export const dbInsert = <T = any>(
   table: string,
@@ -107,14 +132,7 @@ export const dbUpdate = <T = any>(
 export const dbDelete = <T = any>(table: string, match: Match) =>
   call<T>({ table, op: "delete", match });
 
-// ── SELECT ───────────────────────────────────────────────────────────────────
-// Використовуйте dbSelect замість прямого supabase.from().select().
-// Поле "password" автоматично вирізається сервером — навіть якщо вказати columns: "*".
-//
-// Приклади:
-//   dbSelect("users", { match: { username: eq("bob") }, columns: "id, username, role" })
-//   dbSelect("houses", { order: { column: "created_at", ascending: false }, limit: 20 })
-//   dbSelect("users", { columns: "id", count: "exact", head: true })
+// ── SELECT через API ─────────────────────────────────────────────────────────
 
 export interface SelectOptions {
   columns?:     string;
@@ -144,7 +162,40 @@ export const dbSelect = <T = any>(
     head:        opts?.head,
   });
 
-// ── Зручні скорочення для match ─────────────────────────────────────────────
+// ── Pre-auth функції — всі через /api/auth ────────────────────────────────────
+
+export async function dbVerify(
+  nick: string,
+  password: string
+): Promise<Record<string, unknown> | null> {
+  const { data, error } = await callAuth({ op: "verify", nick, password });
+  if (error || !data) return null;
+  return data as Record<string, unknown>;
+}
+
+export async function dbCheckUser(nick: string): Promise<boolean> {
+  const res = await callAuth({ op: "checkUser", nick });
+  return res.exists === true;
+}
+
+export async function dbCheckTelegram(
+  nick: string
+): Promise<{ telegram_id?: string | null } | null> {
+  const { data } = await callAuth<{ telegram_id?: string | null }>({
+    op: "checkTelegram",
+    nick,
+  });
+  return data ?? null;
+}
+
+export async function dbRegister(
+  values: Record<string, unknown>
+): Promise<{ data: unknown; error: { message: string } | null }> {
+  const { data, error } = await callAuth({ op: "register", values });
+  return { data: data ?? null, error };
+}
+
+// ── Зручні скорочення для match ───────────────────────────────────────────────
 export const eq    = (value: unknown): Filter => ({ op: "eq",    value });
 export const neq   = (value: unknown): Filter => ({ op: "neq",   value });
 export const ilike = (value: unknown): Filter => ({ op: "ilike", value });
