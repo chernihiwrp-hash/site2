@@ -630,7 +630,9 @@ const App = () => {
       }
       setBanInfo(null);
       const isReg = localStorage.getItem("crp_registered") === "1";
-      setRegistered(isReg && !!nick);
+      const hasPassword = !!localStorage.getItem("crp_password");
+      // Якщо зареєстрований але немає пароля — примусово показуємо логін
+      setRegistered(isReg && !!nick && hasPassword);
     };
     checkBan();
   }, []);
