@@ -8,7 +8,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-type Op = "verify" | "checkUser" | "checkTelegram" | "register";
+type Op = "verify" | "checkUser" | "checkTelegram" | "register" | "upsert";
 
 interface Body {
   op: Op;
@@ -37,7 +37,7 @@ export default async function handler(req: any, res: any) {
   catch { return res.status(400).json({ error: "Invalid JSON" }); }
 
   const { op, nick, password, values } = body || {} as Body;
-  const ALLOWED: Op[] = ["verify", "checkUser", "checkTelegram", "register"];
+  const ALLOWED: Op[] = ["verify", "checkUser", "checkTelegram", "register", "upsert"];
   if (!op || !ALLOWED.includes(op))
     return res.status(400).json({ error: "Op not allowed" });
 
@@ -90,6 +90,20 @@ export default async function handler(req: any, res: any) {
 
     const { data, error } = await supabase
       .from("users").insert(values as any).select(SAFE_USER_COLUMNS);
+
+    if (error) return res.status(400).json({ error: error.message });
+    return res.status(200).json({ data: data ?? null });
+  }
+
+  if (op === "upsert") {
+    if (!values || typeof values !== "object")
+      return res.status(400).json({ error: "values required" });
+
+    // Тільки таблиця users дозволена через цей endpoint
+    const { data, error } = await supabase
+      .from("users")
+      .upsert(values as any, { onConflict: "username" })
+      .select(SAFE_USER_COLUMNS);
 
     if (error) return res.status(400).json({ error: error.message });
     return res.status(200).json({ data: data ?? null });
