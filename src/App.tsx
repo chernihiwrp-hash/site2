@@ -26,7 +26,7 @@ import NotFound from "./pages/NotFound";
 import BalanceTop from "./pages/BalanceTop";
 import Vip from "./pages/Vip";
 import { supabase } from "./lib/store";
-import { dbUpsert, dbSelect } from "./lib/db";
+import { dbSelect } from "./lib/db";
 import { User, CheckCircle, X, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react";
 import GradientButton from "./components/GradientButton";
 
@@ -233,22 +233,35 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
       return;
     }
 
-    // Зберігаємо в Supabase з паролем (через сервер, обхід RLS)
-    const { error: dbError } = await dbUpsert("users", {
-      username: nick.trim(),
-      telegram_id: tgUser ? String(tgUser.id) : null,
-      avatar_url: tgUser?.photo_url || null,
-      role: "player",
-      balance: 0,
-      password: password,
-    }, { onConflict: "username" });
-
-    if (!dbError) {
+    // Зберігаємо в Supabase з паролем (через /api/auth → service key, без потреби у crp_nick)
+    try {
+      const regRes = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          op: "upsert",
+          values: {
+            username: nick.trim(),
+            telegram_id: tgUser ? String(tgUser.id) : null,
+            avatar_url: tgUser?.photo_url || null,
+            role: "player",
+            balance: 0,
+            password: password,
+          },
+        }),
+      });
+      const regJson = await regRes.json().catch(() => ({}));
+      if (!regRes.ok) {
+        setError("Помилка реєстрації: " + (regJson?.error || `HTTP ${regRes.status}`));
+        setLoading(false);
+        return;
+      }
       localStorage.setItem("crp_registered", "1");
       localStorage.setItem("crp_nick", nick.trim());
+      localStorage.setItem("crp_password", password);
       onDone(nick.trim());
-    } else {
-      setError("Помилка реєстрації: " + dbError.message);
+    } catch (e: any) {
+      setError("Помилка реєстрації: " + (e?.message || "Network error"));
     }
     setLoading(false);
   };
