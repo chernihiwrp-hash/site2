@@ -1,7 +1,18 @@
-// ⚠️ Жодного anon-ключа у фронтенді більше немає.
-// Усі запити йдуть через /api/db (server-only SUPABASE_SERVICE_ROLE_KEY).
-import { supabase, dbInsert, dbUpdate, dbDelete, dbUpsert, eq, ilike } from './db';
-export { supabase, dbInsert, dbUpdate, dbDelete, dbUpsert, eq, ilike };
+// ⚠️ Никаких ключей в браузере. Всё (включая SELECT) идёт через /api/db,
+// который использует SUPABASE_SERVICE_ROLE_KEY на сервере Vercel.
+import {
+  supabase,
+  dbInsert, dbUpdate, dbDelete, dbUpsert,
+  dbVerify, dbCheckUser, dbCheckTelegram, dbRegister,
+  eq, ilike,
+} from './db';
+
+export {
+  supabase,
+  dbInsert, dbUpdate, dbDelete, dbUpsert,
+  dbVerify, dbCheckUser, dbCheckTelegram, dbRegister,
+  eq, ilike,
+};
 
 // Все мутации идут через сервер (api/db.ts) — обходит RLS через SERVICE_ROLE_KEY.
 const secureInsert = async (table: string, data: object): Promise<void> => {
