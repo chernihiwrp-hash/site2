@@ -28,7 +28,7 @@ export default async function handler(req: any, res: any) {
   if (req.method !== "POST")   return res.status(405).json({ error: "Method not allowed" });
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SERVICE_KEY  = process.env.SECRET_ROLE_KEY;
+  const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_KEY)
     return res.status(500).json({ error: "Server not configured" });
 
