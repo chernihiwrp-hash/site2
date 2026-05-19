@@ -18,7 +18,7 @@ interface Body {
 }
 
 const SAFE_USER_COLUMNS =
-  "id, username, role, balance, avatar_url, owned_themes, telegram_id, created_at";
+  "id, username, role, balance, avatar_url, owned_themes, telegram_id, theme, active_theme, registered_at, rare_balance, vip_expires_at, vip_duration, referral_code, referred_by, owned_gifts, favorites";
 
 export default async function handler(req: any, res: any) {
   res.setHeader("Access-Control-Allow-Origin", "*");
