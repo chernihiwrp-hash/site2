@@ -388,9 +388,9 @@ const App = () => {
       }
       setBanInfo(null);
       const isReg = localStorage.getItem("crp_registered") === "1";
-      const nick = localStorage.getItem("crp_nick") || "";
+      const savedNickCheck = localStorage.getItem("crp_nick") || "";
       const hasPassword = !!localStorage.getItem("crp_password");
-      setRegistered(isReg && !!nick && hasPassword);
+      setRegistered(isReg && !!savedNickCheck && hasPassword);
     };
     checkBan();
   }, []);
