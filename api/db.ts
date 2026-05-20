@@ -113,13 +113,12 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── 3.5. Захист критичних полів таблиці users ────────────────────────────
+  // ── 3.5. Захист таблиці users ────────────────────────────────────────────
   if (table === "users") {
-    const PROTECTED_FIELDS = ["role", "telegram_id", "is_banned", "balance", "rare_balance", "vip_expires_at", "vip_duration"];
     const ADMIN_USER_FIELDS = ["role", "telegram_id", "is_banned", "balance", "rare_balance", "vip_expires_at", "vip_duration"];
 
     if (!isSuperAdmin && userRow.role !== "admin") {
-      // Звичайний гравець не може змінювати захищені поля
+      // Гравець не може змінювати захищені поля (включно через upsert)
       if (values && typeof values === "object") {
         for (const field of ADMIN_USER_FIELDS) {
           if (field in (values as any)) {
@@ -127,12 +126,11 @@ export default async function handler(req: any, res: any) {
           }
         }
       }
-      // Гравець може робити update/delete тільки своїх записів
-      if ((op === "update" || op === "delete") && match) {
-        const matchKeys = Object.keys(match);
-        const hasOwnFilter = matchKeys.some(k =>
+      // Гравець може update/delete/upsert тільки свій запис
+      if ((op === "update" || op === "delete" || op === "upsert") && match) {
+        const hasOwnFilter = Object.entries(match).some(([k, cond]) =>
           k === "username" &&
-          String((match[k] as any).value).toLowerCase().trim() === normalizedNick
+          String((cond as any).value).toLowerCase().trim() === normalizedNick
         );
         if (!hasOwnFilter) {
           return res.status(403).json({ error: "Forbidden: can only modify your own user record" });
@@ -141,7 +139,7 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── 3.6. Захист статусів заявок — гравець не може сам собі прийняти заявку ─
+  // ── 3.6. Захист статусів заявок ───────────────────────────────────────────
   const STATUS_PROTECTED_TABLES = new Set([
     "admin_applications", "license_applications", "faction_applications",
     "house_purchase_requests", "mayor_candidate_applications",
@@ -153,6 +151,35 @@ export default async function handler(req: any, res: any) {
         if (field in (values as any)) {
           return res.status(403).json({ error: `Forbidden: cannot change "${field}" field` });
         }
+      }
+    }
+  }
+
+  // ── 3.7. Захист nft_owners і nft_gifts — гравець не може собі додати NFT ──
+  if ((table === "nft_owners" || table === "nft_gifts") && !isSuperAdmin && userRow.role !== "admin") {
+    // Тільки insert дозволений гравцям (отримати подарунок), але не змінювати owner
+    if (op === "update" || op === "delete") {
+      return res.status(403).json({ error: "Forbidden: cannot modify NFT records" });
+    }
+    // При insert перевіряємо що owner це сам гравець
+    if (op === "insert" && values && typeof values === "object") {
+      const owner = (values as any).owner_nick || (values as any).recipient_nick;
+      if (owner && String(owner).toLowerCase().trim() !== normalizedNick) {
+        return res.status(403).json({ error: "Forbidden: cannot assign NFT to another user" });
+      }
+    }
+  }
+
+  // ── 3.8. Захист wanted/sos_signals — delete тільки свого запису ──────────
+  const OWN_RECORD_TABLES = new Set(["wanted", "sos_signals", "city_voice", "notifications"]);
+  if (OWN_RECORD_TABLES.has(table) && !isSuperAdmin && userRow.role !== "admin") {
+    if (op === "delete" && match) {
+      const hasOwnFilter = Object.entries(match).some(([k, cond]) =>
+        (k === "username" || k === "nick" || k === "author") &&
+        String((cond as any).value).toLowerCase().trim() === normalizedNick
+      );
+      if (!hasOwnFilter) {
+        return res.status(403).json({ error: "Forbidden: can only delete your own records" });
       }
     }
   }
