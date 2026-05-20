@@ -1,16 +1,9 @@
 /**
- * ╔══════════════════════════════════════════════════════════════════╗
- * ║  /api/db-select.ts — захищений проксі для SELECT-запитів        ║
- * ║                                                                  ║
- * ║  ВИМАГАЄ заголовок x-role-key = SECRET_ROLE_KEY (Vercel env)   ║
- * ║  Виконується через SERVICE_ROLE_KEY — RLS обходиться на сервері ║
- * ║  Поля password, secret_* автоматично вирізаються з відповіді    ║
- * ╚══════════════════════════════════════════════════════════════════╝
+ * /api/db-select.ts — захищений проксі для SELECT-запитів
  */
 
 import { createClient } from "@supabase/supabase-js";
 
-// Таблиці, дозволені для читання
 const READABLE_TABLES = new Set<string>([
   "users","license_applications","car_plates","faction_applications",
   "admin_applications","admin_perms","house_purchase_requests","city_voice",
@@ -23,8 +16,18 @@ const READABLE_TABLES = new Set<string>([
 const ALLOWED_FILTERS  = new Set(["eq", "ilike", "in", "or", "is"]);
 const ALLOWED_ORDERS   = new Set(["asc", "desc"]);
 
-// Поля, які НІКОЛИ не повертаються клієнту незалежно від запиту
+// Поля які НІКОЛИ не повертаються — ні через columns, ні через *
 const STRIP_FIELDS = new Set(["password", "secret_key", "secret_token", "service_key"]);
+
+// ПАТЧ: колонки таблиці users які гравець не може читати для ЧУЖИХ акаунтів
+// Для свого акаунту — можна читати всі крім password
+const PRIVATE_USER_FIELDS = new Set([
+  "password", "telegram_id", "is_banned", "rare_balance",
+  "vip_expires_at", "vip_duration", "referral_code", "referred_by",
+]);
+
+// Публічні поля users — доступні всім для читання
+const PUBLIC_USER_COLUMNS = "id, username, role, balance, avatar_url, owned_themes, theme, active_theme, registered_at, owned_gifts, favorites";
 
 type FilterOp = "eq" | "ilike" | "in" | "or" | "is";
 type Filter = { col?: string; op: FilterOp; value: unknown };
@@ -33,15 +36,14 @@ interface SelectBody {
   nick:       string;
   password:   string;
   table:      string;
-  columns?:   string;          // "id, username, balance" або "*"
+  columns?:   string;
   filters?:   Filter[];
   order?:     { col: string; dir?: "asc" | "desc" };
   limit?:     number;
-  single?:    boolean;         // maybeSingle()
-  count?:     boolean;         // head-only count
+  single?:    boolean;
+  count?:     boolean;
 }
 
-/** Видаляє заборонені поля з об'єкта або масиву об'єктів */
 function stripSensitive(data: unknown): unknown {
   if (Array.isArray(data)) return data.map(stripSensitive);
   if (data && typeof data === "object") {
@@ -77,10 +79,8 @@ export default async function handler(req: any, res: any) {
 
   const { nick, password, filters, order, single, count } = body || {} as SelectBody;
   const table   = String(body?.table || "").trim();
-  const columns = String(body?.columns || "*").trim();
   const limit   = typeof body?.limit === "number" ? Math.min(body.limit, 1000) : undefined;
 
-  // ── 1. Базова валідація ────────────────────────────────────────────────────
   if (!nick || !password) {
     return res.status(401).json({ error: "Unauthorized: no credentials" });
   }
@@ -88,7 +88,6 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: `Table not allowed: ${table || "empty"}` });
   }
 
-  // ── 2. Перевірка нік/пароль ────────────────────────────────────────────────
   const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -106,9 +105,37 @@ export default async function handler(req: any, res: any) {
     return res.status(401).json({ error: "Unauthorized: wrong password" });
   }
 
-  // ── 3. Виконання SELECT ────────────────────────────────────────────────────
+  const normalizedNick = userRow.username.toLowerCase().trim();
+  const isAdmin = userRow.role === "admin" || userRow.role === "superadmin";
+
+  // ── ПАТЧ: Визначаємо columns безпечно ──────────────────────────────────
+  // Раніше columns йшов напряму в .select() без жодних перевірок
+  // Гравець міг запросити "username, password" і отримати паролі всіх
+  let columns: string;
+
+  if (table === "users" && !isAdmin) {
+    // Перевіряємо чи гравець читає тільки свій акаунт
+    const isSelfQuery = filters && filters.some(f =>
+      (f.col === "username") &&
+      f.op === "eq" &&
+      String(f.value).toLowerCase().trim() === normalizedNick
+    );
+
+    if (isSelfQuery) {
+      // Свій акаунт — всі поля крім password
+      columns = PUBLIC_USER_COLUMNS + ", telegram_id, is_banned, rare_balance, vip_expires_at, vip_duration, referral_code, referred_by";
+    } else {
+      // Чужі акаунти — тільки публічні поля
+      columns = PUBLIC_USER_COLUMNS;
+    }
+  } else if (isAdmin) {
+    // Адмін може запросити будь-які columns, але password все одно вирізається
+    columns = String(body?.columns || "*").trim();
+  } else {
+    columns = String(body?.columns || "*").trim();
+  }
+
   try {
-    // Якщо count-only — повертаємо лише count
     if (count) {
       let q: any = supabaseAdmin.from(table).select(columns, { count: "exact", head: true });
       if (filters) {
@@ -151,7 +178,7 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: error.message });
     }
 
-    // Завжди вирізаємо чутливі поля перед відповіддю
+    // Завжди вирізаємо чутливі поля — остання лінія захисту
     return res.status(200).json({ data: stripSensitive(data) ?? null });
   } catch (e: any) {
     console.error("[api/db-select] exception:", e?.message);
