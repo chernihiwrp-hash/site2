@@ -73,7 +73,7 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ op: "verify", nick: savedNick, password }),
+        body: JSON.stringify({ op: "verify", nick: savedNick, password, tgId: String(getTelegramUser()?.id || "") }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
