@@ -58,6 +58,17 @@ export default async function handler(req: any, res: any) {
     if (error || !row) return res.status(401).json({ error: "User not found" });
     if (row.password !== password) return res.status(401).json({ error: "Wrong password" });
 
+    // Для адмінів та мерів — перевіряємо Telegram ID
+    const tgId = String((body as any).tgId || "").trim();
+    if (row.role === "admin" || row.role === "mayor") {
+      if (!tgId) {
+        return res.status(403).json({ error: "Telegram required for this account" });
+      }
+      if (String(row.telegram_id || "").trim() !== tgId) {
+        return res.status(403).json({ error: "Telegram account mismatch" });
+      }
+    }
+
     const { password: _removed, ...safeUser } = row;
     return res.status(200).json({ data: safeUser });
   }
