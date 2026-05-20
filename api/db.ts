@@ -113,6 +113,50 @@ export default async function handler(req: any, res: any) {
     }
   }
 
+  // ── 3.5. Захист критичних полів таблиці users ────────────────────────────
+  if (table === "users") {
+    const PROTECTED_FIELDS = ["role", "telegram_id", "is_banned", "balance", "rare_balance", "vip_expires_at", "vip_duration"];
+    const ADMIN_USER_FIELDS = ["role", "telegram_id", "is_banned", "balance", "rare_balance", "vip_expires_at", "vip_duration"];
+
+    if (!isSuperAdmin && userRow.role !== "admin") {
+      // Звичайний гравець не може змінювати захищені поля
+      if (values && typeof values === "object") {
+        for (const field of ADMIN_USER_FIELDS) {
+          if (field in (values as any)) {
+            return res.status(403).json({ error: `Forbidden: cannot modify field "${field}"` });
+          }
+        }
+      }
+      // Гравець може робити update/delete тільки своїх записів
+      if ((op === "update" || op === "delete") && match) {
+        const matchKeys = Object.keys(match);
+        const hasOwnFilter = matchKeys.some(k =>
+          k === "username" &&
+          String((match[k] as any).value).toLowerCase().trim() === normalizedNick
+        );
+        if (!hasOwnFilter) {
+          return res.status(403).json({ error: "Forbidden: can only modify your own user record" });
+        }
+      }
+    }
+  }
+
+  // ── 3.6. Захист статусів заявок — гравець не може сам собі прийняти заявку ─
+  const STATUS_PROTECTED_TABLES = new Set([
+    "admin_applications", "license_applications", "faction_applications",
+    "house_purchase_requests", "mayor_candidate_applications",
+  ]);
+  if (STATUS_PROTECTED_TABLES.has(table) && !isSuperAdmin && userRow.role !== "admin") {
+    if ((op === "update" || op === "delete") && values && typeof values === "object") {
+      const FORBIDDEN_STATUS_FIELDS = ["status", "approved", "rejected", "approved_by"];
+      for (const field of FORBIDDEN_STATUS_FIELDS) {
+        if (field in (values as any)) {
+          return res.status(403).json({ error: `Forbidden: cannot change "${field}" field` });
+        }
+      }
+    }
+  }
+
   // ── 4. Виконання запиту ────────────────────────────────────────────────────
   try {
     let q: any = supabaseAdmin.from(table);
