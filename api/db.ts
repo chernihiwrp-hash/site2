@@ -98,26 +98,67 @@ export default async function handler(req: any, res: any) {
   // ── 3. Перевірка прав доступу до таблиці ──────────────────────────────────
   const normalizedNick = userRow.username.toLowerCase().trim();
   const isSuperAdmin   = normalizedNick === SUPER_ADMIN_NICK.toLowerCase();
+  const isAdmin        = isSuperAdmin || userRow.role === "admin";
 
-  if (ADMIN_ONLY_TABLES.has(table)) {
-    if (!isSuperAdmin && userRow.role !== "admin") {
-      const { data: permRow } = await supabaseAdmin
-        .from("admin_perms")
-        .select("perms")
-        .ilike("nick", nick.trim())
-        .maybeSingle();
+  // Маппінг таблиця → perm key
+  const TABLE_PERM_MAP: Record<string, string> = {
+    "sos_signals":                  "sos",
+    "news":                         "news",
+    "houses":                       "houses",
+    "house_confiscations":          "houses",
+    "house_purchase_requests":      "house_requests",
+    "wanted":                       "wanted",
+    "bans":                         "bans",
+    "nft_gifts":                    "nft",
+    "nft_owners":                   "nft",
+    "recruitment_settings":         "recruitment",
+    "factions":                     "manage_factions",
+    "faction_leaders":              "manage_factions",
+    "faction_overrides":            "manage_factions",
+    "faction_applications":         "factions",
+    "mayor_election":               "election",
+    "mayor_candidate_applications": "mayor_apps",
+    "documents":                    "documents",
+    "admin_perms":                  "debug",
+    "admin_applications":           "applications",
+    "license_applications":         "licenses",
+    "car_plates":                   "plates",
+    "city_voice":                   "voice",
+    "house_families":               "houses",
+    "notifications":                "sos",
+  };
 
-      if (!permRow) {
-        return res.status(403).json({ error: "Forbidden: admin access required" });
-      }
+  if (ADMIN_ONLY_TABLES.has(table) && !isAdmin) {
+    // Перевіряємо конкретний perm з admin_perms
+    const requiredPerm = TABLE_PERM_MAP[table];
+    const { data: permRow } = await supabaseAdmin
+      .from("admin_perms")
+      .select("perms")
+      .eq("username", normalizedNick)
+      .maybeSingle();
+    const adminPerms = (permRow?.perms as Record<string, boolean>) || {};
+    if (!requiredPerm || !adminPerms[requiredPerm]) {
+      return res.status(403).json({ error: `Forbidden: missing permission "${requiredPerm || table}"` });
     }
   }
+
+  // Для перевірок нижче — чи є хоч якийсь perm
+  let adminPermsGlobal: Record<string, boolean> = {};
+  if (!isAdmin) {
+    const { data: permRow } = await supabaseAdmin
+      .from("admin_perms")
+      .select("perms")
+      .eq("username", normalizedNick)
+      .maybeSingle();
+    adminPermsGlobal = (permRow?.perms as Record<string, boolean>) || {};
+  }
+  const hasAnyAdminPerm = isAdmin || Object.values(adminPermsGlobal).some(Boolean);
 
   // ── 3.5. Захист таблиці users ────────────────────────────────────────────
   if (table === "users") {
     const ADMIN_USER_FIELDS = ["role", "telegram_id", "is_banned", "balance", "rare_balance", "vip_expires_at", "vip_duration"];
 
-    if (!isSuperAdmin && userRow.role !== "admin") {
+    if (!hasAnyAdminPerm) {
       // Гравець не може змінювати захищені поля (включно через upsert)
       if (values && typeof values === "object") {
         for (const field of ADMIN_USER_FIELDS) {
@@ -144,7 +185,7 @@ export default async function handler(req: any, res: any) {
     "admin_applications", "license_applications", "faction_applications",
     "house_purchase_requests", "mayor_candidate_applications",
   ]);
-  if (STATUS_PROTECTED_TABLES.has(table) && !isSuperAdmin && userRow.role !== "admin") {
+  if (STATUS_PROTECTED_TABLES.has(table) && !hasAnyAdminPerm) {
     if ((op === "update" || op === "delete") && values && typeof values === "object") {
       const FORBIDDEN_STATUS_FIELDS = ["status", "approved", "rejected", "approved_by"];
       for (const field of FORBIDDEN_STATUS_FIELDS) {
@@ -156,7 +197,7 @@ export default async function handler(req: any, res: any) {
   }
 
   // ── 3.7. Захист nft_owners і nft_gifts — гравець не може собі додати NFT ──
-  if ((table === "nft_owners" || table === "nft_gifts") && !isSuperAdmin && userRow.role !== "admin") {
+  if ((table === "nft_owners" || table === "nft_gifts") && !hasAnyAdminPerm) {
     // Тільки insert дозволений гравцям (отримати подарунок), але не змінювати owner
     if (op === "update" || op === "delete") {
       return res.status(403).json({ error: "Forbidden: cannot modify NFT records" });
@@ -172,7 +213,7 @@ export default async function handler(req: any, res: any) {
 
   // ── 3.8. Захист wanted/sos_signals — delete тільки свого запису ──────────
   const OWN_RECORD_TABLES = new Set(["wanted", "sos_signals", "city_voice", "notifications"]);
-  if (OWN_RECORD_TABLES.has(table) && !isSuperAdmin && userRow.role !== "admin") {
+  if (OWN_RECORD_TABLES.has(table) && !hasAnyAdminPerm) {
     if (op === "delete" && match) {
       const hasOwnFilter = Object.entries(match).some(([k, cond]) =>
         (k === "username" || k === "nick" || k === "author") &&
