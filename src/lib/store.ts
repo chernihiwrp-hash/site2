@@ -272,17 +272,23 @@ export const store = {
       photos: r.image_url ? [r.image_url as string] : [], rental_days: 0,
     }));
     if (username) {
-      const { data: requests } = await dbSelect("house_purchase_requests", {
-        columns: "house_id, rental_days",
-        filters: [
-          { col: "username", op: "eq", value: username },
-          { col: "status", op: "eq", value: "approved" },
-        ],
-      });
-      if (requests && requests.length > 0) {
-        const rentalMap = new Map(requests.map(req => [req.house_id, req.rental_days]));
-        return allHouses.map(h => ({ ...h, rental_days: rentalMap.get(h.id) || 0 }));
+      // Тільки будинки де owner_username збігається з username
+      const myHouses = allHouses.filter(h =>
+        h.owner && h.owner.toLowerCase() === username.toLowerCase()
+      );
+      if (myHouses.length > 0) {
+        // Додаємо rental_days з заявок
+        const { data: requests } = await dbSelect("house_purchase_requests", {
+          columns: "house_id, rental_days",
+          filters: [
+            { col: "username", op: "eq", value: username },
+            { col: "status", op: "eq", value: "approved" },
+          ],
+        });
+        const rentalMap = new Map((requests || []).map((req: any) => [req.house_id, req.rental_days]));
+        return myHouses.map(h => ({ ...h, rental_days: rentalMap.get(h.id) || 0 }));
       }
+      return [];
     }
     return allHouses;
   },
