@@ -707,15 +707,4 @@ const App = () => {
               <Route path="/admin-panel" element={<AdminPanel />} />
              <Route path="/profile" element={<Profile />} />
              <Route path="/top" element={<BalanceTop />} />
-             <Route path="/vip" element={<Vip />} />
-             <Route path="*" element={<NotFound />} />
-            </Routes>
-            <BottomNav />
-          </div>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-};
-
-export default App;
+             <Route path="/vip" element={<Vip 
