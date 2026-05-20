@@ -56,22 +56,14 @@ function stripSensitive(data: unknown): unknown {
 export default async function handler(req: any, res: any) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-role-key");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST")   return res.status(405).json({ error: "Method not allowed" });
 
   const SUPABASE_URL    = process.env.SUPABASE_URL;
   const SERVICE_KEY     = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const SECRET_ROLE_KEY = process.env.SECRET_ROLE_KEY;
-
-  // ── 0. Перевірка SECRET_ROLE_KEY ──────────────────────────────────────────
-  if (!SECRET_ROLE_KEY) {
-    return res.status(500).json({ error: "Server not configured (SECRET_ROLE_KEY missing)" });
-  }
-  const incomingKey = req.headers["x-role-key"];
-  if (!incomingKey || incomingKey !== SECRET_ROLE_KEY) {
-    return res.status(403).json({ error: "Forbidden" });
+  );
   }
 
   if (!SUPABASE_URL || !SERVICE_KEY) {
