@@ -59,18 +59,23 @@ const Documents = () => {
                   <div className="mt-3 liquid-glass rounded-xl p-3 animate-fade-in">
                     <p className="text-[11px] text-foreground whitespace-pre-wrap leading-relaxed">{d.content}</p>
                     {d.button_text && d.button_url && (
-                      <a
-                        href={d.button_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={e => e.stopPropagation()}
-                        className="mt-3 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95"
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          const tg = (window as any).Telegram?.WebApp;
+                          if (tg?.openLink) {
+                            tg.openLink(d.button_url);
+                          } else {
+                            window.open(d.button_url, "_blank");
+                          }
+                        }}
+                        className="mt-3 w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95"
                         style={{ background: "hsl(var(--primary) / 0.15)", border: "1px solid hsl(var(--primary) / 0.3)", color: "hsl(var(--primary))" }}
                       >
                         <Link className="w-3.5 h-3.5 shrink-0" />
                         {d.button_text}
                         <ExternalLink className="w-3 h-3 ml-auto shrink-0 opacity-60" />
-                      </a>
+                      </button>
                     )}
                   </div>
                 )}
