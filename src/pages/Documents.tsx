@@ -56,18 +56,25 @@ const Documents = () => {
                     : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
                 </div>
                 {openId === d.id && (
-                  <div className="mt-3 liquid-glass rounded-xl p-3 animate-fade-in">
+                  <div
+                    className="mt-3 liquid-glass rounded-xl p-3 animate-fade-in"
+                    onClick={e => e.stopPropagation()}
+                    onTouchEnd={e => e.stopPropagation()}
+                  >
                     <p className="text-[11px] text-foreground whitespace-pre-wrap leading-relaxed">{d.content}</p>
                     {d.button_text && d.button_url && (
                       <button
                         onClick={e => {
                           e.stopPropagation();
                           const tg = (window as any).Telegram?.WebApp;
-                          if (tg?.openLink) {
-                            tg.openLink(d.button_url);
-                          } else {
-                            window.open(d.button_url, "_blank");
-                          }
+                          if (tg?.openLink) tg.openLink(d.button_url);
+                          else window.open(d.button_url, "_blank");
+                        }}
+                        onTouchEnd={e => {
+                          e.stopPropagation();
+                          const tg = (window as any).Telegram?.WebApp;
+                          if (tg?.openLink) tg.openLink(d.button_url);
+                          else window.open(d.button_url, "_blank");
                         }}
                         className="mt-3 w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95"
                         style={{ background: "hsl(var(--primary) / 0.15)", border: "1px solid hsl(var(--primary) / 0.3)", color: "hsl(var(--primary))" }}
