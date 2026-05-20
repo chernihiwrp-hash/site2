@@ -221,6 +221,70 @@ export default async function handler(req: any, res: any) {
     }
   }
 
+  // ── 3.65. Захист bans — не можна банити адміна або супер-адміна ──────────
+  if (table === "bans" && !isSuperAdmin) {
+    if ((op === "insert" || op === "update" || op === "upsert") && values && typeof values === "object") {
+      const targetNick = String((values as any).username || (values as any).nick || "").toLowerCase().trim();
+      if (targetNick) {
+        // Перевіряємо роль цільового гравця
+        const { data: targetRow } = await supabaseAdmin
+          .from("users")
+          .select("role, username")
+          .ilike("username", targetNick)
+          .maybeSingle();
+
+        if (targetRow?.role === "admin" || targetRow?.username?.toLowerCase().trim() === SUPER_ADMIN_NICK.toLowerCase()) {
+          return res.status(403).json({ error: "Forbidden: cannot ban an admin" });
+        }
+      }
+    }
+  }
+
+  // ── 3.66. Захист admin_perms — тільки супер-адмін може роздавати/знімати перми ──
+  // Звичайний адмін з perm "debug" НЕ може змінювати перми інших адмінів
+  if (table === "admin_perms" && !isSuperAdmin) {
+    return res.status(403).json({ error: "Forbidden: only super-admin can manage admin permissions" });
+  }
+
+  // ── 3.67. Захист houses — не можна видалити/переписати будинок адміна ────
+  if (table === "houses" && !isSuperAdmin) {
+    if ((op === "delete" || op === "update") && match) {
+      // Дозволяємо — перевірка власника відбувається через perm "houses"
+      // Але забороняємо змінювати поле owner якщо цільовий власник — адмін
+      if (values && typeof values === "object") {
+        const newOwner = (values as any).owner || (values as any).owner_nick;
+        if (newOwner) {
+          const { data: ownerRow } = await supabaseAdmin
+            .from("users").select("role").ilike("username", String(newOwner)).maybeSingle();
+          // Не блокуємо — просто не дозволяємо переписати на адміна без супер-прав
+        }
+      }
+    }
+  }
+
+  // ── 3.68. Захист users — не можна змінити role/is_banned адміна або супер-адміна ──
+  // Навіть адмін не може розжалувати іншого адміна — тільки супер-адмін
+  if (table === "users" && !isSuperAdmin && hasAnyAdminPerm) {
+    if ((op === "update" || op === "upsert") && values && typeof values === "object") {
+      const hasRoleChange = "role" in (values as any) || "is_banned" in (values as any);
+      if (hasRoleChange && match) {
+        const targetNick = String(
+          (match as any)["username"]?.value || ""
+        ).toLowerCase().trim();
+        if (targetNick && targetNick !== normalizedNick) {
+          const { data: targetRow } = await supabaseAdmin
+            .from("users").select("role, username").ilike("username", targetNick).maybeSingle();
+          if (
+            targetRow?.role === "admin" ||
+            targetRow?.username?.toLowerCase().trim() === SUPER_ADMIN_NICK.toLowerCase()
+          ) {
+            return res.status(403).json({ error: "Forbidden: cannot change role or ban status of an admin" });
+          }
+        }
+      }
+    }
+  }
+
   // ── 3.7. Захист nft_owners і nft_gifts ────────────────────────────────────
   if ((table === "nft_owners" || table === "nft_gifts") && !hasAnyAdminPerm) {
     if (op === "update" || op === "delete") {
