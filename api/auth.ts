@@ -1,10 +1,3 @@
-/**
- * /api/auth.ts — verify, checkUser, checkTelegram, register
- *
- * VERCEL ENV VARS:
- *   SUPABASE_URL    — URL проєкту Supabase
- *   SECRET_ROLE_KEY — service_role key (БЕЗ VITE_ префіксу!)
- */
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -19,6 +12,13 @@ interface Body {
 
 const SAFE_USER_COLUMNS =
   "id, username, role, balance, avatar_url, owned_themes, telegram_id, theme, active_theme, registered_at, rare_balance, vip_expires_at, vip_duration, referral_code, referred_by, owned_gifts, favorites";
+
+// ПАТЧ: поля які гравець не може встановити через upsert/register
+// Раніше upsert не мав жодних перевірок — можна було передати role: "admin"
+const FORBIDDEN_USER_FIELDS = new Set([
+  "role", "is_banned", "balance", "rare_balance",
+  "vip_expires_at", "vip_duration", "telegram_id",
+]);
 
 export default async function handler(req: any, res: any) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -91,6 +91,13 @@ export default async function handler(req: any, res: any) {
     if (!values || typeof values !== "object")
       return res.status(400).json({ error: "values required" });
 
+    // ПАТЧ: блокуємо захищені поля при реєстрації
+    for (const field of FORBIDDEN_USER_FIELDS) {
+      if (field in values) {
+        return res.status(403).json({ error: `Forbidden: cannot set field "${field}" during registration` });
+      }
+    }
+
     const checkNick = (values as any).username || (values as any).nick;
     if (checkNick) {
       const { data: existing } = await supabase
@@ -110,7 +117,39 @@ export default async function handler(req: any, res: any) {
     if (!values || typeof values !== "object")
       return res.status(400).json({ error: "values required" });
 
-    // Тільки таблиця users дозволена через цей endpoint
+    // ПАТЧ: раніше цього не було взагалі — гравець міг передати role: "admin"
+    // і воно просто записувалось в БД без жодних перевірок
+    for (const field of FORBIDDEN_USER_FIELDS) {
+      if (field in values) {
+        return res.status(403).json({ error: `Forbidden: cannot set field "${field}"` });
+      }
+    }
+
+    // ПАТЧ: гравець може upsert тільки свій запис
+    // Перевіряємо що nick/password присутні і upsert стосується саме цього юзера
+    if (!nick || !password) {
+      return res.status(401).json({ error: "Unauthorized: nick and password required for upsert" });
+    }
+
+    const { data: userRow, error: userErr } = await supabase
+      .from("users")
+      .select("username, password")
+      .ilike("username", nick.trim())
+      .maybeSingle();
+
+    if (userErr || !userRow) {
+      return res.status(401).json({ error: "Unauthorized: user not found" });
+    }
+    if (userRow.password !== password) {
+      return res.status(401).json({ error: "Unauthorized: wrong password" });
+    }
+
+    // Upsert тільки свого запису — username у values має співпадати з авторизованим
+    const targetUsername = String((values as any).username || "").toLowerCase().trim();
+    if (targetUsername && targetUsername !== userRow.username.toLowerCase().trim()) {
+      return res.status(403).json({ error: "Forbidden: can only upsert your own record" });
+    }
+
     const { data, error } = await supabase
       .from("users")
       .upsert(values as any, { onConflict: "username" })
