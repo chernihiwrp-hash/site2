@@ -1,5 +1,3 @@
-
-
 import { createClient } from "@supabase/supabase-js";
 
 const ALLOWED_TABLES = new Set<string>([
@@ -200,12 +198,12 @@ export default async function handler(req: any, res: any) {
   }
 
   // ── 3.6. Захист статусів заявок ───────────────────────────────────────────
-  // ПАТЧ: додано "upsert" — раніше гравець міг зробити upsert зі status=approved
+  // ПАТЧ: insert теж перевіряється — гравець не може одразу вставити заявку зі status=approved
   if (STATUS_PROTECTED_TABLES.has(table) && !hasAnyAdminPerm) {
-    if ((op === "update" || op === "delete" || op === "upsert") && values && typeof values === "object") {
+    if (values && typeof values === "object") {
       for (const field of FORBIDDEN_STATUS_FIELDS) {
         if (field in (values as any)) {
-          return res.status(403).json({ error: `Forbidden: cannot change "${field}" field` });
+          return res.status(403).json({ error: `Forbidden: cannot set "${field}" field` });
         }
       }
     }
