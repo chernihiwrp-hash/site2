@@ -1,3 +1,10 @@
+/**
+ * /api/auth.ts — verify, checkUser, checkTelegram, register, upsert
+ *
+ * VERCEL ENV VARS:
+ *   SUPABASE_URL    — URL проєкту Supabase
+ *   SECRET_ROLE_KEY — service_role key (БЕЗ VITE_ префіксу!)
+ */
 
 import { createClient } from "@supabase/supabase-js";
 
