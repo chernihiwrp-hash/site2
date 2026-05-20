@@ -28,6 +28,19 @@ const ADMIN_ONLY_TABLES = new Set<string>([
 
 const SUPER_ADMIN_NICK = "t1kron1x";
 
+// ── Таблиці заявок — гравець може тільки insert свою заявку ──────────────────
+// update/delete/upsert статусних полів — тільки адміни
+const STATUS_PROTECTED_TABLES = new Set([
+  "admin_applications", "license_applications", "faction_applications",
+  "house_purchase_requests", "mayor_candidate_applications",
+]);
+
+// Поля у заявках, які може змінювати тільки адмін
+const FORBIDDEN_STATUS_FIELDS = new Set(["status", "approved", "rejected", "approved_by"]);
+
+// Таблиці де гравець може видаляти тільки свій запис
+const OWN_RECORD_TABLES = new Set(["wanted", "sos_signals", "city_voice", "notifications"]);
+
 type Match = Record<string, { op: "eq" | "ilike"; value: unknown }> | undefined;
 
 interface Body {
@@ -77,6 +90,12 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: "Op not allowed" });
   }
 
+  // ── ПАТЧ: delete/update БЕЗ match — забороняємо завжди ───────────────────
+  // Без цього будь-який гравець міг передати delete без match і стерти всю таблицю
+  if ((op === "delete" || op === "update") && (!match || Object.keys(match).length === 0)) {
+    return res.status(400).json({ error: `match is required for "${op}" operation` });
+  }
+
   // ── 2. Перевірка нік/пароль у Supabase ────────────────────────────────────
   const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -100,7 +119,6 @@ export default async function handler(req: any, res: any) {
   const isSuperAdmin   = normalizedNick === SUPER_ADMIN_NICK.toLowerCase();
   const isAdmin        = isSuperAdmin || userRow.role === "admin";
 
-  // Маппінг таблиця → perm key
   const TABLE_PERM_MAP: Record<string, string> = {
     "sos_signals":                  "sos",
     "news":                         "news",
@@ -129,7 +147,6 @@ export default async function handler(req: any, res: any) {
   };
 
   if (ADMIN_ONLY_TABLES.has(table) && !isAdmin) {
-    // Перевіряємо конкретний perm з admin_perms
     const requiredPerm = TABLE_PERM_MAP[table];
     const { data: permRow } = await supabaseAdmin
       .from("admin_perms")
@@ -142,7 +159,6 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // Для перевірок нижче — чи є хоч якийсь perm
   let adminPermsGlobal: Record<string, boolean> = {};
   if (!isAdmin) {
     const { data: permRow } = await supabaseAdmin
@@ -159,7 +175,6 @@ export default async function handler(req: any, res: any) {
     const ADMIN_USER_FIELDS = ["role", "telegram_id", "is_banned", "balance", "rare_balance", "vip_expires_at", "vip_duration"];
 
     if (!hasAnyAdminPerm) {
-      // Гравець не може змінювати захищені поля (включно через upsert)
       if (values && typeof values === "object") {
         for (const field of ADMIN_USER_FIELDS) {
           if (field in (values as any)) {
@@ -168,7 +183,11 @@ export default async function handler(req: any, res: any) {
         }
       }
       // Гравець може update/delete/upsert тільки свій запис
-      if ((op === "update" || op === "delete" || op === "upsert") && match) {
+      // ПАТЧ: перевіряємо match навіть якщо він є — раніше при відсутності match перевірка пропускалась
+      if (op === "update" || op === "delete" || op === "upsert") {
+        if (!match || Object.keys(match).length === 0) {
+          return res.status(403).json({ error: "Forbidden: match with own username is required" });
+        }
         const hasOwnFilter = Object.entries(match).some(([k, cond]) =>
           k === "username" &&
           String((cond as any).value).toLowerCase().trim() === normalizedNick
@@ -181,41 +200,52 @@ export default async function handler(req: any, res: any) {
   }
 
   // ── 3.6. Захист статусів заявок ───────────────────────────────────────────
-  const STATUS_PROTECTED_TABLES = new Set([
-    "admin_applications", "license_applications", "faction_applications",
-    "house_purchase_requests", "mayor_candidate_applications",
-  ]);
+  // ПАТЧ: додано "upsert" — раніше гравець міг зробити upsert зі status=approved
   if (STATUS_PROTECTED_TABLES.has(table) && !hasAnyAdminPerm) {
-    if ((op === "update" || op === "delete") && values && typeof values === "object") {
-      const FORBIDDEN_STATUS_FIELDS = ["status", "approved", "rejected", "approved_by"];
+    if ((op === "update" || op === "delete" || op === "upsert") && values && typeof values === "object") {
       for (const field of FORBIDDEN_STATUS_FIELDS) {
         if (field in (values as any)) {
           return res.status(403).json({ error: `Forbidden: cannot change "${field}" field` });
         }
       }
     }
+
+    // ПАТЧ: гравець може тільки insert свою заявку — не може змінювати чужі
+    if ((op === "update" || op === "delete" || op === "upsert") && match) {
+      const ownerFields = ["username", "nick", "player_nick", "author"];
+      const hasOwnFilter = Object.entries(match).some(([k, cond]) =>
+        ownerFields.includes(k) &&
+        String((cond as any).value).toLowerCase().trim() === normalizedNick
+      );
+      if (!hasOwnFilter) {
+        return res.status(403).json({ error: "Forbidden: can only modify your own application" });
+      }
+    }
   }
 
-  // ── 3.7. Захист nft_owners і nft_gifts — гравець не може собі додати NFT ──
+  // ── 3.7. Захист nft_owners і nft_gifts ────────────────────────────────────
   if ((table === "nft_owners" || table === "nft_gifts") && !hasAnyAdminPerm) {
-    // Тільки insert дозволений гравцям (отримати подарунок), але не змінювати owner
     if (op === "update" || op === "delete") {
       return res.status(403).json({ error: "Forbidden: cannot modify NFT records" });
     }
-    // При insert перевіряємо що owner це сам гравець
     if (op === "insert" && values && typeof values === "object") {
       const owner = (values as any).owner_nick || (values as any).recipient_nick;
       if (owner && String(owner).toLowerCase().trim() !== normalizedNick) {
         return res.status(403).json({ error: "Forbidden: cannot assign NFT to another user" });
       }
     }
+    // ПАТЧ: upsert заборонений для NFT гравцям
+    if (op === "upsert") {
+      return res.status(403).json({ error: "Forbidden: cannot upsert NFT records" });
+    }
   }
 
   // ── 3.8. Захист wanted/sos_signals — delete тільки свого запису ──────────
-  const OWN_RECORD_TABLES = new Set(["wanted", "sos_signals", "city_voice", "notifications"]);
+  // ПАТЧ: раніше при відсутності match перевірка пропускалась → delete всієї таблиці
   if (OWN_RECORD_TABLES.has(table) && !hasAnyAdminPerm) {
-    if (op === "delete" && match) {
-      const hasOwnFilter = Object.entries(match).some(([k, cond]) =>
+    if (op === "delete") {
+      // match вже перевірений вище (обов'язковий для delete), але перевіряємо власника
+      const hasOwnFilter = Object.entries(match!).some(([k, cond]) =>
         (k === "username" || k === "nick" || k === "author") &&
         String((cond as any).value).toLowerCase().trim() === normalizedNick
       );
