@@ -34,7 +34,10 @@ const STATUS_PROTECTED_TABLES = new Set([
 ]);
 
 // Поля у заявках, які може змінювати тільки адмін
+// При insert — дозволяємо status="pending", блокуємо тільки approved/rejected
+// При update/upsert — status взагалі заборонено без прав
 const FORBIDDEN_STATUS_FIELDS = new Set(["status", "approved", "rejected", "approved_by"]);
+const APPROVED_INSERT_STATUSES = new Set(["pending", "review"]);
 
 // Таблиці де гравець може видаляти тільки свій запис
 const OWN_RECORD_TABLES = new Set(["wanted", "sos_signals", "city_voice", "notifications"]);
@@ -198,12 +201,27 @@ export default async function handler(req: any, res: any) {
   }
 
   // ── 3.6. Захист статусів заявок ───────────────────────────────────────────
-  // ПАТЧ: insert теж перевіряється — гравець не може одразу вставити заявку зі status=approved
   if (STATUS_PROTECTED_TABLES.has(table) && !hasAnyAdminPerm) {
     if (values && typeof values === "object") {
-      for (const field of FORBIDDEN_STATUS_FIELDS) {
-        if (field in (values as any)) {
-          return res.status(403).json({ error: `Forbidden: cannot set "${field}" field` });
+      if (op === "insert") {
+        // При insert — дозволяємо тільки status="pending"/"review"
+        // Гравець НЕ може одразу вставити заявку зі status=approved
+        const statusVal = String((values as any)["status"] || "").toLowerCase().trim();
+        if ("status" in (values as any) && !APPROVED_INSERT_STATUSES.has(statusVal)) {
+          return res.status(403).json({ error: `Forbidden: cannot insert with status="${statusVal}"` });
+        }
+        // Поля approved/rejected/approved_by заблоковані завжди
+        for (const field of ["approved", "rejected", "approved_by"]) {
+          if (field in (values as any)) {
+            return res.status(403).json({ error: `Forbidden: cannot set "${field}" field` });
+          }
+        }
+      } else {
+        // update/upsert — status взагалі заборонений без прав
+        for (const field of FORBIDDEN_STATUS_FIELDS) {
+          if (field in (values as any)) {
+            return res.status(403).json({ error: `Forbidden: cannot change "${field}" field` });
+          }
         }
       }
     }
