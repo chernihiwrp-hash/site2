@@ -1,8 +1,9 @@
 // /api/db.ts — захищений проксі для INSERT/UPDATE/DELETE/UPSERT.
-// Зміни проти попередньої версії описано в AUDIT.md.
+// v2: bcrypt-пароли, узкий CORS, нейтрализация текста ошибок.
 
 import { createClient } from "@supabase/supabase-js";
 import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger.js";
+import { verifyCredentials, applyCors, safeDbError } from "./_auth.js";
 
 const ALLOWED_TABLES = new Set<string>([
   "users","license_applications","car_plates","faction_applications",
@@ -11,7 +12,6 @@ const ALLOWED_TABLES = new Set<string>([
   "mayor_election","nft_gifts","nft_owners","news","houses","documents",
   "bans","house_families","recruitment_settings","house_confiscations",
   "mayor_candidate_applications","notifications",
-  // db_logs у списку, але запис у нього заборонено всім (див. нижче)
   "db_logs",
 ]);
 
@@ -34,11 +34,18 @@ const APPROVED_INSERT_STATUSES = new Set(["pending", "review"]);
 
 const OWN_RECORD_TABLES = new Set(["wanted", "sos_signals", "city_voice", "notifications"]);
 
-// Таблиці, де delete/update мають однозначно адресувати ОДИН рядок
-// (по id або slug) — щоб уникнути масового знищення через слабкий match.
+// Таблицы, где delete/update обязаны адресовать ОДНУ строку (id/slug).
 const SINGLE_ROW_REQUIRED = new Set([
   "factions","faction_leaders","faction_overrides","houses","news","documents",
   "bans","recruitment_settings","house_confiscations","mayor_election",
+]);
+
+// Доп. защита для самых критичных таблиц: insert/upsert этих таблиц
+// разрешён ТОЛЬКО админам с соответствующим пермом или супер-админу.
+// Без этого обычный игрок мог бы заINSERT'ить "свой" дом/фракцию/розыск.
+const ADMIN_INSERT_REQUIRED = new Set([
+  "factions","faction_leaders","faction_overrides","houses","news","documents",
+  "bans","recruitment_settings","house_confiscations","mayor_election","wanted",
 ]);
 
 const SAFE_COL = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
@@ -58,9 +65,7 @@ function valueHasWildcard(v: unknown): boolean {
 }
 
 export default async function handler(req: any, res: any) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  applyCors(req, res);
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST")   return res.status(405).json({ error: "Method not allowed" });
 
@@ -100,20 +105,17 @@ export default async function handler(req: any, res: any) {
     return res.status(status).json(payload);
   };
 
-  // ── 1. Базова валідація ──────────────────────────────────────────────────
+  // ── 1. Базова валидация ──────────────────────────────────────────────────
   if (!nick || !password) return deny(401, "Unauthorized: no credentials");
   if (!table || !ALLOWED_TABLES.has(table)) return deny(400, `Table not allowed: ${table || "empty"}`);
   if (!op || !ALLOWED_OPS.has(op)) return deny(400, "Op not allowed");
 
-  // db_logs — read-only через /api/db-select; писати не можна нікому
   if (table === "db_logs") return deny(403, "db_logs is read-only");
 
-  // match обов'язковий для delete/update/upsert
   if ((op === "delete" || op === "update" || op === "upsert") && (!match || Object.keys(match).length === 0)) {
     return deny(400, `match is required for "${op}" operation`);
   }
 
-  // Валідація імен колонок у match
   if (match) {
     for (const col of Object.keys(match)) {
       if (!SAFE_COL.test(col)) return deny(400, `Invalid match column: ${col}`);
@@ -122,18 +124,14 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── 2. Перевірка користувача ─────────────────────────────────────────────
-  const { data: userRow, error: userErr } = await supabaseAdmin
-    .from("users").select("username, password, role")
-    .ilike("username", nick.trim()).maybeSingle();
+  // ── 2. Перевірка користувача (bcrypt) ────────────────────────────────────
+  const user = await verifyCredentials(supabaseAdmin, nick, password);
+  if (!user) return deny(401, "Unauthorized");
 
-  if (userErr || !userRow) return deny(401, "Unauthorized: user not found");
-  if (userRow.password !== password) return deny(401, "Unauthorized: wrong password");
-
-  const normalizedNick = userRow.username.toLowerCase().trim();
+  const { normalizedNick } = user;
   const isSuperAdmin   = normalizedNick === SUPER_ADMIN_NICK.toLowerCase();
-  const isAdmin        = isSuperAdmin || userRow.role === "admin";
-  const role           = isSuperAdmin ? "superadmin" : (userRow.role || "player");
+  const isAdmin        = isSuperAdmin || user.role === "admin";
+  const role           = isSuperAdmin ? "superadmin" : (user.role || "player");
 
   // ── 3. Permission map ────────────────────────────────────────────────────
   const TABLE_PERM_MAP: Record<string, string> = {
@@ -149,7 +147,6 @@ export default async function handler(req: any, res: any) {
     "city_voice":"voice","house_families":"houses","notifications":"sos",
   };
 
-  // Завантажуємо perms один раз
   let adminPermsGlobal: Record<string, boolean> = {};
   if (!isAdmin) {
     const { data: permRow } = await supabaseAdmin
@@ -165,7 +162,19 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── 3.1 Жорсткий «один рядок» для критичних таблиць ─────────────────────
+  // ── 3.0 Жёсткий запрет INSERT/UPSERT в admin-таблицы для обычных игроков ─
+  // Закрывает дыру, когда у игрока нет ни одного перма и он пытается
+  // создать "свой" дом/фракцию/розыск через insert (delete/update уже
+  // прикрыты ADMIN_ONLY_TABLES + SINGLE_ROW_REQUIRED выше).
+  if (ADMIN_INSERT_REQUIRED.has(table) && (op === "insert" || op === "upsert") && !isSuperAdmin) {
+    const requiredPerm = TABLE_PERM_MAP[table];
+    const hasPerm = isAdmin || (requiredPerm ? !!adminPermsGlobal[requiredPerm] : false);
+    if (!hasPerm) {
+      return deny(403, `Forbidden: missing permission "${requiredPerm || table}" for ${op}`);
+    }
+  }
+
+  // ── 3.1 «Один ряд» для критичных таблиц ──────────────────────────────────
   if (SINGLE_ROW_REQUIRED.has(table) && (op === "delete" || op === "update" || op === "upsert") && !isSuperAdmin) {
     const hasIdOrSlug = match && Object.entries(match).some(([k, c]) =>
       (k === "id" || k === "slug") && c.op === "eq" && !valueHasWildcard(c.value)
@@ -175,9 +184,9 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── 3.5 Захист таблиці users ────────────────────────────────────────────
+  // ── 3.5 users ────────────────────────────────────────────────────────────
   if (table === "users") {
-    const ADMIN_USER_FIELDS = ["role","telegram_id","is_banned","balance","rare_balance","vip_expires_at","vip_duration"];
+    const ADMIN_USER_FIELDS = ["role","telegram_id","is_banned","balance","rare_balance","vip_expires_at","vip_duration","password_hash"];
     if (!hasAnyAdminPerm) {
       if (values && typeof values === "object") {
         for (const field of ADMIN_USER_FIELDS) {
@@ -196,7 +205,7 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── 3.6 Захист статусів заявок ──────────────────────────────────────────
+  // ── 3.6 Статусы заявок ───────────────────────────────────────────────────
   if (STATUS_PROTECTED_TABLES.has(table) && !hasAnyAdminPerm) {
     if (values && typeof values === "object") {
       if (op === "insert") {
@@ -224,7 +233,7 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── 3.65 Захист bans ────────────────────────────────────────────────────
+  // ── 3.65 bans ────────────────────────────────────────────────────────────
   if (table === "bans" && !isSuperAdmin) {
     if ((op === "insert" || op === "update" || op === "upsert") && values && typeof values === "object") {
       const targetNick = String((values as any).username || (values as any).nick || "").toLowerCase().trim();
@@ -238,12 +247,12 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── 3.66 admin_perms — тільки супер-адмін ───────────────────────────────
+  // ── 3.66 admin_perms ─────────────────────────────────────────────────────
   if (table === "admin_perms" && !isSuperAdmin) {
     return deny(403, "Forbidden: only super-admin can manage admin permissions");
   }
 
-  // ── 3.68 Захист users від змін ролі/бану адмінів ────────────────────────
+  // ── 3.68 users + change role/ban ─────────────────────────────────────────
   if (table === "users" && !isSuperAdmin && hasAnyAdminPerm) {
     if ((op === "update" || op === "upsert") && values && typeof values === "object") {
       const hasRoleChange = "role" in (values as any) || "is_banned" in (values as any);
@@ -261,7 +270,7 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── 3.7 NFT ─────────────────────────────────────────────────────────────
+  // ── 3.7 NFT ──────────────────────────────────────────────────────────────
   if ((table === "nft_owners" || table === "nft_gifts") && !hasAnyAdminPerm) {
     if (op === "update" || op === "delete") return deny(403, "Forbidden: cannot modify NFT records");
     if (op === "upsert") return deny(403, "Forbidden: cannot upsert NFT records");
@@ -273,7 +282,7 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── 3.8 OWN_RECORD_TABLES ───────────────────────────────────────────────
+  // ── 3.8 OWN_RECORD_TABLES ────────────────────────────────────────────────
   if (OWN_RECORD_TABLES.has(table) && !hasAnyAdminPerm) {
     if (op === "delete" || op === "update" || op === "upsert") {
       if (!match) return deny(403, "Forbidden: match required");
@@ -286,7 +295,7 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── 4. Виконання ────────────────────────────────────────────────────────
+  // ── 4. Выполнение ────────────────────────────────────────────────────────
   try {
     let q: any = supabaseAdmin.from(table);
     if      (op === "insert") q = q.insert(values as any);
@@ -307,10 +316,17 @@ export default async function handler(req: any, res: any) {
         table_name: table, op, match_keys: keysOf(match), value_keys: keysOf(values),
         status: 400, allowed: false, error: error.message, ip, user_agent: ua,
       });
-      return res.status(400).json({ error: error.message });
+      // Не отдаём наружу текст ошибки Supabase — может утечь схема.
+      return res.status(400).json({ error: safeDbError(error) });
     }
     return allow(200, role, { data: data ?? null });
   } catch (e: any) {
-    return deny(500, e?.message || "Server error", role);
+    // Логируем подробности, наружу — общий текст.
+    await logDbRequest(supabaseAdmin, {
+      endpoint: "db", username: normalizedNick, role,
+      table_name: table, op, match_keys: keysOf(match), value_keys: keysOf(values),
+      status: 500, allowed: false, error: e?.message || "server error", ip, user_agent: ua,
+    });
+    return res.status(500).json({ error: "Server error" });
   }
 }
