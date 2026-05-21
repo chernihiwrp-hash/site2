@@ -84,9 +84,10 @@ export default async function handler(req: any, res: any) {
   });
 
   // ── Авторизація ───────────────────────────────────────────────────────────
+  // Спочатку базові поля
   const { data: userRow, error: userErr } = await supabase
     .from("users")
-    .select("username, password, balance, owned_themes, last_daily_claim, daily_streak")
+    .select("username, password, balance, owned_themes")
     .ilike("username", nick.trim())
     .maybeSingle();
 
@@ -95,6 +96,15 @@ export default async function handler(req: any, res: any) {
   if (userRow.password !== password)
     return res.status(401).json({ error: "Unauthorized: wrong password" });
 
+  // Окремо daily поля — якщо колонок ще немає в БД, не падаємо
+  const { data: dailyRow } = await supabase
+    .from("users")
+    .select("last_daily_claim, daily_streak")
+    .ilike("username", (userRow.username as string).toLowerCase().trim())
+    .maybeSingle()
+    .then(r => r)
+    .catch(() => ({ data: null, error: null }));
+
   const currentBalance = (userRow.balance as number) || 0;
   const normalizedNick = userRow.username.toLowerCase().trim();
 
@@ -102,7 +112,8 @@ export default async function handler(req: any, res: any) {
   // DAILY CLAIM
   // ══════════════════════════════════════════════════════════════════════════
   if (op === "daily_claim") {
-    const lastClaim = userRow.last_daily_claim ? new Date(userRow.last_daily_claim).getTime() : 0;
+    // Graceful fallback якщо колонок last_daily_claim/daily_streak ще немає в БД
+    const lastClaim = dailyRow?.last_daily_claim ? new Date((dailyRow as any).last_daily_claim).getTime() : 0;
     const now = Date.now();
 
     // Перевірка часу на СЕРВЕРІ — фронт не може підробити
@@ -112,7 +123,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // Streak — беремо з БД, не з фронту
-    const dbStreak = (userRow.daily_streak as number) || 0;
+    const dbStreak = ((dailyRow as any)?.daily_streak as number) || 0;
     const streakExpired = lastClaim > 0 && (now - lastClaim) > 48 * 60 * 60 * 1000;
     const newStreak = streakExpired ? 1 : dbStreak + 1;
 
