@@ -3,7 +3,7 @@ import {
   User, Briefcase, Home, Car, FileCheck, Wallet, Lock,
   Bell, ChevronDown, ChevronRight, Shield, CheckCircle,
   LogIn, RefreshCw, Coins, Clock, Settings, X,
-  Crown, Sparkles, Zap, Star, Timer, CreditCard, Trophy
+  Sparkles, Zap, Star, Timer, Trophy
 } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { useNavigate } from "react-router-dom";
@@ -44,6 +44,37 @@ const Trident = () => (
   </svg>
 );
 
+// ── Skeleton компоненти ───────────────────────────────────────────────────────
+const SkeletonLine = ({ w = "100%", h = 10, radius = 6, mb = 0 }: { w?: string | number; h?: number; radius?: number; mb?: number }) => (
+  <div style={{ width: w, height: h, borderRadius: radius, marginBottom: mb, background: "hsl(0 0% 100% / 0.07)", animation: "skeletonPulse 1.4s ease-in-out infinite" }} />
+);
+
+const SkeletonPassport = () => (
+  <div className="rounded-2xl overflow-hidden mb-4" style={{ border: "1px solid hsl(0 0% 100% / 0.08)", background: "hsl(240 15% 8% / 0.9)" }}>
+    <div className="px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.05)" }}>
+      <SkeletonLine w={80} h={7} />
+    </div>
+    <div className="flex items-start gap-3 px-4 py-3">
+      <div style={{ width: 72, height: 72, borderRadius: 12, background: "hsl(0 0% 100% / 0.07)", animation: "skeletonPulse 1.4s ease-in-out infinite", flexShrink: 0 }} />
+      <div className="flex-1 pt-1 space-y-2">
+        <SkeletonLine w="60%" h={14} />
+        <SkeletonLine w="40%" h={9} />
+        <SkeletonLine w="50%" h={9} />
+        <SkeletonLine w="35%" h={9} />
+      </div>
+    </div>
+    <div className="px-4 pb-3 grid grid-cols-2 gap-2">
+      <div style={{ height: 48, borderRadius: 10, background: "hsl(0 0% 100% / 0.05)", animation: "skeletonPulse 1.4s ease-in-out infinite" }} />
+      <div style={{ height: 48, borderRadius: 10, background: "hsl(0 0% 100% / 0.05)", animation: "skeletonPulse 1.4s ease-in-out infinite" }} />
+    </div>
+  </div>
+);
+
+const SkeletonBlock = ({ h = 64 }: { h?: number }) => (
+  <div style={{ height: h, borderRadius: 16, background: "hsl(0 0% 100% / 0.06)", animation: "skeletonPulse 1.4s ease-in-out infinite", marginBottom: 8 }} />
+);
+// ─────────────────────────────────────────────────────────────────────────────
+
 type ProfileData = {
   houses: { id: number; name: string; price: number; image?: string; rental_days?: number; photos?: string[] }[];
   factionApps: { faction_name: string; status: string }[];
@@ -57,7 +88,6 @@ const statusLabels: Record<string, string> = {
   approved: "Прийнято", pending: "На розгляді", rejected: "Відхилено", review: "На розгляді",
 };
 
-// Хелпер для stagger-анімації блоків
 const blockAnim = (visible: boolean, delayMs: number) => ({
   animation: visible ? `fadeSlideIn 0.45s ${delayMs}ms ease both` : "none",
   opacity: visible ? undefined : 0,
@@ -98,14 +128,8 @@ const Profile = () => {
   const [houseModalId, setHouseModalId] = useState<number | null>(null);
   const [nftVisible, setNftVisible] = useState(false);
   const [contentVisible, setContentVisible] = useState(false);
-
-  // ── VIP ───────────────────────────────────────────────────────────────────
-  const [showVipModal, setShowVipModal] = useState(false);
-  const [vipPlan, setVipPlan] = useState<"month" | "year">("month");
-  const [vipLoading, setVipLoading] = useState(false);
-  const [vipExpiresAt, setVipExpiresAt] = useState<string | null>(null);
-  const [isVip, setIsVip] = useState(false);
-  const [vipTimeLeft, setVipTimeLeft] = useState("");
+  // true поки перший loadData ще не завершився
+  const [loading, setLoading] = useState(true);
   const [orbitSpeed, setOrbitSpeed] = useState<number>(() => {
     const s = localStorage.getItem("orbit_speed"); return s ? Number(s) : 14;
   });
@@ -113,10 +137,17 @@ const Profile = () => {
   const loadData = useCallback(async () => {
     setRefreshing(true);
     try {
-      const data = await store.getPlayerProfile(nick);
-      const carsData = await store.getCarPlates(nick);
-      const { data: ownedData } = await supabase.from('nft_owners').select('nft_id').eq('owner_nick', nick);
-      const ownedIds = ownedData?.map(item => item.nft_id) || [];
+      // Паралельні запити — значно швидше ніж послідовні await
+      const [data, carsData, ownedData, balanceResult, userData] = await Promise.all([
+        store.getPlayerProfile(nick),
+        store.getCarPlates(nick),
+        supabase.from('nft_owners').select('nft_id').eq('owner_nick', nick),
+        getBalanceFromDB(nick),
+        supabase.from("users").select("role, vip_expires_at").ilike("username", nick).maybeSingle(),
+      ]);
+
+      const ownedIds = ownedData.data?.map((item: any) => item.nft_id) || [];
+
       if (ownedIds.length > 0) {
         const { data: nfts } = await supabase.from('nft_gifts').select('*').in('id', ownedIds);
         if (nfts) {
@@ -124,34 +155,20 @@ const Profile = () => {
           const saved = localStorage.getItem("orbit_nft_ids");
           const parsedSaved = saved ? JSON.parse(saved) : [];
           const validSelected = parsedSaved.filter((id: string) => ownedIds.includes(id));
-          setSelectedNftIds(validSelected.length > 0 ? validSelected : nfts.slice(0, 6).map(n => n.id));
+          setSelectedNftIds(validSelected.length > 0 ? validSelected : nfts.slice(0, 6).map((n: any) => n.id));
         }
       } else {
         setAvailableNfts([]);
         setSelectedNftIds([]);
       }
-      setProfileData({ ...data, cars: carsData || [] });
-      const realBalance = await getBalanceFromDB(nick);
-      setBalanceState(realBalance);
 
-      // ── Завантажуємо VIP статус ────────────────────────────────────────
-      const { data: userData } = await supabase
-        .from("users")
-        .select("role, vip_expires_at")
-        .ilike("username", nick)
-        .maybeSingle();
-      if (userData) {
-        const vipActive =
-          userData.role === "vip" &&
-          userData.vip_expires_at &&
-          new Date(userData.vip_expires_at).getTime() > Date.now();
-        setIsVip(Boolean(vipActive));
-        setVipExpiresAt(userData.vip_expires_at || null);
-      }
+      setProfileData({ ...data, cars: carsData || [] });
+      setBalanceState(balanceResult);
     } catch (e) {
       console.error("Помилка:", e);
     } finally {
       setRefreshing(false);
+      setLoading(false);
     }
   }, [nick]);
 
@@ -167,25 +184,6 @@ const Profile = () => {
     const t = setTimeout(() => setNftVisible(true), 450);
     return () => { clearTimeout(t); clearTimeout(t2); };
   }, [loadData]);
-
-  // ── VIP таймер (оновлення щосекунди) ─────────────────────────────────────
-  useEffect(() => {
-    if (!vipExpiresAt || !isVip) return;
-    const tick = () => {
-      const diff = new Date(vipExpiresAt).getTime() - Date.now();
-      if (diff <= 0) { setVipTimeLeft("Закінчилась"); setIsVip(false); return; }
-      const d = Math.floor(diff / 86400000);
-      const h = Math.floor((diff % 86400000) / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      if (d > 0) setVipTimeLeft(`${d}д ${h}г`);
-      else if (h > 0) setVipTimeLeft(`${h}г ${m}хв`);
-      else setVipTimeLeft(`${m}хв ${s}с`);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [vipExpiresAt, isVip]);
 
   const unread = notifications.filter(n => !n.read).length;
   const markRead = async () => { await store.markNotificationsRead(nick); setNotifications(notifications.map(n => ({ ...n, read: true }))); };
@@ -219,28 +217,6 @@ const Profile = () => {
     setAdminCode(""); setShowAdminInput(false);
   };
 
-  const handleBuyVip = async () => {
-    if (!nick) return;
-    setVipLoading(true);
-    try {
-      const res = await fetch("/api/anypay-create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: nick, duration: vipPlan }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.payment_url) {
-        toast.error(data.error || "Помилка створення платежу");
-        return;
-      }
-      window.location.href = data.payment_url;
-    } catch {
-      toast.error("Мережева помилка");
-    } finally {
-      setVipLoading(false);
-    }
-  };
-
   const name = tgUser ? `${tgUser.first_name}${tgUser.last_name ? " " + tgUser.last_name : ""}` : nick;
   const uid = tgUser ? String(tgUser.id) : "000001";
   const uname = tgUser?.username ? `@${tgUser.username}` : null;
@@ -265,7 +241,6 @@ const Profile = () => {
         @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes orbit-ring-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes orbit-item-counter { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
-
         @keyframes fadeSlideIn {
           from { opacity: 0; transform: translateY(18px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -278,38 +253,14 @@ const Profile = () => {
           0%   { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
-
-        @keyframes vipShimmer {
-          0%   { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        @keyframes vipPulse {
-          0%, 100% { box-shadow: 0 0 8px #f59e0b66, 0 0 16px #f59e0b33; }
-          50%       { box-shadow: 0 0 14px #f59e0baa, 0 0 28px #f59e0b55; }
-        }
-        @keyframes vipGlitter {
-          0%,100% { opacity: 0.6; transform: scale(1) rotate(0deg); }
-          50%      { opacity: 1;   transform: scale(1.3) rotate(20deg); }
-        }
-        @keyframes modalSlideUp {
-          from { opacity: 0; transform: translateY(100%); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes crownFloat {
-          0%, 100% { transform: translateY(0px) rotate(-5deg); }
-          50%       { transform: translateY(-6px) rotate(5deg); }
-        }
-        @keyframes planGlow {
-          0%, 100% { box-shadow: 0 0 0px transparent; }
-          50%       { box-shadow: 0 0 20px #f59e0b44; }
+        @keyframes skeletonPulse {
+          0%, 100% { opacity: 0.5; }
+          50%       { opacity: 1; }
         }
       `}</style>
 
       {/* Header */}
-      <div
-        className="flex items-center justify-between mb-5"
-        style={blockAnim(contentVisible, 0)}
-      >
+      <div className="flex items-center justify-between mb-5" style={blockAnim(contentVisible, 0)}>
         <h1 className="font-display text-xl font-bold tracking-wider neon-text-lime">ПРОФІЛЬ</h1>
         <div className="flex items-center gap-2">
           <button onClick={loadData} disabled={refreshing} className="w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all">
@@ -361,450 +312,410 @@ const Profile = () => {
         </div>
       )}
 
-      {/* ═══ PASSPORT CARD ═══ */}
-      <div className="mb-4" style={blockAnim(contentVisible, 80)}>
-        <div className="rounded-2xl overflow-visible relative select-none"
-          style={{ border: "1px solid hsl(0 0% 100% / 0.12)", boxShadow: "0 8px 32px hsl(0 0% 0% / 0.5)" }}>
+      {/* ═══ PASSPORT CARD — скелетон поки loading ═══ */}
+      {loading ? (
+        <SkeletonPassport />
+      ) : (
+        <div className="mb-4" style={blockAnim(contentVisible, 80)}>
+          <div className="rounded-2xl overflow-visible relative select-none"
+            style={{ border: "1px solid hsl(0 0% 100% / 0.12)", boxShadow: "0 8px 32px hsl(0 0% 0% / 0.5)" }}>
 
-          {/* BG image */}
-          <div className="absolute inset-0 rounded-2xl overflow-hidden">
-            <img src="https://i.ibb.co/NbX6ZNs/images-2.jpg" alt="" className="w-full h-full object-cover" style={{ opacity: 0.18 }} onError={e => { e.currentTarget.style.display = "none"; }} />
-            <div className="absolute inset-0" style={{ background: passportBg || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))", transition: "background 0.6s ease" }} />
-            <div className="absolute inset-0 rounded-2xl" style={{ background: `radial-gradient(ellipse 80% 50% at 50% 100%, hsl(var(--primary) / 0.08) 0%, transparent 70%)`, transition: "background 0.6s ease" }} />
-          </div>
-
-          {/* Trident watermark */}
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 w-24 h-28 pointer-events-none">
-            <Trident />
-          </div>
-
-          {/* Header strip */}
-          <div className="relative flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.07)" }}>
-            <div>
-              <p className="text-[7px] text-muted-foreground/50 tracking-[0.3em] uppercase">Удостоверение</p>
-              <p className="text-[8px] text-muted-foreground/70 tracking-[0.15em] font-semibold uppercase">Chernihiv RP</p>
+            {/* BG image */}
+            <div className="absolute inset-0 rounded-2xl overflow-hidden">
+              <img src="https://i.ibb.co/NbX6ZNs/images-2.jpg" alt="" className="w-full h-full object-cover" style={{ opacity: 0.18 }} onError={e => { e.currentTarget.style.display = "none"; }} />
+              <div className="absolute inset-0" style={{ background: passportBg || "linear-gradient(145deg, hsl(240 15% 8% / 0.95), hsl(0 0% 4% / 0.92))", transition: "background 0.6s ease" }} />
+              <div className="absolute inset-0 rounded-2xl" style={{ background: `radial-gradient(ellipse 80% 50% at 50% 100%, hsl(var(--primary) / 0.08) 0%, transparent 70%)`, transition: "background 0.6s ease" }} />
             </div>
-            <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
-          </div>
 
-          {/* ── Main row ── */}
-          <div className="relative py-3 flex items-start gap-3 px-4">
+            {/* Trident watermark */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 w-24 h-28 pointer-events-none">
+              <Trident />
+            </div>
 
-            <div
-              className="shrink-0 cursor-pointer"
-              style={{ width: AV, height: AV, position: "relative", zIndex: 30 }}
-              onClick={() => setShowOrbitSettings(true)}
-            >
-              {/* Аватарка */}
-              <div
-                className="group absolute rounded-xl overflow-hidden"
-                style={{ width: AV, height: AV, left: 0, top: 0, border: "1.5px solid hsl(0 0% 100% / 0.15)", zIndex: 10 }}
-              >
-                {tgUser?.photo_url ? (
-                  <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
-                    <User className="w-8 h-8 text-primary/30" />
-                  </div>
-                )}
-                <div className="absolute inset-0 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
-                  style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.5), hsl(var(--primary) / 0.2))", backdropFilter: "blur(2px)" }}>
-                  <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.5"
-                    style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 8px hsl(var(--primary)))", animation: "spin-slow 4s linear infinite" }}>
-                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
-                    <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
-                  </svg>
-                </div>
+            {/* Header strip */}
+            <div className="relative flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.07)" }}>
+              <div>
+                <p className="text-[7px] text-muted-foreground/50 tracking-[0.3em] uppercase">Удостоверение</p>
+                <p className="text-[8px] text-muted-foreground/70 tracking-[0.15em] font-semibold uppercase">Chernihiv RP</p>
               </div>
+              <p className="text-[8px] text-muted-foreground/50 font-mono">#{uid.slice(-6)}</p>
+            </div>
 
-              {/* ОРБІТАЛЬНЕ КІЛЬЦЕ */}
+            {/* ── Main row ── */}
+            <div className="relative py-3 flex items-start gap-3 px-4">
+
               <div
-                style={{
-                  position: "absolute",
-                  left: AV / 2,
-                  top: AV / 2,
-                  width: 0,
-                  height: 0,
-                  animation: `orbit-ring-spin ${orbitSpeed}s linear infinite`,
-                  transformOrigin: "0px 0px",
-                  zIndex: 5,
-                  pointerEvents: "none",
-                }}
+                className="shrink-0 cursor-pointer"
+                style={{ width: AV, height: AV, position: "relative", zIndex: 30 }}
+                onClick={() => setShowOrbitSettings(true)}
               >
-                {orbitNfts.map((nft, index) => {
-                  const angleDeg = (index * 360 / orbitNfts.length) - 90;
-                  const angleRad = angleDeg * (Math.PI / 180);
-                  const px = Math.cos(angleRad) * R;
-                  const py = Math.sin(angleRad) * R;
-                  const flyDelay = 0.35 + index * 0.15;
-                  return (
-                    <div key={nft.id} style={{
-                      position: "absolute",
-                      left: px - NW / 2,
-                      top: py - NW / 2,
-                      width: NW,
-                      height: NW,
-                      animation: `orbit-item-counter ${orbitSpeed}s linear infinite`,
-                      transformOrigin: `${NW / 2}px ${NW / 2}px`,
-                    }}>
-                      <div style={{
-                        width: NW, height: NW,
-                        opacity: nftVisible ? 1 : 0,
-                        transform: nftVisible ? "scale(1)" : "scale(0)",
-                        transition: `opacity 0.45s ease ${flyDelay}s, transform 0.5s cubic-bezier(0.34,1.56,0.64,1) ${flyDelay}s`,
+                {/* Аватарка */}
+                <div
+                  className="group absolute rounded-xl overflow-hidden"
+                  style={{ width: AV, height: AV, left: 0, top: 0, border: "1.5px solid hsl(0 0% 100% / 0.15)", zIndex: 10 }}
+                >
+                  {tgUser?.photo_url ? (
+                    <img src={tgUser.photo_url} alt={name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.08)" }}>
+                      <User className="w-8 h-8 text-primary/30" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
+                    style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.5), hsl(var(--primary) / 0.2))", backdropFilter: "blur(2px)" }}>
+                    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.5"
+                      style={{ color: "hsl(var(--primary))", filter: "drop-shadow(0 0 8px hsl(var(--primary)))", animation: "spin-slow 4s linear infinite" }}>
+                      <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+                      <path d="M19.622 10.395l-1.097-2.65L20 6l-2-2-1.735 1.483-2.707-1.113L12.935 2h-1.954l-.632 2.401-2.645 1.115L6 4 4 6l1.453 1.789-1.08 2.657L2 11v2l2.401.655L5.516 16.3 4 18l2 2 1.791-1.46 2.606 1.072L11 22h2l.604-2.387 2.651-1.098C16.697 18.831 18 20 18 20l2-2-1.484-1.75 1.086-2.663L22 13v-2l-2.378-.605Z"/>
+                    </svg>
+                  </div>
+                </div>
+
+                {/* ОРБІТАЛЬНЕ КІЛЬЦЕ */}
+                <div
+                  style={{
+                    position: "absolute",
+                    left: AV / 2,
+                    top: AV / 2,
+                    width: 0,
+                    height: 0,
+                    animation: `orbit-ring-spin ${orbitSpeed}s linear infinite`,
+                    transformOrigin: "0px 0px",
+                    zIndex: 5,
+                    pointerEvents: "none",
+                  }}
+                >
+                  {orbitNfts.map((nft, index) => {
+                    const angleDeg = (index * 360 / orbitNfts.length) - 90;
+                    const angleRad = angleDeg * (Math.PI / 180);
+                    const px = Math.cos(angleRad) * R;
+                    const py = Math.sin(angleRad) * R;
+                    const flyDelay = 0.35 + index * 0.15;
+                    return (
+                      <div key={nft.id} style={{
+                        position: "absolute",
+                        left: px - NW / 2,
+                        top: py - NW / 2,
+                        width: NW,
+                        height: NW,
+                        animation: `orbit-item-counter ${orbitSpeed}s linear infinite`,
+                        transformOrigin: `${NW / 2}px ${NW / 2}px`,
                       }}>
                         <div style={{
-                          position: "absolute", inset: 0, borderRadius: "50%",
-                          background: "radial-gradient(circle, hsl(var(--primary) / 0.9) 0%, hsl(var(--primary) / 0.3) 40%, transparent 70%)",
-                          filter: "blur(8px)", transform: "scale(2.6)",
-                        }} />
-                        <img src={nft.image_url} alt="" style={{
-                          width: NW, height: NW, borderRadius: "50%", objectFit: "cover",
-                          display: "block", position: "relative", zIndex: 1,
-                          WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 22%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0) 72%)",
-                          maskImage: "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 22%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0) 72%)",
-                        }} />
+                          width: NW, height: NW,
+                          opacity: nftVisible ? 1 : 0,
+                          transform: nftVisible ? "scale(1)" : "scale(0)",
+                          transition: `opacity 0.45s ease ${flyDelay}s, transform 0.5s cubic-bezier(0.34,1.56,0.64,1) ${flyDelay}s`,
+                        }}>
+                          <div style={{
+                            position: "absolute", inset: 0, borderRadius: "50%",
+                            background: "radial-gradient(circle, hsl(var(--primary) / 0.9) 0%, hsl(var(--primary) / 0.3) 40%, transparent 70%)",
+                            filter: "blur(8px)", transform: "scale(2.6)",
+                          }} />
+                          <img src={nft.image_url} alt="" style={{
+                            width: NW, height: NW, borderRadius: "50%", objectFit: "cover",
+                            display: "block", position: "relative", zIndex: 1,
+                            WebkitMaskImage: "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 22%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0) 72%)",
+                            maskImage: "radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 22%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0) 72%)",
+                          }} />
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Текст */}
-            <div className="flex-1 min-w-0 pt-1">
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
-              <div className="flex items-center gap-2 mb-1.5">
-                <p className="text-base font-bold text-foreground truncate">{name}</p>
-                {/* ── VIP BADGE ── */}
-                <button
-                  onClick={() => setShowVipModal(true)}
-                  style={{
-                    flexShrink: 0,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    padding: isVip ? "3px 9px 3px 6px" : "3px 9px 3px 6px",
-                    borderRadius: 20,
-                    border: isVip ? "1px solid #f59e0baa" : "1px solid #f59e0b44",
-                    background: isVip
-                      ? "linear-gradient(90deg, #78350f, #b45309, #d97706, #f59e0b, #d97706, #b45309, #78350f)"
-                      : "linear-gradient(90deg, #1c1008, #2d1a08, #3d2410, #2d1a08, #1c1008)",
-                    backgroundSize: "200% 100%",
-                    animation: isVip
-                      ? "vipShimmer 2.5s linear infinite, vipPulse 2s ease-in-out infinite"
-                      : "vipShimmer 4s linear infinite",
-                    cursor: "pointer",
-                    transition: "transform 0.15s",
-                  }}
-                  onMouseDown={e => (e.currentTarget.style.transform = "scale(0.93)")}
-                  onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
-                >
-                  <Crown
-                    size={11}
-                    style={{
-                      color: isVip ? "#fff" : "#f59e0b",
-                      filter: isVip ? "drop-shadow(0 0 4px #fff8)" : "none",
-                      animation: isVip ? "vipGlitter 1.8s ease-in-out infinite" : "none",
-                    }}
-                  />
-                  <span style={{
-                    fontSize: 9,
-                    fontWeight: 800,
-                    letterSpacing: "0.08em",
-                    color: isVip ? "#fff" : "#f59e0b",
-                    textShadow: isVip ? "0 0 8px #fff6" : "none",
-                    textTransform: "uppercase",
-                  }}>
-                    {isVip ? "VIP" : "VIP?"}
-                  </span>
-                </button>
-              </div>
-              {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
-              <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <CheckCircle className="w-3 h-3 text-primary shrink-0" />
-                <span className="text-xs text-primary font-semibold">Верифіковано</span>
-                <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
-              </div>
-              {isVip && vipTimeLeft && (
-                <div className="flex items-center gap-1.5 mb-1" style={{
-                  padding: "3px 8px",
-                  borderRadius: 8,
-                  background: "#f59e0b15",
-                  border: "1px solid #f59e0b33",
-                  display: "inline-flex",
-                  width: "fit-content",
-                }}>
-                  <Timer size={10} style={{ color: "#f59e0b" }} />
-                  <span style={{ fontSize: 9, fontWeight: 700, color: "#f59e0b", letterSpacing: "0.04em" }}>
-                    {vipTimeLeft}
-                  </span>
+                    );
+                  })}
                 </div>
-              )}
-              <div className="flex items-center gap-1">
-                <Coins className="w-3 h-3 text-yellow-400/70" />
-                <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
+              </div>
+
+              {/* Текст */}
+              <div className="flex-1 min-w-0 pt-1">
+                <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Ім'я</p>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <p className="text-base font-bold text-foreground truncate">{name}</p>
+                </div>
+                {uname && <p className="text-[9px] text-primary/50 mb-1.5">{uname}</p>}
+                <p className="text-[7px] text-muted-foreground/40 tracking-[0.2em] uppercase mb-0.5">Статус</p>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <CheckCircle className="w-3 h-3 text-primary shrink-0" />
+                  <span className="text-xs text-primary font-semibold">Верифіковано</span>
+                  <span className="text-[8px] text-muted-foreground/40">{regDate}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Coins className="w-3 h-3 text-yellow-400/70" />
+                  <span className="text-[10px] font-semibold text-yellow-400/80">{balance} CR</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Bottom stats */}
-          <div className="relative px-4 pb-3 grid grid-cols-2 gap-2">
-            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{ background: activeFaction ? "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--secondary) / 0.08))" : "hsl(0 0% 100% / 0.05)", border: activeFaction ? "1px solid hsl(var(--primary) / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)" }}>
-              <Shield className="w-3 h-3 shrink-0" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 40%)" }} />
-              <div>
-                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Фракція</p>
-                <p className="text-[10px] font-medium truncate" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 60%)" }}>
-                  {activeFaction || (pendingFaction ? `${pendingFaction}...` : "Немає")}
-                </p>
+            {/* Bottom stats */}
+            <div className="relative px-4 pb-3 grid grid-cols-2 gap-2">
+              <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
+                style={{ background: activeFaction ? "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--secondary) / 0.08))" : "hsl(0 0% 100% / 0.05)", border: activeFaction ? "1px solid hsl(var(--primary) / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)" }}>
+                <Shield className="w-3 h-3 shrink-0" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 40%)" }} />
+                <div>
+                  <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Фракція</p>
+                  <p className="text-[10px] font-medium truncate" style={{ color: activeFaction ? "hsl(var(--primary))" : "hsl(0 0% 60%)" }}>
+                    {activeFaction || (pendingFaction ? `${pendingFaction}...` : "Немає")}
+                  </p>
+                </div>
+              </div>
+              <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
+                style={{ background: firstHouse ? "hsl(142 71% 45% / 0.1)" : "hsl(0 0% 100% / 0.05)", border: firstHouse ? "1px solid hsl(142 71% 45% / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)" }}>
+                <Home className="w-3 h-3 shrink-0" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 40%)", filter: firstHouse ? "drop-shadow(0 0 4px hsl(142 71% 45% / 0.8))" : "none" }} />
+                <div>
+                  <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Дім</p>
+                  <p className="text-[10px] font-medium truncate" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 60%)" }}>
+                    {firstHouse?.name || "Немає"}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{ background: firstHouse ? "hsl(142 71% 45% / 0.1)" : "hsl(0 0% 100% / 0.05)", border: firstHouse ? "1px solid hsl(142 71% 45% / 0.25)" : "1px solid hsl(0 0% 100% / 0.07)" }}>
-              <Home className="w-3 h-3 shrink-0" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 40%)", filter: firstHouse ? "drop-shadow(0 0 4px hsl(142 71% 45% / 0.8))" : "none" }} />
-              <div>
-                <p className="text-[7px] text-muted-foreground/40 uppercase tracking-wider">Дім</p>
-                <p className="text-[10px] font-medium truncate" style={{ color: firstHouse ? "hsl(142 71% 45%)" : "hsl(0 0% 60%)" }}>
-                  {firstHouse?.name || "Немає"}
-                </p>
-              </div>
-            </div>
-          </div>
 
-          {/* Machine line */}
-          <div className="relative px-4 py-1.5 rounded-b-2xl" style={{ borderTop: "1px solid hsl(0 0% 100% / 0.05)", background: "hsl(0 0% 100% / 0.02)" }}>
-            <p className="text-[6px] text-muted-foreground/20 font-mono tracking-widest text-center truncate">
-              CHERNIHIV RP &lt;&lt; {nick.toUpperCase()} &lt;&lt; {uid.slice(-8)}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Діяльність */}
-      <div className="mb-2" style={blockAnim(contentVisible, 160)}>
-        <button onClick={() => setShowActivity(!showActivity)}
-          className="relative w-full liquid-glass-card rounded-2xl px-4 py-3.5 flex items-center justify-between transition-all active:scale-[0.98] overflow-hidden"
-          style={activeFaction ? {
-            borderColor: "hsl(var(--primary) / 0.55)",
-            boxShadow: "0 0 22px hsl(var(--primary) / 0.45), inset 0 0 18px hsl(var(--primary) / 0.08)",
-            background: "linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))",
-          } : showActivity ? { boxShadow: "0 0 18px hsl(var(--primary) / 0.25)", borderColor: "hsl(var(--primary) / 0.3)" } : {}}>
-          {activeFaction && (
-            <div className="absolute inset-0 pointer-events-none opacity-70"
-                 style={{
-                   background: "linear-gradient(110deg, transparent 0%, transparent 40%, hsl(var(--primary) / 0.18) 50%, transparent 60%, transparent 100%)",
-                   backgroundSize: "200% 100%",
-                   animation: "shimmerSweep 3.5s linear infinite",
-                 }} />
-          )}
-          <div className="relative flex items-center gap-3 z-10">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-              style={activeFaction
-                ? { background: "hsl(var(--primary) / 0.22)", border: "1px solid hsl(var(--primary) / 0.5)", boxShadow: "0 0 14px hsl(var(--primary) / 0.55)" }
-                : showActivity
-                  ? { background: "hsl(var(--primary) / 0.18)", border: "1px solid hsl(var(--primary) / 0.4)", boxShadow: "0 0 12px hsl(var(--primary) / 0.3)" }
-                  : { background: "hsl(var(--primary) / 0.1)", border: "1px solid hsl(var(--primary) / 0.12)" }}>
-              <Briefcase className="w-4 h-4 text-primary" style={activeFaction ? { filter: "drop-shadow(0 0 6px hsl(var(--primary)))" } : {}} />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-semibold" style={activeFaction || showActivity ? { color: "hsl(var(--primary))" } : {}}>Моя діяльність</p>
-              <p className="text-[10px] text-muted-foreground">
-                {activeFaction ? `Фракція: ${activeFaction}` : pendingFaction ? `Очікує: ${pendingFaction}` : "Немає активної діяльності"}
+            {/* Machine line */}
+            <div className="relative px-4 py-1.5 rounded-b-2xl" style={{ borderTop: "1px solid hsl(0 0% 100% / 0.05)", background: "hsl(0 0% 100% / 0.02)" }}>
+              <p className="text-[6px] text-muted-foreground/20 font-mono tracking-widest text-center truncate">
+                CHERNIHIV RP &lt;&lt; {nick.toUpperCase()} &lt;&lt; {uid.slice(-8)}
               </p>
             </div>
           </div>
-          {showActivity ? <ChevronDown className="w-4 h-4 text-primary relative z-10" /> : <ChevronRight className="w-4 h-4 text-muted-foreground relative z-10" />}
-        </button>
-        {showActivity && (
-          <div className="mt-2 space-y-2 animate-fade-in">
-            {profileData.factionApps.length > 0 ? (
-              profileData.factionApps.slice(0, 5).map((a, i) => (
-                <div key={i} className="liquid-glass rounded-xl px-4 py-3 flex items-center justify-between"
-                     style={{ border: "1px solid hsl(var(--primary) / 0.15)" }}>
-                  <div className="flex items-center gap-3">
-                    <Shield className="w-4 h-4 text-primary" />
-                    <p className="text-xs font-medium">{a.faction_name}</p>
-                  </div>
-                  <span className={`text-[10px] font-semibold ${statusColors[a.status] || "text-muted-foreground"}`}>
-                    {statusLabels[a.status] || a.status}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="liquid-glass rounded-2xl p-4" style={{ border: "1px solid hsl(var(--primary) / 0.15)" }}>
-                <p className="text-xs text-muted-foreground text-center py-2 mb-3">Немає активної діяльності</p>
-                <GradientButton variant="green" className="w-full text-xs py-2" onClick={() => navigate("/factions")}>
-                  Переглянути фракції
-                </GradientButton>
-              </div>
+        </div>
+      )}
+
+      {/* Діяльність */}
+      {loading ? (
+        <SkeletonBlock h={60} />
+      ) : (
+        <div className="mb-2" style={blockAnim(contentVisible, 160)}>
+          <button onClick={() => setShowActivity(!showActivity)}
+            className="relative w-full liquid-glass-card rounded-2xl px-4 py-3.5 flex items-center justify-between transition-all active:scale-[0.98] overflow-hidden"
+            style={activeFaction ? {
+              borderColor: "hsl(var(--primary) / 0.55)",
+              boxShadow: "0 0 22px hsl(var(--primary) / 0.45), inset 0 0 18px hsl(var(--primary) / 0.08)",
+              background: "linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))",
+            } : showActivity ? { boxShadow: "0 0 18px hsl(var(--primary) / 0.25)", borderColor: "hsl(var(--primary) / 0.3)" } : {}}>
+            {activeFaction && (
+              <div className="absolute inset-0 pointer-events-none opacity-70"
+                   style={{
+                     background: "linear-gradient(110deg, transparent 0%, transparent 40%, hsl(var(--primary) / 0.18) 50%, transparent 60%, transparent 100%)",
+                     backgroundSize: "200% 100%",
+                     animation: "shimmerSweep 3.5s linear infinite",
+                   }} />
             )}
-          </div>
-        )}
-      </div>
+            <div className="relative flex items-center gap-3 z-10">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+                style={activeFaction
+                  ? { background: "hsl(var(--primary) / 0.22)", border: "1px solid hsl(var(--primary) / 0.5)", boxShadow: "0 0 14px hsl(var(--primary) / 0.55)" }
+                  : showActivity
+                    ? { background: "hsl(var(--primary) / 0.18)", border: "1px solid hsl(var(--primary) / 0.4)", boxShadow: "0 0 12px hsl(var(--primary) / 0.3)" }
+                    : { background: "hsl(var(--primary) / 0.1)", border: "1px solid hsl(var(--primary) / 0.12)" }}>
+                <Briefcase className="w-4 h-4 text-primary" style={activeFaction ? { filter: "drop-shadow(0 0 6px hsl(var(--primary)))" } : {}} />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold" style={activeFaction || showActivity ? { color: "hsl(var(--primary))" } : {}}>Моя діяльність</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {activeFaction ? `Фракція: ${activeFaction}` : pendingFaction ? `Очікує: ${pendingFaction}` : "Немає активної діяльності"}
+                </p>
+              </div>
+            </div>
+            {showActivity ? <ChevronDown className="w-4 h-4 text-primary relative z-10" /> : <ChevronRight className="w-4 h-4 text-muted-foreground relative z-10" />}
+          </button>
+          {showActivity && (
+            <div className="mt-2 space-y-2 animate-fade-in">
+              {profileData.factionApps.length > 0 ? (
+                profileData.factionApps.slice(0, 5).map((a, i) => (
+                  <div key={i} className="liquid-glass rounded-xl px-4 py-3 flex items-center justify-between"
+                       style={{ border: "1px solid hsl(var(--primary) / 0.15)" }}>
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-4 h-4 text-primary" />
+                      <p className="text-xs font-medium">{a.faction_name}</p>
+                    </div>
+                    <span className={`text-[10px] font-semibold ${statusColors[a.status] || "text-muted-foreground"}`}>
+                      {statusLabels[a.status] || a.status}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="liquid-glass rounded-2xl p-4" style={{ border: "1px solid hsl(var(--primary) / 0.15)" }}>
+                  <p className="text-xs text-muted-foreground text-center py-2 mb-3">Немає активної діяльності</p>
+                  <GradientButton variant="green" className="w-full text-xs py-2" onClick={() => navigate("/factions")}>
+                    Переглянути фракції
+                  </GradientButton>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Дома */}
-      <div className="mb-2" style={blockAnim(contentVisible, 230)}>
-        <div className="liquid-glass-card rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: "hsl(142 71% 45% / 0.12)", border: "1px solid hsl(142 71% 45% / 0.25)", boxShadow: "0 0 12px hsl(142 71% 45% / 0.2)" }}>
-                <Home className="w-4 h-4" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
+      {loading ? (
+        <SkeletonBlock h={80} />
+      ) : (
+        <div className="mb-2" style={blockAnim(contentVisible, 230)}>
+          <div className="liquid-glass-card rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{ background: "hsl(142 71% 45% / 0.12)", border: "1px solid hsl(142 71% 45% / 0.25)", boxShadow: "0 0 12px hsl(142 71% 45% / 0.2)" }}>
+                  <Home className="w-4 h-4" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
+                </div>
+                <p className="text-sm font-medium">Мої дома</p>
               </div>
-              <p className="text-sm font-medium">Мої дома</p>
+              <button onClick={() => navigate("/houses")} className="text-[10px] text-primary flex items-center gap-0.5">
+                Переглянути <ChevronRight className="w-3 h-3" />
+              </button>
             </div>
-            <button onClick={() => navigate("/houses")} className="text-[10px] text-primary flex items-center gap-0.5">
-              Переглянути <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-          <div className="px-4 py-3">
-            {profileData.houses.length > 0 ? (
-              <div className="space-y-2">
-                {profileData.houses.map(h => {
-                  const photo = h.photos?.find((p: string) => p.startsWith("http")) || h.image;
-                  return (
-                    <div key={h.id} className="rounded-xl overflow-hidden relative"
-                      style={{ background: "hsl(142 71% 45% / 0.05)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
-                      {photo && (
-                        <div className="relative h-28 overflow-hidden">
-                          <img src={photo} alt={h.name} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setHouseModalId(h.id); }}
-                            title="Управління домом та сім'єю"
-                            className="absolute top-2 left-2 flex items-center justify-center transition-all active:scale-90 hover:scale-105 z-20"
-                            style={{
-                              width: 28, height: 28, borderRadius: 8,
-                              background: "linear-gradient(135deg, hsl(142 71% 45% / 0.95), hsl(152 76% 30% / 0.95))",
-                              border: "1.5px solid hsl(142 71% 55%)",
-                              boxShadow: "0 0 10px hsl(142 71% 45% / 0.55), 0 2px 6px rgba(0,0,0,0.5)",
-                            }}
-                          >
-                            <Settings className="w-3.5 h-3.5 text-white" />
-                          </button>
-                          <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10">
-                            <Clock className="w-3 h-3 text-primary" />
-                            <span className="text-[10px] font-bold text-white">{calculateHouseTime(h.created_at, h.rental_days || 7)}</span>
-                          </div>
-                          <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
-                            <p className="text-sm font-black text-white drop-shadow">{h.name}</p>
-                            <span className="text-[10px] font-bold text-yellow-400">{h.price.toLocaleString()}€</span>
-                          </div>
-                        </div>
-                      )}
-                      {!photo && (
-                        <div className="flex items-center gap-3 p-3">
-                          <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
-                            style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
-                            <Home className="w-5 h-5" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                              <p className="text-xs font-semibold text-foreground">{h.name}</p>
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-primary" />
-                                <span className="text-[10px] text-primary font-bold">{calculateHouseTime(h.created_at, h.rental_days || 7)}</span>
-                              </div>
+            <div className="px-4 py-3">
+              {profileData.houses.length > 0 ? (
+                <div className="space-y-2">
+                  {profileData.houses.map(h => {
+                    const photo = h.photos?.find((p: string) => p.startsWith("http")) || h.image;
+                    return (
+                      <div key={h.id} className="rounded-xl overflow-hidden relative"
+                        style={{ background: "hsl(142 71% 45% / 0.05)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
+                        {photo && (
+                          <div className="relative h-28 overflow-hidden">
+                            <img src={photo} alt={h.name} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setHouseModalId(h.id); }}
+                              title="Управління домом та сім'єю"
+                              className="absolute top-2 left-2 flex items-center justify-center transition-all active:scale-90 hover:scale-105 z-20"
+                              style={{
+                                width: 28, height: 28, borderRadius: 8,
+                                background: "linear-gradient(135deg, hsl(142 71% 45% / 0.95), hsl(152 76% 30% / 0.95))",
+                                border: "1.5px solid hsl(142 71% 55%)",
+                                boxShadow: "0 0 10px hsl(142 71% 45% / 0.55), 0 2px 6px rgba(0,0,0,0.5)",
+                              }}
+                            >
+                              <Settings className="w-3.5 h-3.5 text-white" />
+                            </button>
+                            <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10">
+                              <Clock className="w-3 h-3 text-primary" />
+                              <span className="text-[10px] font-bold text-white">{calculateHouseTime(h.created_at, h.rental_days || 7)}</span>
                             </div>
-                            <p className="text-[10px] text-yellow-400 font-bold">{h.price.toLocaleString()}€</p>
+                            <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
+                              <p className="text-sm font-black text-white drop-shadow">{h.name}</p>
+                              <span className="text-[10px] font-bold text-yellow-400">{h.price.toLocaleString()}€</span>
+                            </div>
                           </div>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setHouseModalId(h.id); }}
-                            title="Управління домом та сім'єю"
-                            className="flex items-center justify-center transition-all active:scale-90 hover:scale-105 shrink-0"
-                            style={{
-                              width: 30, height: 30, borderRadius: 9,
-                              background: "linear-gradient(135deg, hsl(142 71% 45% / 0.95), hsl(152 76% 30% / 0.95))",
-                              border: "1.5px solid hsl(142 71% 55%)",
-                              boxShadow: "0 0 10px hsl(142 71% 45% / 0.55), 0 2px 6px rgba(0,0,0,0.5)",
-                            }}
-                          >
-                            <Settings className="w-3.5 h-3.5 text-white" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="relative overflow-hidden rounded-xl p-4 flex items-center gap-4"
-                style={{ background: "linear-gradient(135deg, hsl(142 71% 45% / 0.06), hsl(142 71% 45% / 0.02))", border: "1px solid hsl(142 71% 45% / 0.15)" }}>
-                <div className="relative w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center"
-                  style={{ background: "hsl(142 71% 45% / 0.1)", border: "1.5px solid hsl(142 71% 45% / 0.3)" }}>
-                  <Home className="w-7 h-7" style={{ color: "hsl(142 71% 45%)" }} />
+                        )}
+                        {!photo && (
+                          <div className="flex items-center gap-3 p-3">
+                            <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
+                              style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
+                              <Home className="w-5 h-5" style={{ color: "hsl(142 71% 45%)", filter: "drop-shadow(0 0 4px hsl(142 71% 45%))" }} />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                <p className="text-xs font-semibold text-foreground">{h.name}</p>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-primary" />
+                                  <span className="text-[10px] text-primary font-bold">{calculateHouseTime(h.created_at, h.rental_days || 7)}</span>
+                                </div>
+                              </div>
+                              <p className="text-[10px] text-yellow-400 font-bold">{h.price.toLocaleString()}€</p>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setHouseModalId(h.id); }}
+                              title="Управління домом та сім'єю"
+                              className="flex items-center justify-center transition-all active:scale-90 hover:scale-105 shrink-0"
+                              style={{
+                                width: 30, height: 30, borderRadius: 9,
+                                background: "linear-gradient(135deg, hsl(142 71% 45% / 0.95), hsl(152 76% 30% / 0.95))",
+                                border: "1.5px solid hsl(142 71% 55%)",
+                                boxShadow: "0 0 10px hsl(142 71% 45% / 0.55), 0 2px 6px rgba(0,0,0,0.5)",
+                              }}
+                            >
+                              <Settings className="w-3.5 h-3.5 text-white" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold" style={{ color: "hsl(142 71% 45%)" }}>Немає будинку</p>
-                  <button onClick={() => navigate("/houses")}
-                    className="mt-2 text-[10px] font-semibold px-2.5 py-1 rounded-lg"
-                    style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.25)", color: "hsl(142 71% 45%)" }}>
-                    Переглянути →
-                  </button>
+              ) : (
+                <div className="relative overflow-hidden rounded-xl p-4 flex items-center gap-4"
+                  style={{ background: "linear-gradient(135deg, hsl(142 71% 45% / 0.06), hsl(142 71% 45% / 0.02))", border: "1px solid hsl(142 71% 45% / 0.15)" }}>
+                  <div className="relative w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center"
+                    style={{ background: "hsl(142 71% 45% / 0.1)", border: "1.5px solid hsl(142 71% 45% / 0.3)" }}>
+                    <Home className="w-7 h-7" style={{ color: "hsl(142 71% 45%)" }} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold" style={{ color: "hsl(142 71% 45%)" }}>Немає будинку</p>
+                    <button onClick={() => navigate("/houses")}
+                      className="mt-2 text-[10px] font-semibold px-2.5 py-1 rounded-lg"
+                      style={{ background: "hsl(142 71% 45% / 0.1)", border: "1px solid hsl(142 71% 45% / 0.25)", color: "hsl(142 71% 45%)" }}>
+                      Переглянути →
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
-
-
+      )}
 
       {/* ═══ ЯРУС 1: ЛІЦЕНЗІЇ ═══ */}
-      <div className="space-y-4 mb-6 px-1" style={blockAnim(contentVisible, 300)}>
-        {profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any) => (
-          <div key={item.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
-               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
-            <div className="relative rounded-[15px] overflow-hidden px-5 py-4 flex items-center gap-4" style={{ background: passportBg }}>
-              <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-40"
-                   style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.6) 0%, transparent 80%)` }} />
-              <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
-                <FileCheck className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
-              </div>
-              <div className="flex-1 min-w-0 z-10">
-                <p className="text-[8px] text-muted-foreground uppercase tracking-[0.2em] font-black mb-2 opacity-60">ЛІЦЕНЗІЯ</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(item.license_type || "Ліцензія").split(',').map((tag: string, i: number) => (
-                    <div key={i} className="px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/10 backdrop-blur-md">
-                      <span className="text-[9px] font-black uppercase tracking-tight text-primary italic whitespace-nowrap">{tag.trim()}</span>
-                    </div>
-                  ))}
+      {loading ? (
+        <SkeletonBlock h={56} />
+      ) : (
+        <div className="space-y-4 mb-6 px-1" style={blockAnim(contentVisible, 300)}>
+          {profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any) => (
+            <div key={item.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
+                 style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
+              <div className="relative rounded-[15px] overflow-hidden px-5 py-4 flex items-center gap-4" style={{ background: passportBg }}>
+                <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-40"
+                     style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.6) 0%, transparent 80%)` }} />
+                <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
+                  <FileCheck className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
                 </div>
+                <div className="flex-1 min-w-0 z-10">
+                  <p className="text-[8px] text-muted-foreground uppercase tracking-[0.2em] font-black mb-2 opacity-60">ЛІЦЕНЗІЯ</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(item.license_type || "Ліцензія").split(',').map((tag: string, i: number) => (
+                      <div key={i} className="px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/10 backdrop-blur-md">
+                        <span className="text-[9px] font-black uppercase tracking-tight text-primary italic whitespace-nowrap">{tag.trim()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
               </div>
-              <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* ═══ ЯРУС 2: ТРАНСПОРТ ═══ */}
-      <div className="space-y-4 mb-10 px-1" style={blockAnim(contentVisible, 360)}>
-        {((profileData as any).cars || []).map((car: any) => (
-          <div key={car.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
-               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
-            <div className="relative rounded-[15px] overflow-hidden px-5 py-5 flex items-center gap-4" style={{ background: passportBg }}>
-              <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-30"
-                   style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.5) 0%, transparent 80%)` }} />
-              <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
-                <Car className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
-              </div>
-              <div className="flex-1 flex items-center justify-between min-w-0 z-10">
-                <div>
-                  <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-black mb-1 opacity-50">НОМЕРИ АВТО</p>
-                  <p className="text-[7px] text-primary/40 uppercase font-bold tracking-tighter mb-0.5">МОДЕЛЬ АВТО</p>
-                  <p className="text-sm font-black text-white italic tracking-tighter leading-none truncate max-w-[110px]">{car.car_model || "НЕВІДОМО"}</p>
+      {loading ? (
+        <SkeletonBlock h={72} />
+      ) : (
+        <div className="space-y-4 mb-10 px-1" style={blockAnim(contentVisible, 360)}>
+          {((profileData as any).cars || []).map((car: any) => (
+            <div key={car.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
+                 style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
+              <div className="relative rounded-[15px] overflow-hidden px-5 py-5 flex items-center gap-4" style={{ background: passportBg }}>
+                <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-30"
+                     style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.5) 0%, transparent 80%)` }} />
+                <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
+                  <Car className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
                 </div>
-                <div className="shrink-0 scale-[1.2] origin-right mr-1 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
-                  <PlateBadge plate={car.plate_number} />
+                <div className="flex-1 flex items-center justify-between min-w-0 z-10">
+                  <div>
+                    <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-black mb-1 opacity-50">НОМЕРИ АВТО</p>
+                    <p className="text-[7px] text-primary/40 uppercase font-bold tracking-tighter mb-0.5">МОДЕЛЬ АВТО</p>
+                    <p className="text-sm font-black text-white italic tracking-tighter leading-none truncate max-w-[110px]">{car.car_model || "НЕВІДОМО"}</p>
+                  </div>
+                  <div className="shrink-0 scale-[1.2] origin-right mr-1 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
+                    <PlateBadge plate={car.plate_number} />
+                  </div>
                 </div>
+                <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
               </div>
-              <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* ═══ МОДАЛКА ВИБОРУ НФТ ДЛЯ ОРБІТИ ═══ */}
       {showOrbitSettings && (
@@ -943,218 +854,6 @@ const Profile = () => {
             </div>
             <ChevronRight className="w-4 h-4 text-primary" />
           </button>
-        </div>
-      )}
-
-      {/* ═══ VIP МОДАЛКА ═══ */}
-      {showVipModal && (
-        <div
-          className="fixed inset-0 z-[1000] flex items-end justify-center"
-          style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)" }}
-          onClick={() => setShowVipModal(false)}
-        >
-          <div
-            className="w-full max-w-md pb-6"
-            style={{ animation: "modalSlideUp 0.38s cubic-bezier(0.34,1.3,0.64,1) both" }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* ── Картка модалки ── */}
-            <div style={{
-              margin: "0 8px",
-              borderRadius: "28px 28px 20px 20px",
-              overflow: "hidden",
-              background: "linear-gradient(170deg, #0f0a04 0%, #1a1005 40%, #0f0a04 100%)",
-              border: "1px solid #f59e0b33",
-              boxShadow: "0 -8px 60px #f59e0b22, 0 0 0 1px #f59e0b18",
-            }}>
-
-              {/* ── Header з переливаючимся золотом ── */}
-              <div style={{ position: "relative", overflow: "hidden", padding: "28px 24px 20px" }}>
-                {/* Фон шимер */}
-                <div style={{
-                  position: "absolute", inset: 0,
-                  background: "linear-gradient(135deg, #f59e0b08 0%, #f59e0b18 30%, #fbbf2428 50%, #f59e0b18 70%, #f59e0b08 100%)",
-                  backgroundSize: "300% 100%",
-                  animation: "vipShimmer 3s linear infinite",
-                }} />
-                {/* Радіальне сяйво знизу */}
-                <div style={{
-                  position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)",
-                  width: 260, height: 80,
-                  background: "radial-gradient(ellipse, #f59e0b30 0%, transparent 70%)",
-                  filter: "blur(16px)",
-                }} />
-
-                {/* Close */}
-                <button
-                  onClick={() => setShowVipModal(false)}
-                  style={{
-                    position: "absolute", top: 16, right: 16,
-                    width: 30, height: 30, borderRadius: 10,
-                    background: "#ffffff0a", border: "1px solid #ffffff10",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer", zIndex: 2,
-                  }}
-                >
-                  <X size={14} style={{ color: "#ffffff60" }} />
-                </button>
-
-                {/* Crown + title */}
-                <div style={{ position: "relative", textAlign: "center", zIndex: 1 }}>
-                  <div style={{
-                    width: 64, height: 64, borderRadius: "50%", margin: "0 auto 14px",
-                    background: "linear-gradient(135deg, #78350f, #d97706, #fbbf24, #d97706, #78350f)",
-                    backgroundSize: "200% 200%",
-                    animation: "vipShimmer 2s linear infinite",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    boxShadow: "0 0 32px #f59e0b66, 0 0 64px #f59e0b33",
-                  }}>
-                    <Crown size={28} style={{ color: "#fff", filter: "drop-shadow(0 0 8px #fff)", animation: "crownFloat 3s ease-in-out infinite" }} />
-                  </div>
-
-                  <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase",
-                    background: "linear-gradient(90deg, #b45309, #f59e0b, #fde68a, #f59e0b, #b45309)",
-                    backgroundSize: "200% 100%",
-                    WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                    animation: "vipShimmer 2.5s linear infinite",
-                  }}>VIP Підписка</div>
-                  <div style={{ fontSize: 12, color: "#f59e0b70", marginTop: 4, fontWeight: 500 }}>
-                    Ексклюзивний доступ для обраних
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Переваги ── */}
-              <div style={{ padding: "0 20px 16px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {[
-                    { icon: <Crown size={13} />, text: "VIP значок" },
-                    { icon: <Shield size={13} />, text: "VIP-зони" },
-                    { icon: <Zap size={13} />, text: "Подвійний досвід" },
-                    { icon: <Star size={13} />, text: "Ексклюзивний скін" },
-                  ].map((item, i) => (
-                    <div key={i} style={{
-                      display: "flex", alignItems: "center", gap: 8,
-                      padding: "8px 12px", borderRadius: 12,
-                      background: "#f59e0b0c", border: "1px solid #f59e0b22",
-                    }}>
-                      <span style={{ color: "#f59e0b", flexShrink: 0 }}>{item.icon}</span>
-                      <span style={{ fontSize: 11, color: "#e2c97e", fontWeight: 600 }}>{item.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Вибір плану ── */}
-              <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
-                {([
-                  { id: "month" as const, label: "1 Місяць", price: 99, sub: "UAH" },
-                  { id: "year" as const, label: "1 Рік", price: 799, sub: "UAH • -33%" },
-                ] as const).map(plan => {
-                  const sel = vipPlan === plan.id;
-                  return (
-                    <button
-                      key={plan.id}
-                      onClick={() => setVipPlan(plan.id)}
-                      style={{
-                        flex: 1, padding: "14px 8px", borderRadius: 16, cursor: "pointer",
-                        border: sel ? "1.5px solid #f59e0baa" : "1.5px solid #f59e0b33",
-                        background: sel
-                          ? "linear-gradient(135deg, #78350f30, #d9770620, #f59e0b18)"
-                          : "#f59e0b08",
-                        boxShadow: sel ? "0 0 20px #f59e0b33, inset 0 0 12px #f59e0b0a" : "none",
-                        animation: sel ? "planGlow 2s ease-in-out infinite" : "none",
-                        transition: "all 0.2s",
-                        position: "relative", overflow: "hidden",
-                      }}
-                    >
-                      {plan.id === "year" && (
-                        <div style={{
-                          position: "absolute", top: -1, right: -1,
-                          background: "linear-gradient(135deg, #d97706, #f59e0b)",
-                          fontSize: 8, fontWeight: 900, color: "#000",
-                          padding: "3px 8px", borderRadius: "0 14px 0 10px",
-                          letterSpacing: "0.05em", textTransform: "uppercase",
-                        }}>ТОП</div>
-                      )}
-                      {sel && (
-                        <div style={{
-                          position: "absolute", inset: 0,
-                          background: "linear-gradient(90deg, transparent, #f59e0b18, transparent)",
-                          backgroundSize: "200% 100%",
-                          animation: "vipShimmer 1.8s linear infinite",
-                        }} />
-                      )}
-                      <div style={{ position: "relative", zIndex: 1 }}>
-                        <div style={{ fontSize: 11, color: sel ? "#fde68a" : "#f59e0b99", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                          {plan.label}
-                        </div>
-                        <div style={{ fontSize: 22, fontWeight: 900,
-                          background: sel
-                            ? "linear-gradient(90deg, #f59e0b, #fde68a, #f59e0b)"
-                            : "none",
-                          backgroundSize: "200% 100%",
-                          animation: sel ? "vipShimmer 2s linear infinite" : "none",
-                          WebkitBackgroundClip: sel ? "text" : "initial",
-                          WebkitTextFillColor: sel ? "transparent" : "#f59e0b99",
-                          color: sel ? undefined : "#f59e0b99",
-                        }}>
-                          {plan.price}₴
-                        </div>
-                        <div style={{ fontSize: 9, color: sel ? "#f59e0b88" : "#f59e0b44", marginTop: 2, fontWeight: 600 }}>
-                          {plan.sub}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* ── Кнопка оплати ── */}
-              <div style={{ padding: "0 20px 8px" }}>
-                <button
-                  onClick={handleBuyVip}
-                  disabled={vipLoading}
-                  style={{
-                    width: "100%", padding: "15px 20px",
-                    borderRadius: 16, border: "none", cursor: vipLoading ? "not-allowed" : "pointer",
-                    background: vipLoading
-                      ? "#2a1f0a"
-                      : "linear-gradient(90deg, #78350f, #b45309, #d97706, #f59e0b, #fbbf24, #f59e0b, #d97706, #b45309, #78350f)",
-                    backgroundSize: "200% 100%",
-                    animation: vipLoading ? "none" : "vipShimmer 2s linear infinite",
-                    boxShadow: vipLoading ? "none" : "0 0 24px #f59e0b66, 0 4px 20px #00000088",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                    transition: "all 0.2s",
-                  }}
-                >
-                  {vipLoading ? (
-                    <>
-                      <div style={{
-                        width: 16, height: 16, border: "2px solid #f59e0b44",
-                        borderTopColor: "#f59e0b", borderRadius: "50%",
-                        animation: "spin-slow 0.7s linear infinite",
-                      }} />
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b88" }}>Перенаправлення...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard size={16} style={{ color: "#000", filter: "drop-shadow(0 0 4px #fff4)" }} />
-                      <span style={{ fontSize: 15, fontWeight: 900, color: "#000", letterSpacing: "0.04em" }}>
-                        Оплатити {vipPlan === "month" ? "99" : "799"}₴ через AnyPay
-                      </span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* ── Захист ── */}
-              <div style={{ padding: "8px 20px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <Shield size={11} style={{ color: "#f59e0b55" }} />
-                <span style={{ fontSize: 10, color: "#f59e0b55", fontWeight: 500 }}>Захищена оплата • Visa / MC / Google Pay</span>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
