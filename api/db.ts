@@ -1,4 +1,8 @@
+// /api/db.ts — захищений проксі для INSERT/UPDATE/DELETE/UPSERT.
+// Зміни проти попередньої версії описано в AUDIT.md.
+
 import { createClient } from "@supabase/supabase-js";
+import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger";
 
 const ALLOWED_TABLES = new Set<string>([
   "users","license_applications","car_plates","faction_applications",
@@ -7,17 +11,12 @@ const ALLOWED_TABLES = new Set<string>([
   "mayor_election","nft_gifts","nft_owners","news","houses","documents",
   "bans","house_families","recruitment_settings","house_confiscations",
   "mayor_candidate_applications","notifications",
+  // db_logs у списку, але запис у нього заборонено всім (див. нижче)
+  "db_logs",
 ]);
 
 const ALLOWED_OPS  = new Set(["insert", "update", "delete", "upsert"]);
 const ALLOWED_FILTERS = new Set(["eq", "ilike"]);
-
-const PLAYER_TABLES = new Set<string>([
-  "users","license_applications","car_plates","faction_applications",
-  "admin_applications","house_purchase_requests","city_voice","sos_signals",
-  "wanted","nft_gifts","nft_owners","house_families","mayor_candidate_applications",
-  "notifications",
-]);
 
 const ADMIN_ONLY_TABLES = new Set<string>([
   "admin_perms","bans","news","houses","documents","factions","faction_leaders",
@@ -26,342 +25,292 @@ const ADMIN_ONLY_TABLES = new Set<string>([
 
 const SUPER_ADMIN_NICK = "t1kron1x";
 
-// ── Таблиці заявок — гравець може тільки insert свою заявку ──────────────────
-// update/delete/upsert статусних полів — тільки адміни
 const STATUS_PROTECTED_TABLES = new Set([
   "admin_applications", "license_applications", "faction_applications",
   "house_purchase_requests", "mayor_candidate_applications",
 ]);
-
-// Поля у заявках, які може змінювати тільки адмін
-// При insert — дозволяємо status="pending", блокуємо тільки approved/rejected
-// При update/upsert — status взагалі заборонено без прав
 const FORBIDDEN_STATUS_FIELDS = new Set(["status", "approved", "rejected", "approved_by"]);
 const APPROVED_INSERT_STATUSES = new Set(["pending", "review"]);
 
-// Таблиці де гравець може видаляти тільки свій запис
 const OWN_RECORD_TABLES = new Set(["wanted", "sos_signals", "city_voice", "notifications"]);
+
+// Таблиці, де delete/update мають однозначно адресувати ОДИН рядок
+// (по id або slug) — щоб уникнути масового знищення через слабкий match.
+const SINGLE_ROW_REQUIRED = new Set([
+  "factions","faction_leaders","faction_overrides","houses","news","documents",
+  "bans","recruitment_settings","house_confiscations","mayor_election",
+]);
+
+const SAFE_COL = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
 type Match = Record<string, { op: "eq" | "ilike"; value: unknown }> | undefined;
 
 interface Body {
-  nick:     string;
-  password: string;
-  table:    string;
-  op:       "insert" | "update" | "delete" | "upsert";
-  values?:  unknown;
-  match?:   Match;
-  onConflict?: string;
-  returning?:  boolean;
+  nick: string; password: string; table: string;
+  op: "insert" | "update" | "delete" | "upsert";
+  values?: unknown; match?: Match;
+  onConflict?: string; returning?: boolean;
+}
+
+function valueHasWildcard(v: unknown): boolean {
+  const s = String(v ?? "");
+  return s.includes("%") || s.includes("_");
 }
 
 export default async function handler(req: any, res: any) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST")   return res.status(405).json({ error: "Method not allowed" });
 
-  const SUPABASE_URL    = process.env.SUPABASE_URL;
-  const SERVICE_KEY     = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!SUPABASE_URL || !SERVICE_KEY) {
-    return res.status(500).json({ error: "Server not configured" });
-  }
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!SUPABASE_URL || !SERVICE_KEY) return res.status(500).json({ error: "Server not configured" });
 
   let body: Body;
-  try {
-    body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-  } catch {
-    return res.status(400).json({ error: "Invalid JSON" });
-  }
+  try { body = typeof req.body === "string" ? JSON.parse(req.body) : req.body; }
+  catch { return res.status(400).json({ error: "Invalid JSON" }); }
 
   const { nick, password, op, values, match, onConflict, returning } = body || {} as Body;
   const table = String(body?.table || "").trim();
-
-  // ── 1. Перевірка вхідних даних ─────────────────────────────────────────────
-  if (!nick || !password) {
-    return res.status(401).json({ error: "Unauthorized: no credentials" });
-  }
-  if (!table || !ALLOWED_TABLES.has(table)) {
-    return res.status(400).json({ error: `Table not allowed: ${table || "empty"}` });
-  }
-  if (!op || !ALLOWED_OPS.has(op)) {
-    return res.status(400).json({ error: "Op not allowed" });
-  }
-
-  // ── ПАТЧ: delete/update БЕЗ match — забороняємо завжди ───────────────────
-  // Без цього будь-який гравець міг передати delete без match і стерти всю таблицю
-  if ((op === "delete" || op === "update") && (!match || Object.keys(match).length === 0)) {
-    return res.status(400).json({ error: `match is required for "${op}" operation` });
-  }
-
-  // ── 2. Перевірка нік/пароль у Supabase ────────────────────────────────────
   const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: userRow, error: userErr } = await supabaseAdmin
-    .from("users")
-    .select("username, password, role")
-    .ilike("username", nick.trim())
-    .maybeSingle();
+  const ip = getClientIp(req);
+  const ua = getUserAgent(req);
 
-  if (userErr || !userRow) {
-    return res.status(401).json({ error: "Unauthorized: user not found" });
-  }
-  if (userRow.password !== password) {
-    return res.status(401).json({ error: "Unauthorized: wrong password" });
-  }
-
-  // ── 3. Перевірка прав доступу до таблиці ──────────────────────────────────
-  const normalizedNick = userRow.username.toLowerCase().trim();
-  const isSuperAdmin   = normalizedNick === SUPER_ADMIN_NICK.toLowerCase();
-  const isAdmin        = isSuperAdmin || userRow.role === "admin";
-
-  const TABLE_PERM_MAP: Record<string, string> = {
-    "sos_signals":                  "sos",
-    "news":                         "news",
-    "houses":                       "houses",
-    "house_confiscations":          "houses",
-    "house_purchase_requests":      "house_requests",
-    "wanted":                       "wanted",
-    "bans":                         "bans",
-    "nft_gifts":                    "nft",
-    "nft_owners":                   "nft",
-    "recruitment_settings":         "recruitment",
-    "factions":                     "manage_factions",
-    "faction_leaders":              "manage_factions",
-    "faction_overrides":            "manage_factions",
-    "faction_applications":         "factions",
-    "mayor_election":               "election",
-    "mayor_candidate_applications": "mayor_apps",
-    "documents":                    "documents",
-    "admin_perms":                  "debug",
-    "admin_applications":           "applications",
-    "license_applications":         "licenses",
-    "car_plates":                   "plates",
-    "city_voice":                   "voice",
-    "house_families":               "houses",
-    "notifications":                "sos",
+  const deny = async (status: number, error: string, role: string | null = null) => {
+    await logDbRequest(supabaseAdmin, {
+      endpoint: "db", username: nick ? String(nick).toLowerCase().trim() : null,
+      role, table_name: table || null, op: op || null,
+      match_keys: keysOf(match), value_keys: keysOf(values),
+      status, allowed: false, error, ip, user_agent: ua,
+    });
+    return res.status(status).json({ error });
+  };
+  const allow = async (status: number, role: string, payload: any) => {
+    await logDbRequest(supabaseAdmin, {
+      endpoint: "db", username: String(nick).toLowerCase().trim(),
+      role, table_name: table, op,
+      match_keys: keysOf(match), value_keys: keysOf(values),
+      status, allowed: true, error: null, ip, user_agent: ua,
+    });
+    return res.status(status).json(payload);
   };
 
-  if (ADMIN_ONLY_TABLES.has(table) && !isAdmin) {
-    const requiredPerm = TABLE_PERM_MAP[table];
-    const { data: permRow } = await supabaseAdmin
-      .from("admin_perms")
-      .select("perms")
-      .ilike("username", normalizedNick)
-      .maybeSingle();
-    const adminPerms = (permRow?.perms as Record<string, boolean>) || {};
-    if (!requiredPerm || !adminPerms[requiredPerm]) {
-      return res.status(403).json({ error: `Forbidden: missing permission "${requiredPerm || table}"` });
+  // ── 1. Базова валідація ──────────────────────────────────────────────────
+  if (!nick || !password) return deny(401, "Unauthorized: no credentials");
+  if (!table || !ALLOWED_TABLES.has(table)) return deny(400, `Table not allowed: ${table || "empty"}`);
+  if (!op || !ALLOWED_OPS.has(op)) return deny(400, "Op not allowed");
+
+  // db_logs — read-only через /api/db-select; писати не можна нікому
+  if (table === "db_logs") return deny(403, "db_logs is read-only");
+
+  // match обов'язковий для delete/update/upsert
+  if ((op === "delete" || op === "update" || op === "upsert") && (!match || Object.keys(match).length === 0)) {
+    return deny(400, `match is required for "${op}" operation`);
+  }
+
+  // Валідація імен колонок у match
+  if (match) {
+    for (const col of Object.keys(match)) {
+      if (!SAFE_COL.test(col)) return deny(400, `Invalid match column: ${col}`);
+      const cond = (match as any)[col];
+      if (!cond || !ALLOWED_FILTERS.has(cond.op)) return deny(400, `Invalid filter on ${col}`);
     }
   }
 
-  // Завантажуємо perms один раз для подальших перевірок
+  // ── 2. Перевірка користувача ─────────────────────────────────────────────
+  const { data: userRow, error: userErr } = await supabaseAdmin
+    .from("users").select("username, password, role")
+    .ilike("username", nick.trim()).maybeSingle();
+
+  if (userErr || !userRow) return deny(401, "Unauthorized: user not found");
+  if (userRow.password !== password) return deny(401, "Unauthorized: wrong password");
+
+  const normalizedNick = userRow.username.toLowerCase().trim();
+  const isSuperAdmin   = normalizedNick === SUPER_ADMIN_NICK.toLowerCase();
+  const isAdmin        = isSuperAdmin || userRow.role === "admin";
+  const role           = isSuperAdmin ? "superadmin" : (userRow.role || "player");
+
+  // ── 3. Permission map ────────────────────────────────────────────────────
+  const TABLE_PERM_MAP: Record<string, string> = {
+    "sos_signals":"sos","news":"news","houses":"houses",
+    "house_confiscations":"houses","house_purchase_requests":"house_requests",
+    "wanted":"wanted","bans":"bans","nft_gifts":"nft","nft_owners":"nft",
+    "recruitment_settings":"recruitment","factions":"manage_factions",
+    "faction_leaders":"manage_factions","faction_overrides":"manage_factions",
+    "faction_applications":"factions","mayor_election":"election",
+    "mayor_candidate_applications":"mayor_apps","documents":"documents",
+    "admin_perms":"debug","admin_applications":"applications",
+    "license_applications":"licenses","car_plates":"plates",
+    "city_voice":"voice","house_families":"houses","notifications":"sos",
+  };
+
+  // Завантажуємо perms один раз
   let adminPermsGlobal: Record<string, boolean> = {};
   if (!isAdmin) {
     const { data: permRow } = await supabaseAdmin
-      .from("admin_perms")
-      .select("perms")
-      .ilike("username", normalizedNick)
-      .maybeSingle();
+      .from("admin_perms").select("perms").ilike("username", normalizedNick).maybeSingle();
     adminPermsGlobal = (permRow?.perms as Record<string, boolean>) || {};
   }
   const hasAnyAdminPerm = isAdmin || Object.values(adminPermsGlobal).some(Boolean);
 
-  // ── 3.5. Захист таблиці users ────────────────────────────────────────────
-  if (table === "users") {
-    const ADMIN_USER_FIELDS = ["role", "telegram_id", "is_banned", "balance", "rare_balance", "vip_expires_at", "vip_duration"];
+  if (ADMIN_ONLY_TABLES.has(table) && !isAdmin) {
+    const requiredPerm = TABLE_PERM_MAP[table];
+    if (!requiredPerm || !adminPermsGlobal[requiredPerm]) {
+      return deny(403, `Forbidden: missing permission "${requiredPerm || table}"`);
+    }
+  }
 
+  // ── 3.1 Жорсткий «один рядок» для критичних таблиць ─────────────────────
+  if (SINGLE_ROW_REQUIRED.has(table) && (op === "delete" || op === "update" || op === "upsert") && !isSuperAdmin) {
+    const hasIdOrSlug = match && Object.entries(match).some(([k, c]) =>
+      (k === "id" || k === "slug") && c.op === "eq" && !valueHasWildcard(c.value)
+    );
+    if (!hasIdOrSlug) {
+      return deny(400, `Operation on "${table}" requires explicit id/slug match`);
+    }
+  }
+
+  // ── 3.5 Захист таблиці users ────────────────────────────────────────────
+  if (table === "users") {
+    const ADMIN_USER_FIELDS = ["role","telegram_id","is_banned","balance","rare_balance","vip_expires_at","vip_duration"];
     if (!hasAnyAdminPerm) {
       if (values && typeof values === "object") {
         for (const field of ADMIN_USER_FIELDS) {
-          if (field in (values as any)) {
-            return res.status(403).json({ error: `Forbidden: cannot modify field "${field}"` });
-          }
+          if (field in (values as any)) return deny(403, `Forbidden: cannot modify field "${field}"`);
         }
       }
-      // Гравець може update/delete/upsert тільки свій запис
-      // ПАТЧ: перевіряємо match навіть якщо він є — раніше при відсутності match перевірка пропускалась
       if (op === "update" || op === "delete" || op === "upsert") {
-        if (!match || Object.keys(match).length === 0) {
-          return res.status(403).json({ error: "Forbidden: match with own username is required" });
-        }
-        const hasOwnFilter = Object.entries(match).some(([k, cond]) =>
-          k === "username" &&
-          String((cond as any).value).toLowerCase().trim() === normalizedNick
-        );
-        if (!hasOwnFilter) {
-          return res.status(403).json({ error: "Forbidden: can only modify your own user record" });
-        }
+        if (!match) return deny(403, "Forbidden: match is required");
+        const hasOwnFilter = Object.entries(match).some(([k, cond]) => {
+          if (k !== "username") return false;
+          if (cond.op === "ilike" && valueHasWildcard(cond.value)) return false;
+          return String(cond.value).toLowerCase().trim() === normalizedNick;
+        });
+        if (!hasOwnFilter) return deny(403, "Forbidden: can only modify your own user record");
       }
     }
   }
 
-  // ── 3.6. Захист статусів заявок ───────────────────────────────────────────
+  // ── 3.6 Захист статусів заявок ──────────────────────────────────────────
   if (STATUS_PROTECTED_TABLES.has(table) && !hasAnyAdminPerm) {
     if (values && typeof values === "object") {
       if (op === "insert") {
-        // При insert — дозволяємо тільки status="pending"/"review"
-        // Гравець НЕ може одразу вставити заявку зі status=approved
         const statusVal = String((values as any)["status"] || "").toLowerCase().trim();
         if ("status" in (values as any) && !APPROVED_INSERT_STATUSES.has(statusVal)) {
-          return res.status(403).json({ error: `Forbidden: cannot insert with status="${statusVal}"` });
+          return deny(403, `Forbidden: cannot insert with status="${statusVal}"`);
         }
-        // Поля approved/rejected/approved_by заблоковані завжди
-        for (const field of ["approved", "rejected", "approved_by"]) {
-          if (field in (values as any)) {
-            return res.status(403).json({ error: `Forbidden: cannot set "${field}" field` });
-          }
+        for (const field of ["approved","rejected","approved_by"]) {
+          if (field in (values as any)) return deny(403, `Forbidden: cannot set "${field}" field`);
         }
       } else {
-        // update/upsert — status взагалі заборонений без прав
         for (const field of FORBIDDEN_STATUS_FIELDS) {
-          if (field in (values as any)) {
-            return res.status(403).json({ error: `Forbidden: cannot change "${field}" field` });
-          }
+          if (field in (values as any)) return deny(403, `Forbidden: cannot change "${field}" field`);
         }
       }
     }
-
-    // ПАТЧ: гравець може тільки insert свою заявку — не може змінювати чужі
     if ((op === "update" || op === "delete" || op === "upsert") && match) {
-      const ownerFields = ["username", "nick", "player_nick", "author"];
-      const hasOwnFilter = Object.entries(match).some(([k, cond]) =>
-        ownerFields.includes(k) &&
-        String((cond as any).value).toLowerCase().trim() === normalizedNick
-      );
-      if (!hasOwnFilter) {
-        return res.status(403).json({ error: "Forbidden: can only modify your own application" });
-      }
+      const ownerFields = ["username","nick","player_nick","author"];
+      const hasOwnFilter = Object.entries(match).some(([k, cond]) => {
+        if (!ownerFields.includes(k)) return false;
+        if (cond.op === "ilike" && valueHasWildcard(cond.value)) return false;
+        return String(cond.value).toLowerCase().trim() === normalizedNick;
+      });
+      if (!hasOwnFilter) return deny(403, "Forbidden: can only modify your own application");
     }
   }
 
-  // ── 3.65. Захист bans — не можна банити адміна або супер-адміна ──────────
+  // ── 3.65 Захист bans ────────────────────────────────────────────────────
   if (table === "bans" && !isSuperAdmin) {
     if ((op === "insert" || op === "update" || op === "upsert") && values && typeof values === "object") {
       const targetNick = String((values as any).username || (values as any).nick || "").toLowerCase().trim();
       if (targetNick) {
-        // Перевіряємо роль цільового гравця
         const { data: targetRow } = await supabaseAdmin
-          .from("users")
-          .select("role, username")
-          .ilike("username", targetNick)
-          .maybeSingle();
-
+          .from("users").select("role, username").ilike("username", targetNick).maybeSingle();
         if (targetRow?.role === "admin" || targetRow?.username?.toLowerCase().trim() === SUPER_ADMIN_NICK.toLowerCase()) {
-          return res.status(403).json({ error: "Forbidden: cannot ban an admin" });
+          return deny(403, "Forbidden: cannot ban an admin");
         }
       }
     }
   }
 
-  // ── 3.66. Захист admin_perms — тільки супер-адмін може роздавати/знімати перми ──
-  // Звичайний адмін з perm "debug" НЕ може змінювати перми інших адмінів
+  // ── 3.66 admin_perms — тільки супер-адмін ───────────────────────────────
   if (table === "admin_perms" && !isSuperAdmin) {
-    return res.status(403).json({ error: "Forbidden: only super-admin can manage admin permissions" });
+    return deny(403, "Forbidden: only super-admin can manage admin permissions");
   }
 
-  // ── 3.67. Захист houses — не можна видалити/переписати будинок адміна ────
-  if (table === "houses" && !isSuperAdmin) {
-    if ((op === "delete" || op === "update") && match) {
-      // Дозволяємо — перевірка власника відбувається через perm "houses"
-      // Але забороняємо змінювати поле owner якщо цільовий власник — адмін
-      if (values && typeof values === "object") {
-        const newOwner = (values as any).owner || (values as any).owner_nick;
-        if (newOwner) {
-          const { data: ownerRow } = await supabaseAdmin
-            .from("users").select("role").ilike("username", String(newOwner)).maybeSingle();
-          // Не блокуємо — просто не дозволяємо переписати на адміна без супер-прав
-        }
-      }
-    }
-  }
-
-  // ── 3.68. Захист users — не можна змінити role/is_banned адміна або супер-адміна ──
-  // Навіть адмін не може розжалувати іншого адміна — тільки супер-адмін
+  // ── 3.68 Захист users від змін ролі/бану адмінів ────────────────────────
   if (table === "users" && !isSuperAdmin && hasAnyAdminPerm) {
     if ((op === "update" || op === "upsert") && values && typeof values === "object") {
       const hasRoleChange = "role" in (values as any) || "is_banned" in (values as any);
       if (hasRoleChange && match) {
-        const targetNick = String(
-          (match as any)["username"]?.value || ""
-        ).toLowerCase().trim();
+        const targetNick = String((match as any)["username"]?.value || "").toLowerCase().trim();
         if (targetNick && targetNick !== normalizedNick) {
           const { data: targetRow } = await supabaseAdmin
             .from("users").select("role, username").ilike("username", targetNick).maybeSingle();
-          if (
-            targetRow?.role === "admin" ||
-            targetRow?.username?.toLowerCase().trim() === SUPER_ADMIN_NICK.toLowerCase()
-          ) {
-            return res.status(403).json({ error: "Forbidden: cannot change role or ban status of an admin" });
+          if (targetRow?.role === "admin" ||
+              targetRow?.username?.toLowerCase().trim() === SUPER_ADMIN_NICK.toLowerCase()) {
+            return deny(403, "Forbidden: cannot change role or ban status of an admin");
           }
         }
       }
     }
   }
 
-  // ── 3.7. Захист nft_owners і nft_gifts ────────────────────────────────────
+  // ── 3.7 NFT ─────────────────────────────────────────────────────────────
   if ((table === "nft_owners" || table === "nft_gifts") && !hasAnyAdminPerm) {
-    if (op === "update" || op === "delete") {
-      return res.status(403).json({ error: "Forbidden: cannot modify NFT records" });
-    }
+    if (op === "update" || op === "delete") return deny(403, "Forbidden: cannot modify NFT records");
+    if (op === "upsert") return deny(403, "Forbidden: cannot upsert NFT records");
     if (op === "insert" && values && typeof values === "object") {
       const owner = (values as any).owner_nick || (values as any).recipient_nick;
       if (owner && String(owner).toLowerCase().trim() !== normalizedNick) {
-        return res.status(403).json({ error: "Forbidden: cannot assign NFT to another user" });
+        return deny(403, "Forbidden: cannot assign NFT to another user");
       }
-    }
-    // ПАТЧ: upsert заборонений для NFT гравцям
-    if (op === "upsert") {
-      return res.status(403).json({ error: "Forbidden: cannot upsert NFT records" });
     }
   }
 
-  // ── 3.8. Захист wanted/sos_signals — delete тільки свого запису ──────────
-  // ПАТЧ: раніше при відсутності match перевірка пропускалась → delete всієї таблиці
+  // ── 3.8 OWN_RECORD_TABLES ───────────────────────────────────────────────
   if (OWN_RECORD_TABLES.has(table) && !hasAnyAdminPerm) {
-    if (op === "delete") {
-      // match вже перевірений вище (обов'язковий для delete), але перевіряємо власника
-      const hasOwnFilter = Object.entries(match!).some(([k, cond]) =>
-        (k === "username" || k === "nick" || k === "author") &&
-        String((cond as any).value).toLowerCase().trim() === normalizedNick
-      );
-      if (!hasOwnFilter) {
-        return res.status(403).json({ error: "Forbidden: can only delete your own records" });
-      }
+    if (op === "delete" || op === "update" || op === "upsert") {
+      if (!match) return deny(403, "Forbidden: match required");
+      const hasOwnFilter = Object.entries(match).some(([k, cond]) => {
+        if (!(k === "username" || k === "nick" || k === "author")) return false;
+        if (cond.op === "ilike" && valueHasWildcard(cond.value)) return false;
+        return String(cond.value).toLowerCase().trim() === normalizedNick;
+      });
+      if (!hasOwnFilter) return deny(403, "Forbidden: can only modify your own records");
     }
   }
 
-  // ── 4. Виконання запиту ────────────────────────────────────────────────────
+  // ── 4. Виконання ────────────────────────────────────────────────────────
   try {
     let q: any = supabaseAdmin.from(table);
-
     if      (op === "insert") q = q.insert(values as any);
     else if (op === "upsert") q = q.upsert(values as any, onConflict ? { onConflict } : undefined);
     else if (op === "update") q = q.update(values as any);
     else if (op === "delete") q = q.delete();
-
-    if (match && typeof match === "object") {
+    if (match) {
       for (const [col, cond] of Object.entries(match)) {
         if (!cond || !ALLOWED_FILTERS.has(cond.op)) continue;
         q = q[cond.op](col, cond.value as any);
       }
     }
-
     if (returning) q = q.select();
-
     const { data, error } = await q;
     if (error) {
-      console.error("[api/db] error:", error.message);
+      await logDbRequest(supabaseAdmin, {
+        endpoint: "db", username: normalizedNick, role,
+        table_name: table, op, match_keys: keysOf(match), value_keys: keysOf(values),
+        status: 400, allowed: false, error: error.message, ip, user_agent: ua,
+      });
       return res.status(400).json({ error: error.message });
     }
-    return res.status(200).json({ data: data ?? null });
+    return allow(200, role, { data: data ?? null });
   } catch (e: any) {
-    console.error("[api/db] exception:", e?.message);
-    return res.status(500).json({ error: e?.message || "Server error" });
+    return deny(500, e?.message || "Server error", role);
   }
 }
