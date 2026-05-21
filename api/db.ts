@@ -152,7 +152,7 @@ export default async function handler(req: any, res: any) {
     const { data: permRow } = await supabaseAdmin
       .from("admin_perms")
       .select("perms")
-      .eq("username", normalizedNick)
+      .ilike("username", normalizedNick)
       .maybeSingle();
     const adminPerms = (permRow?.perms as Record<string, boolean>) || {};
     if (!requiredPerm || !adminPerms[requiredPerm]) {
@@ -160,12 +160,13 @@ export default async function handler(req: any, res: any) {
     }
   }
 
+  // Завантажуємо perms один раз для подальших перевірок
   let adminPermsGlobal: Record<string, boolean> = {};
   if (!isAdmin) {
     const { data: permRow } = await supabaseAdmin
       .from("admin_perms")
       .select("perms")
-      .eq("username", normalizedNick)
+      .ilike("username", normalizedNick)
       .maybeSingle();
     adminPermsGlobal = (permRow?.perms as Record<string, boolean>) || {};
   }
