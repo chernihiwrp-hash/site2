@@ -97,13 +97,17 @@ export default async function handler(req: any, res: any) {
     return res.status(401).json({ error: "Unauthorized: wrong password" });
 
   // Окремо daily поля — якщо колонок ще немає в БД, не падаємо
-  const { data: dailyRow } = await supabase
-    .from("users")
-    .select("last_daily_claim, daily_streak")
-    .ilike("username", (userRow.username as string).toLowerCase().trim())
-    .maybeSingle()
-    .then(r => r)
-    .catch(() => ({ data: null, error: null }));
+  let dailyRow: { last_daily_claim: any; daily_streak: any } | null = null;
+  try {
+    const res = await supabase
+      .from("users")
+      .select("last_daily_claim, daily_streak")
+      .ilike("username", (userRow.username as string).toLowerCase().trim())
+      .maybeSingle();
+    dailyRow = (res.data as any) ?? null;
+  } catch {
+    dailyRow = null;
+  }
 
   const currentBalance = (userRow.balance as number) || 0;
   const normalizedNick = userRow.username.toLowerCase().trim();
