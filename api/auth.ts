@@ -1,6 +1,6 @@
 // /api/auth.ts — verify, checkUser, checkTelegram, register, upsert.
 import { createClient } from "@supabase/supabase-js";
-import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger";
+import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger.js";
 
 type Op = "verify" | "checkUser" | "checkTelegram" | "register" | "upsert";
 
