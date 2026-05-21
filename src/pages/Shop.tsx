@@ -3,6 +3,7 @@ import { Gift, Clock, Zap, Star, Trophy, Sparkles, Lock, Flame, AlertTriangle, C
 import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
 import { setBalance as syncBalance, supabase } from "../lib/store";
+import { claimDaily as claimDailyApi } from "../lib/balanceApi";
 import { dbInsert, dbUpdate, ilike } from "../lib/db";
 
 /* ───────────── THEMES ───────────── */
@@ -405,19 +406,29 @@ const Shop = () => {
     if (!canClaim || loading) return;
     setLoading(true);
     try {
-      const bonus = streak >= 6 ? 200 : streak >= 3 ? 150 : 100;
-      const { data: user } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
-      const currentBal = (user?.balance as number) ?? 0;
-      const newBal = currentBal + bonus;
-      const { error } = await dbUpdate("users", { balance: newBal }, { username: ilike(nick) });
-      if (error) { toast.error("Помилка нарахування балансу"); setLoading(false); return; }
-      syncBalance(nick, newBal); setBalanceState(newBal);
+      // ПАТЧ: сервер перевіряє час останнього клейму з БД
+      // Фронт не може підробити crp_last_reward в localStorage
+      const result = await claimDailyApi();
+
+      if ("error" in result) {
+        if ((result as any).remaining_ms) {
+          toast.error("Ще зарано! Нагорода буде доступна пізніше");
+        } else {
+          toast.error("Помилка: " + result.error);
+        }
+        setLoading(false);
+        return;
+      }
+
+      const { balance: newBal, bonus, streak: newStreak } = result as any;
+      syncBalance(nick, newBal);
+      setBalanceState(newBal);
       const nowTs = Date.now();
-      // If streak was frozen, reset to 1, otherwise increment
-      const newStreak = streakFrozen ? 1 : streak + 1;
-      setLastReward(nowTs); setStreak(newStreak);
+      setLastReward(nowTs);
+      setStreak(newStreak);
       localStorage.setItem("crp_last_reward", String(nowTs));
       localStorage.setItem("crp_streak", String(newStreak));
+
       if (streakFrozen) {
         toast.info(`Серія відновлена! Починаємо заново з 1 дня. +${bonus} CR`);
       } else {
