@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Palette, Check, Zap, Gift, X, Coins, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { store, type NftGift, supabase } from "../lib/store";
-import { dbUpdate, dbInsert, ilike } from "../lib/db";
+import { store, type NftGift } from "../lib/store";
+import { dbUpdate, ilike } from "../lib/db";
+import { buyTheme as apiBuyTheme, buyNft as apiBuyNft } from "../lib/balanceApi";
 import { THEMES, applyTheme, type ThemeId } from "./Shop";
+import { supabase } from "../lib/store";
 
 const GLOBAL_STYLES = `
   @keyframes card-enter {
@@ -214,7 +216,6 @@ const Casino = () => {
   const [currentTheme, setCurrentTheme] = useState<ThemeId>("lime");
   const [ownedThemes, setOwnedThemes] = useState<ThemeId[]>(["lime"]);
 
-  // ── Завантаження всіх даних з Supabase ────────────────────────────────────
   const loadUserData = useCallback(async () => {
     if (!nick) return;
     try {
@@ -226,12 +227,10 @@ const Casino = () => {
 
       if (data) {
         setBalance((data.balance as number) || 0);
-
         const dbOwned: ThemeId[] = Array.isArray(data.owned_themes) && data.owned_themes.length > 0
           ? data.owned_themes : ["lime"];
         if (!dbOwned.includes("lime")) dbOwned.unshift("lime");
         setOwnedThemes(dbOwned);
-
         const dbTheme = (data.active_theme as ThemeId) || "lime";
         setCurrentTheme(dbTheme);
         const themeObj = THEMES.find(t => t.id === dbTheme);
@@ -240,7 +239,6 @@ const Casino = () => {
     } catch (e) {
       console.error("Помилка завантаження:", e);
     }
-
     const nftData = await store.getNftGifts();
     setGifts(nftData);
     setLoading(false);
@@ -256,7 +254,7 @@ const Casino = () => {
   const buyOrActivate = async (theme: typeof THEMES[0]) => {
     if (buyingTheme) return;
 
-    // Якщо вже куплена — просто активуємо
+    // Якщо вже куплена — просто активуємо (без зміни балансу)
     if (ownedThemes.includes(theme.id)) {
       applyTheme(theme);
       setCurrentTheme(theme.id);
@@ -270,28 +268,18 @@ const Casino = () => {
 
     setBuyingTheme(true);
     try {
-      // Беремо свіжий баланс з БД щоб не було подвійного списання
-      const { data: fresh } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
-      const freshBal = (fresh?.balance as number) ?? 0;
+      // ПАТЧ: тепер сервер сам списує баланс і перевіряє ціну
+      // Фронт не передає newBalance — тільки що купує
+      const result = await apiBuyTheme(theme.id);
 
-      if (freshBal < theme.price) {
-        toast.error("Недостатньо CR!");
+      if ("error" in result) {
+        toast.error("Помилка: " + result.error);
         setBuyingTheme(false);
         return;
       }
 
-      const newBalance = freshBal - theme.price;
+      setBalance(result.balance);
       const newOwned = [...ownedThemes, theme.id as ThemeId];
-
-      const { error } = await dbUpdate("users", {
-        balance: newBalance,
-        owned_themes: newOwned,
-        active_theme: theme.id,
-      }, { username: ilike(nick) });
-
-      if (error) { toast.error("Помилка: " + error.message); setBuyingTheme(false); return; }
-
-      setBalance(newBalance);
       setOwnedThemes(newOwned);
       setCurrentTheme(theme.id as ThemeId);
       localStorage.setItem("crp_theme", theme.id);
@@ -310,37 +298,19 @@ const Casino = () => {
 
     setBuyingNft(true);
     try {
-      // Свіжий баланс з БД
-      const { data: fresh } = await supabase.from("users").select("balance").ilike("username", nick).maybeSingle();
-      const freshBal = (fresh?.balance as number) ?? 0;
+      // ПАТЧ: сервер сам читає баланс, перевіряє ціну з БД і списує
+      // Фронт не передає newBalance
+      const result = await apiBuyNft(selectedGift.id);
 
-      if (freshBal < selectedGift.price) {
-        toast.error("Недостатньо CR!");
-        setSelectedGift(null);
+      if ("error" in result) {
+        toast.error("Помилка: " + result.error);
         setBuyingNft(false);
         return;
       }
 
-      const newBalance = freshBal - selectedGift.price;
-
-      // Списуємо баланс
-      const { error: balError } = await dbUpdate("users", { balance: newBalance }, { username: ilike(nick) });
-      if (balError) { toast.error("Помилка списання балансу"); setBuyingNft(false); return; }
-
-      // Записуємо власника NFT
-      const { error: nftError } = await dbInsert("nft_owners", { owner_nick: nick, nft_id: selectedGift.id });
-      if (nftError) {
-        // Повертаємо баланс якщо NFT не записався
-        await dbUpdate("users", { balance: freshBal }, { username: ilike(nick) });
-        toast.error("Помилка покупки NFT");
-        setBuyingNft(false);
-        return;
-      }
-
-      setBalance(newBalance);
+      setBalance(result.balance);
       const bought = selectedGift;
       setSelectedGift(null);
-      // Оновлюємо список NFT
       const nftData = await store.getNftGifts();
       setGifts(nftData);
       setTimeout(() => setPurchasedGift(bought), 150);
@@ -359,7 +329,6 @@ const Casino = () => {
       <div className="absolute bottom-40 right-0 w-[280px] h-[280px] pointer-events-none"
         style={{ background: "radial-gradient(circle, hsl(var(--primary)/0.05) 0%, transparent 70%)", filter: "blur(60px)" }} />
 
-      {/* Header */}
       <div className="relative flex items-center justify-between mb-8">
         <div>
           <h1 className="font-display text-2xl font-black tracking-tighter text-white italic"
@@ -381,7 +350,6 @@ const Casino = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1.5 mb-8 p-1.5 rounded-[22px]"
         style={{ background: "hsl(0 0% 100% / 0.02)", border: "1px solid hsl(0 0% 100% / 0.05)" }}>
         {(["themes", "gifts"] as const).map((tab) => (
@@ -399,7 +367,6 @@ const Casino = () => {
         ))}
       </div>
 
-      {/* Themes */}
       {activeTab === "themes" && (
         <div className="grid gap-3">
           {loading ? (
@@ -436,7 +403,6 @@ const Casino = () => {
         </div>
       )}
 
-      {/* NFT Grid */}
       {activeTab === "gifts" && (
         <div className="grid grid-cols-2 gap-4">
           {loading ? (
@@ -448,7 +414,6 @@ const Casino = () => {
         </div>
       )}
 
-      {/* NFT Modal */}
       {selectedGift && !selectedGift.sold && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6"
           style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(20px)", animation: "fade-backdrop 0.28s ease" }}
