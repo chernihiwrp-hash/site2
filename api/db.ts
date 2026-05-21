@@ -2,7 +2,7 @@
 // Зміни проти попередньої версії описано в AUDIT.md.
 
 import { createClient } from "@supabase/supabase-js";
-import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger";
+import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger.js";
 
 const ALLOWED_TABLES = new Set<string>([
   "users","license_applications","car_plates","faction_applications",
