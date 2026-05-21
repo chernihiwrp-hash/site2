@@ -1,7 +1,7 @@
 // /api/db-select.ts — захищений проксі для SELECT-запитів + читання db_logs.
 
 import { createClient } from "@supabase/supabase-js";
-import { logDbRequest, getClientIp, getUserAgent } from "./_logger";
+import { logDbRequest, getClientIp, getUserAgent } from "./_logger.js";
 
 const READABLE_TABLES = new Set<string>([
   "users","license_applications","car_plates","faction_applications",
