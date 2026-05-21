@@ -1,7 +1,9 @@
-// /api/db-select.ts — захищений проксі для SELECT-запитів + читання db_logs.
+// /api/db-select.ts — защищённый прокси для SELECT-запросов + db_logs.
+// v2: bcrypt-пароли, узкий CORS, нейтрализация текста ошибок.
 
 import { createClient } from "@supabase/supabase-js";
 import { logDbRequest, getClientIp, getUserAgent } from "./_logger.js";
+import { verifyCredentials, applyCors, safeDbError } from "./_auth.js";
 
 const READABLE_TABLES = new Set<string>([
   "users","license_applications","car_plates","faction_applications",
@@ -16,7 +18,7 @@ const ALLOWED_FILTERS = new Set(["eq", "ilike", "in", "or", "is"]);
 const ALLOWED_ORDERS  = new Set(["asc", "desc"]);
 const SUPER_ADMIN_NICK = "t1kron1x";
 
-const STRIP_FIELDS = new Set(["password","secret_key","secret_token","service_key"]);
+const STRIP_FIELDS = new Set(["password","password_hash","secret_key","secret_token","service_key"]);
 
 const PUBLIC_USER_COLUMNS =
   "id, username, role, balance, avatar_url, owned_themes, theme, active_theme, registered_at, owned_gifts, favorites";
@@ -43,9 +45,7 @@ function stripSensitive(data: unknown): unknown {
 }
 
 export default async function handler(req: any, res: any) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  applyCors(req, res);
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST")   return res.status(405).json({ error: "Method not allowed" });
 
@@ -80,18 +80,14 @@ export default async function handler(req: any, res: any) {
   if (!nick || !password) return deny(401, "Unauthorized: no credentials");
   if (!table || !READABLE_TABLES.has(table)) return deny(400, `Table not allowed: ${table || "empty"}`);
 
-  const { data: userRow, error: userErr } = await supabaseAdmin
-    .from("users").select("username, password, role")
-    .ilike("username", nick.trim()).maybeSingle();
-  if (userErr || !userRow) return deny(401, "Unauthorized: user not found");
-  if (userRow.password !== password) return deny(401, "Unauthorized: wrong password");
+  const user = await verifyCredentials(supabaseAdmin, nick, password);
+  if (!user) return deny(401, "Unauthorized");
 
-  const normalizedNick = userRow.username.toLowerCase().trim();
+  const { normalizedNick } = user;
   const isSuperAdmin   = normalizedNick === SUPER_ADMIN_NICK.toLowerCase();
-  const isAdmin = isSuperAdmin || userRow.role === "admin" || userRow.role === "superadmin";
-  const role = isSuperAdmin ? "superadmin" : (userRow.role || "player");
+  const isAdmin = isSuperAdmin || user.role === "admin" || user.role === "superadmin";
+  const role = isSuperAdmin ? "superadmin" : (user.role || "player");
 
-  // ── db_logs: тільки адмін з пермом db_logs (або super-admin) ─────────────
   if (table === "db_logs") {
     if (!isAdmin) {
       const { data: permRow } = await supabaseAdmin
@@ -99,15 +95,14 @@ export default async function handler(req: any, res: any) {
       const has = !!(permRow?.perms as any)?.db_logs;
       if (!has) return deny(403, "Forbidden: missing permission \"db_logs\"");
     } else if (!isSuperAdmin) {
-      // звичайний адмін: потрібен перм db_logs
       const { data: permRow } = await supabaseAdmin
         .from("admin_perms").select("perms").ilike("username", normalizedNick).maybeSingle();
-      const has = permRow ? !!(permRow.perms as any)?.db_logs : true; // якщо запису нема — це класичний адмін з повними правами
+      const has = permRow ? !!(permRow.perms as any)?.db_logs : true;
       if (permRow && !has) return deny(403, "Forbidden: missing permission \"db_logs\"");
     }
   }
 
-  // ── columns ──────────────────────────────────────────────────────────────
+  // columns
   let columns: string;
   if (table === "users" && !isAdmin) {
     const isSelfQuery = filters && filters.some(f =>
@@ -132,7 +127,7 @@ export default async function handler(req: any, res: any) {
         q = q[f.op](f.col, f.value as any);
       }
       const { count: cnt, error } = await q;
-      if (error) return deny(400, error.message, role);
+      if (error) return deny(400, safeDbError(error), role);
       await logDbRequest(supabaseAdmin, {
         endpoint: "db-select", username: normalizedNick, role,
         table_name: table, op: "select.count", match_keys: null, value_keys: null,
@@ -157,7 +152,7 @@ export default async function handler(req: any, res: any) {
     if (single) q = q.maybeSingle();
 
     const { data, error } = await q;
-    if (error) return deny(400, error.message, role);
+    if (error) return deny(400, safeDbError(error), role);
 
     await logDbRequest(supabaseAdmin, {
       endpoint: "db-select", username: normalizedNick, role,
@@ -166,6 +161,6 @@ export default async function handler(req: any, res: any) {
     });
     return res.status(200).json({ data: stripSensitive(data) ?? null });
   } catch (e: any) {
-    return deny(500, e?.message || "Server error", role);
+    return deny(500, "Server error", role);
   }
 }
