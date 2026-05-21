@@ -1,6 +1,9 @@
 // /api/auth.ts — verify, checkUser, checkTelegram, register, upsert.
+// v2: bcrypt-пароли, узкий CORS.
+
 import { createClient } from "@supabase/supabase-js";
 import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger.js";
+import { verifyCredentials, hashPassword, applyCors } from "./_auth.js";
 
 type Op = "verify" | "checkUser" | "checkTelegram" | "register" | "upsert";
 
@@ -15,12 +18,11 @@ const SAFE_USER_COLUMNS =
 const FORBIDDEN_USER_FIELDS = new Set([
   "role","is_banned","balance","rare_balance",
   "vip_expires_at","vip_duration","telegram_id",
+  "password_hash", // запрет на прямую подстановку готового хеша
 ]);
 
 export default async function handler(req: any, res: any) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  applyCors(req, res);
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST")   return res.status(405).json({ error: "Method not allowed" });
 
@@ -52,19 +54,22 @@ export default async function handler(req: any, res: any) {
 
   if (op === "verify") {
     if (!nick || !password) { await log(400, false, "missing creds"); return res.status(400).json({ error: "nick and password required" }); }
-    const { data: row, error } = await supabase
-      .from("users").select(`${SAFE_USER_COLUMNS}, password`)
-      .ilike("username", nick.trim()).maybeSingle();
-    if (error || !row)               { await log(401, false, "user not found"); return res.status(401).json({ error: "User not found" }); }
-    if (row.password !== password)   { await log(401, false, "wrong password"); return res.status(401).json({ error: "Wrong password" }); }
+    const user = await verifyCredentials(supabase, nick, password);
+    if (!user) { await log(401, false, "bad creds"); return res.status(401).json({ error: "Invalid credentials" }); }
+
+    // Дополнительно подтягиваем профиль и telegram-проверку для admin/mayor.
+    const { data: profile } = await supabase
+      .from("users").select(SAFE_USER_COLUMNS)
+      .ilike("username", user.normalizedNick).maybeSingle();
+    if (!profile) { await log(401, false, "profile missing"); return res.status(401).json({ error: "Invalid credentials" }); }
+
     const tgId = String((body as any).tgId || "").trim();
-    if (row.role === "admin" || row.role === "mayor") {
+    if (user.role === "admin" || user.role === "mayor") {
       if (!tgId) { await log(403, false, "tg required"); return res.status(403).json({ error: "Telegram required for this account" }); }
-      if (String(row.telegram_id || "").trim() !== tgId) { await log(403, false, "tg mismatch"); return res.status(403).json({ error: "Telegram account mismatch" }); }
+      if (String((profile as any).telegram_id || "").trim() !== tgId) { await log(403, false, "tg mismatch"); return res.status(403).json({ error: "Telegram account mismatch" }); }
     }
-    const { password: _removed, ...safeUser } = row;
     await log(200, true);
-    return res.status(200).json({ data: safeUser });
+    return res.status(200).json({ data: profile });
   }
 
   if (op === "checkUser") {
@@ -92,8 +97,18 @@ export default async function handler(req: any, res: any) {
         .from("users").select("id").ilike("username", String(checkNick).trim()).maybeSingle();
       if (existing) { await log(409, false, "taken"); return res.status(409).json({ error: "Username already taken" }); }
     }
-    const { data, error } = await supabase.from("users").insert(values as any).select(SAFE_USER_COLUMNS);
-    if (error) { await log(400, false, error.message); return res.status(400).json({ error: error.message }); }
+    // Превращаем plaintext password в bcrypt-хеш.
+    const insertValues: Record<string, unknown> = { ...values };
+    const pwd = insertValues["password"];
+    if (typeof pwd !== "string" || pwd.length < 4 || pwd.length > 256) {
+      await log(400, false, "bad password");
+      return res.status(400).json({ error: "Password length must be 4..256" });
+    }
+    delete insertValues["password"];
+    insertValues["password_hash"] = await hashPassword(pwd);
+
+    const { data, error } = await supabase.from("users").insert(insertValues as any).select(SAFE_USER_COLUMNS);
+    if (error) { await log(400, false, error.message); return res.status(400).json({ error: "Registration failed" }); }
     await log(200, true);
     return res.status(200).json({ data: data ?? null });
   }
@@ -105,22 +120,28 @@ export default async function handler(req: any, res: any) {
     }
     if (!nick || !password) { await log(401, false, "no creds"); return res.status(401).json({ error: "Unauthorized" }); }
 
-    const { data: userRow, error: userErr } = await supabase
-      .from("users").select("username, password").ilike("username", nick.trim()).maybeSingle();
-    if (userErr || !userRow) { await log(401, false, "user not found"); return res.status(401).json({ error: "Unauthorized" }); }
-    if (userRow.password !== password) { await log(401, false, "wrong password"); return res.status(401).json({ error: "Unauthorized" }); }
+    const user = await verifyCredentials(supabase, nick, password);
+    if (!user) { await log(401, false, "bad creds"); return res.status(401).json({ error: "Unauthorized" }); }
 
-    // ПАТЧ H8: username у values обов'язковий і має дорівнювати залогіненому
     const targetUsername = String((values as any).username || "").toLowerCase().trim();
-    const ownUsername = userRow.username.toLowerCase().trim();
-    if (!targetUsername || targetUsername !== ownUsername) {
+    if (!targetUsername || targetUsername !== user.normalizedNick) {
       await log(403, false, "upsert not own");
       return res.status(403).json({ error: "Forbidden: can only upsert your own record" });
     }
 
+    // Если хотят сменить пароль — хешируем и в password_hash, иначе игнорируем поле.
+    const upsertValues: Record<string, unknown> = { ...values };
+    if (typeof upsertValues["password"] === "string") {
+      const newPwd = upsertValues["password"] as string;
+      delete upsertValues["password"];
+      if (newPwd.length >= 4 && newPwd.length <= 256) {
+        upsertValues["password_hash"] = await hashPassword(newPwd);
+      }
+    }
+
     const { data, error } = await supabase
-      .from("users").upsert(values as any, { onConflict: "username" }).select(SAFE_USER_COLUMNS);
-    if (error) { await log(400, false, error.message); return res.status(400).json({ error: error.message }); }
+      .from("users").upsert(upsertValues as any, { onConflict: "username" }).select(SAFE_USER_COLUMNS);
+    if (error) { await log(400, false, error.message); return res.status(400).json({ error: "Upsert failed" }); }
     await log(200, true);
     return res.status(200).json({ data: data ?? null });
   }
