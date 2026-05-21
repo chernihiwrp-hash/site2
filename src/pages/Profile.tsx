@@ -3,7 +3,7 @@ import {
   User, Briefcase, Home, Car, FileCheck, Wallet, Lock,
   Bell, ChevronDown, ChevronRight, Shield, CheckCircle,
   LogIn, RefreshCw, Coins, Clock, Settings, X,
-  Crown, Sparkles, Zap, Star, Timer, CreditCard
+  Crown, Sparkles, Zap, Star, Timer, CreditCard, Trophy
 } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { useNavigate } from "react-router-dom";
@@ -314,6 +314,9 @@ const Profile = () => {
         <div className="flex items-center gap-2">
           <button onClick={loadData} disabled={refreshing} className="w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all">
             <RefreshCw className={`w-4 h-4 text-muted-foreground ${refreshing ? "animate-spin" : ""}`} />
+          </button>
+          <button onClick={() => navigate("/top")} className="w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all">
+            <Trophy className="w-4 h-4 text-yellow-400" />
           </button>
           <button onClick={() => setShowNotifs(!showNotifs)} className="relative w-9 h-9 liquid-glass rounded-xl flex items-center justify-center active:scale-95 transition-all">
             <Bell className="w-4 h-4 text-primary" />
