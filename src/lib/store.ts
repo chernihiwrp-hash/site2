@@ -1173,26 +1173,34 @@ export const store = {
     }
   },
 
-  // ── HOUSE PURCHASE WITH CR (миттєва видача) ─────────────────────────────
+  // ── HOUSE PURCHASE WITH CR (через защищённый /api/balance buy_house) ───
+  // Раньше клиент сам делал dbUpdate("houses",...) — этот путь:
+  //  а) ломался RLS-патчем (houses — admin-only для прямых апдейтов);
+  //  б) позволял хакеру подменить владельца, минуя баланс.
+  // Теперь вся логика на сервере: проверка кредов, баланса, занятости дома,
+  // атомарная установка owner_username — без шанса на race / подмену.
   buyHouseWithCR: async (
-    houseId: number, username: string, priceEUR: number, rentalDays = 24,
+    houseId: number, username: string, _priceEUR: number, rentalDays = 24,
   ): Promise<{ ok: boolean; error?: string }> => {
-    const crPrice = toCR(priceEUR);
-    const balance = await getBalanceFromDB(username);
-    if (balance < crPrice) return { ok: false, error: `Потрібно ${crPrice.toLocaleString()} CR` };
-    const ok = await subtractBalance(username, crPrice);
-    if (!ok) return { ok: false, error: "Не вдалось списати CR" };
+    const password = localStorage.getItem("crp_password") || "";
+    if (!username || !password) return { ok: false, error: "Not logged in" };
     try {
-      // одразу approved — будинок видається моментально
-      await secureInsert("house_purchase_requests", {
-        house_id: houseId, username, status: "approved", rental_days: rentalDays,
+      const res = await fetch("/api/balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nick: username, password,
+          op: "buy_house",
+          house_id: houseId,
+          rental_days: rentalDays,
+        }),
       });
-      await dbUpdate("houses", { owner_username: username, is_for_sale: false }, { id: eq(houseId) });
-      await store.addNotification(username, `🏠 Будинок придбано за ${crPrice.toLocaleString()} CR`);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: json?.error || `HTTP ${res.status}` };
+      await store.addNotification(username, `🏠 Будинок придбано за ${(json?.data?.cr_spent ?? 0).toLocaleString()} CR`);
       return { ok: true };
     } catch (e: any) {
-      await addBalance(username, crPrice);
-      return { ok: false, error: e?.message || "DB error" };
+      return { ok: false, error: e?.message || "Network error" };
     }
   },
 
