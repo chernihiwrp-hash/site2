@@ -4,6 +4,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { logDbRequest, getClientIp, getUserAgent } from "./_logger.js";
 import { verifyCredentials, applyCors, safeDbError } from "./_auth.js";
+import { checkSelectLimit } from "./_ratelimit.js";
 
 const READABLE_TABLES = new Set<string>([
   "users","license_applications","car_plates","faction_applications",
@@ -66,6 +67,13 @@ export default async function handler(req: any, res: any) {
   });
   const ip = getClientIp(req);
   const ua = getUserAgent(req);
+
+  // Rate limiting
+  const rawNick = nick ? String(nick).toLowerCase().trim() : null;
+  if (checkSelectLimit(rawNick, ip)) {
+    console.warn(`[db-select] rate limit: nick=${rawNick} ip=${ip}`);
+    return res.status(429).json({ error: "Too many requests" });
+  }
 
   const deny = async (status: number, error: string, role: string | null = null) => {
     await logDbRequest(supabaseAdmin, {
