@@ -271,13 +271,22 @@ export default async function handler(req: any, res: any) {
   }
 
   // ── 3.7 NFT ──────────────────────────────────────────────────────────────
-  if ((table === "nft_owners" || table === "nft_gifts") && !hasAnyAdminPerm) {
+  // Менять/создавать/удалять записи NFT может только админ с пермом "nft"
+  // (или супер-админ). Раньше проверялся `hasAnyAdminPerm` — этого мало,
+  // потому что любой админ с любым пермом мог пометить чужой NFT как SOLD.
+  const isNftAdmin = isSuperAdmin || isAdmin || !!adminPermsGlobal["nft"];
+  if ((table === "nft_owners" || table === "nft_gifts") && !isNftAdmin) {
     if (op === "update" || op === "delete") return deny(403, "Forbidden: cannot modify NFT records");
     if (op === "upsert") return deny(403, "Forbidden: cannot upsert NFT records");
     if (op === "insert" && values && typeof values === "object") {
+      // Обычный игрок может вставить только запись на свой ник и без
+      // прямой подмены полей `sold` / `status` (это делает только /api/balance buy_nft).
       const owner = (values as any).owner_nick || (values as any).recipient_nick;
       if (owner && String(owner).toLowerCase().trim() !== normalizedNick) {
         return deny(403, "Forbidden: cannot assign NFT to another user");
+      }
+      for (const f of ["sold","status","price"]) {
+        if (f in (values as any)) return deny(403, `Forbidden: cannot set "${f}" on NFT insert`);
       }
     }
   }
