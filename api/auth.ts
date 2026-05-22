@@ -104,20 +104,21 @@ export default async function handler(req: any, res: any) {
       if (REGISTER_ALLOWED_FIELDS.has(k)) filtered[k] = v;
     }
 
-    // 2. role — только 'player'. balance — только 0 (или отсутствует).
+    // 2. role — тільки 'player'. Якщо RLS або column-level security в Supabase
+    //    блокує запис поля role через service key, просто видаляємо його з insert —
+    //    база використає DEFAULT ('player'). Якщо передано невалідну роль — блокуємо.
     if ("role" in filtered) {
       const r = String(filtered.role ?? "").toLowerCase().trim();
       if (r !== "player") { await log(403, false, "bad role"); return res.status(403).json({ error: "Forbidden: role must be 'player'" }); }
-      filtered.role = "player";
-    } else {
-      filtered.role = "player";
+      // Видаляємо role з payload — БД сама підставить DEFAULT 'player'.
+      // Це обходить Column-Level Security / RLS, що може блокувати поле role.
+      delete filtered.role;
     }
     if ("balance" in filtered) {
       const b = Number(filtered.balance);
       if (!Number.isFinite(b) || b !== 0) { await log(403, false, "bad balance"); return res.status(403).json({ error: "Forbidden: initial balance must be 0" }); }
-      filtered.balance = 0;
-    } else {
-      filtered.balance = 0;
+      // Аналогічно — дозволяємо БД використати DEFAULT 0.
+      delete filtered.balance;
     }
     // telegram_id — приводим к строке/null.
     if ("telegram_id" in filtered) {
