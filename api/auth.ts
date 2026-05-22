@@ -6,6 +6,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger.js";
 import { verifyCredentials, hashPassword, applyCors } from "./_auth.js";
+import { checkAuthLimit } from "./_ratelimit.js";
 
 type Op = "verify" | "checkUser" | "checkTelegram" | "register" | "upsert";
 
@@ -52,6 +53,13 @@ export default async function handler(req: any, res: any) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const ip = getClientIp(req);
+
+  // Rate limiting for auth (anti-bruteforce)
+  const rawNickAuth = typeof req.body?.nick === "string" ? req.body.nick.toLowerCase().trim() : null;
+  if (checkAuthLimit(rawNickAuth, ip)) {
+    console.warn(`[auth] rate limit: nick=${rawNickAuth} ip=${ip}`);
+    return res.status(429).json({ error: "Too many requests" });
+  }
   const ua = getUserAgent(req);
 
   const log = (status: number, allowed: boolean, error: string | null = null) =>
