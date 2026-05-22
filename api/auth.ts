@@ -1,5 +1,7 @@
 // /api/auth.ts — verify, checkUser, checkTelegram, register, upsert.
-// v2: bcrypt-пароли, узкий CORS.
+// v3: фикс регистрации — разрешаем дефолтные безопасные поля (role='player',
+// balance=0, telegram_id, avatar_url). Любые попытки протащить admin-роль
+// или произвольный баланс блокируются строгим whitelist.
 
 import { createClient } from "@supabase/supabase-js";
 import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger.js";
@@ -15,10 +17,18 @@ interface Body {
 const SAFE_USER_COLUMNS =
   "id, username, role, balance, avatar_url, owned_themes, telegram_id, theme, active_theme, registered_at, rare_balance, vip_expires_at, vip_duration, referral_code, referred_by, owned_gifts, favorites";
 
-const FORBIDDEN_USER_FIELDS = new Set([
+// Запрещённые поля для UPSERT обычного игрока (он не может менять role/balance/etc).
+const UPSERT_FORBIDDEN_FIELDS = new Set([
   "role","is_banned","balance","rare_balance",
   "vip_expires_at","vip_duration","telegram_id",
-  "password_hash", // запрет на прямую подстановку готового хеша
+  "password_hash",
+]);
+
+// Безопасные поля при REGISTER. Всё остальное — отбрасываем.
+const REGISTER_ALLOWED_FIELDS = new Set([
+  "username","nick","password",
+  "telegram_id","avatar_url","photo_url",
+  "role","balance","theme","active_theme","referred_by",
 ]);
 
 export default async function handler(req: any, res: any) {
@@ -57,7 +67,6 @@ export default async function handler(req: any, res: any) {
     const user = await verifyCredentials(supabase, nick, password);
     if (!user) { await log(401, false, "bad creds"); return res.status(401).json({ error: "Invalid credentials" }); }
 
-    // Дополнительно подтягиваем профиль и telegram-проверку для admin/mayor.
     const { data: profile } = await supabase
       .from("users").select(SAFE_USER_COLUMNS)
       .ilike("username", user.normalizedNick).maybeSingle();
@@ -88,26 +97,52 @@ export default async function handler(req: any, res: any) {
 
   if (op === "register") {
     if (!values || typeof values !== "object") { await log(400, false, "no values"); return res.status(400).json({ error: "values required" }); }
-    for (const field of FORBIDDEN_USER_FIELDS) {
-      if (field in values) { await log(403, false, `forbidden ${field}`); return res.status(403).json({ error: `Forbidden: cannot set field "${field}" during registration` }); }
+
+    // 1. Фильтруем только разрешённые поля — всё неизвестное молча отбрасываем.
+    const filtered: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(values)) {
+      if (REGISTER_ALLOWED_FIELDS.has(k)) filtered[k] = v;
     }
-    const checkNick = (values as any).username || (values as any).nick;
-    if (checkNick) {
-      const { data: existing } = await supabase
-        .from("users").select("id").ilike("username", String(checkNick).trim()).maybeSingle();
-      if (existing) { await log(409, false, "taken"); return res.status(409).json({ error: "Username already taken" }); }
+
+    // 2. role — только 'player'. balance — только 0 (или отсутствует).
+    if ("role" in filtered) {
+      const r = String(filtered.role ?? "").toLowerCase().trim();
+      if (r !== "player") { await log(403, false, "bad role"); return res.status(403).json({ error: "Forbidden: role must be 'player'" }); }
+      filtered.role = "player";
+    } else {
+      filtered.role = "player";
     }
-    // Превращаем plaintext password в bcrypt-хеш.
-    const insertValues: Record<string, unknown> = { ...values };
-    const pwd = insertValues["password"];
+    if ("balance" in filtered) {
+      const b = Number(filtered.balance);
+      if (!Number.isFinite(b) || b !== 0) { await log(403, false, "bad balance"); return res.status(403).json({ error: "Forbidden: initial balance must be 0" }); }
+      filtered.balance = 0;
+    } else {
+      filtered.balance = 0;
+    }
+    // telegram_id — приводим к строке/null.
+    if ("telegram_id" in filtered) {
+      const t = filtered.telegram_id;
+      filtered.telegram_id = (t === null || t === undefined || t === "") ? null : String(t);
+    }
+
+    const checkNick = (filtered.username as string | undefined) || (filtered as any).nick;
+    if (!checkNick || typeof checkNick !== "string" || checkNick.trim().length < 2) {
+      await log(400, false, "bad nick"); return res.status(400).json({ error: "Username required (min 2 chars)" });
+    }
+    const { data: existing } = await supabase
+      .from("users").select("id").ilike("username", String(checkNick).trim()).maybeSingle();
+    if (existing) { await log(409, false, "taken"); return res.status(409).json({ error: "Username already taken" }); }
+
+    const pwd = filtered["password"];
     if (typeof pwd !== "string" || pwd.length < 4 || pwd.length > 256) {
       await log(400, false, "bad password");
       return res.status(400).json({ error: "Password length must be 4..256" });
     }
-    delete insertValues["password"];
-    insertValues["password_hash"] = await hashPassword(pwd);
+    delete filtered["password"];
+    filtered["password_hash"] = await hashPassword(pwd);
+    // На случай если в схеме всё ещё есть поле password — оставим plaintext запрещённым.
 
-    const { data, error } = await supabase.from("users").insert(insertValues as any).select(SAFE_USER_COLUMNS);
+    const { data, error } = await supabase.from("users").insert(filtered as any).select(SAFE_USER_COLUMNS);
     if (error) { await log(400, false, error.message); return res.status(400).json({ error: "Registration failed" }); }
     await log(200, true);
     return res.status(200).json({ data: data ?? null });
@@ -115,7 +150,7 @@ export default async function handler(req: any, res: any) {
 
   if (op === "upsert") {
     if (!values || typeof values !== "object") { await log(400, false, "no values"); return res.status(400).json({ error: "values required" }); }
-    for (const field of FORBIDDEN_USER_FIELDS) {
+    for (const field of UPSERT_FORBIDDEN_FIELDS) {
       if (field in values) { await log(403, false, `forbidden ${field}`); return res.status(403).json({ error: `Forbidden: cannot set field "${field}"` }); }
     }
     if (!nick || !password) { await log(401, false, "no creds"); return res.status(401).json({ error: "Unauthorized" }); }
@@ -129,7 +164,6 @@ export default async function handler(req: any, res: any) {
       return res.status(403).json({ error: "Forbidden: can only upsert your own record" });
     }
 
-    // Если хотят сменить пароль — хешируем и в password_hash, иначе игнорируем поле.
     const upsertValues: Record<string, unknown> = { ...values };
     if (typeof upsertValues["password"] === "string") {
       const newPwd = upsertValues["password"] as string;
