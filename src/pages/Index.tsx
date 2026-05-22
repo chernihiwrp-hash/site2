@@ -63,9 +63,12 @@ const SectionLabel = ({ icon: Icon, label }: { icon: React.ElementType; label: s
   </div>
 );
 
-// Preload the GIF once at module level so it's cached before the component mounts
-const preloadBg = new Image();
-preloadBg.src = BG_GIF;
+// Preload the GIF once at module level so it's cached before any component mount
+// (kept across re-mounts / navigations — eliminates the black flash on re-entry).
+if (typeof window !== "undefined") {
+  const img = new Image();
+  img.src = BG_GIF;
+}
 
 const Index = () => {
   const navigate = useNavigate();
@@ -77,20 +80,6 @@ const Index = () => {
   const [copied, setCopied]           = useState(false);
   const [sosSending, setSosSending]   = useState(false);
   const [badges, setBadges]           = useState<Record<string, boolean>>({});
-  // bgReady drives the fade-in: starts true if GIF was already cached, otherwise waits for load
-  const [bgReady, setBgReady]         = useState(preloadBg.complete);
-
-  // Fade-in the background only once the GIF is loaded — eliminates the black flash
-  useEffect(() => {
-    if (preloadBg.complete) { setBgReady(true); return; }
-    const onLoad = () => setBgReady(true);
-    preloadBg.addEventListener("load", onLoad);
-    preloadBg.addEventListener("error", onLoad); // show something even on error
-    return () => {
-      preloadBg.removeEventListener("load", onLoad);
-      preloadBg.removeEventListener("error", onLoad);
-    };
-  }, []);
 
   const checkBadges = async () => {
     const { supabase } = await import("../lib/store");
@@ -156,26 +145,31 @@ const Index = () => {
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-4 relative">
-      {/* Background GIF — fades in only after loaded, no black flash */}
+      {/* Background layer — single fixed element, no opacity toggle / transition.
+          The dark base color matches the overlay, so there is no black/white flash
+          while the cached GIF is being painted. */}
       <div
+        aria-hidden
         className="fixed inset-0 pointer-events-none"
         style={{
           zIndex: 0,
+          backgroundColor: "#0a0a0a",
           backgroundImage: `url('${BG_GIF}')`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
-          opacity: bgReady ? 1 : 0,
-          transition: "opacity 0.4s ease",
-          // Paint a dark base behind the GIF so there's never a white flash
-          backgroundColor: "#0a0a0a",
+          // promote to its own layer so it doesn't repaint on every state change
+          willChange: "transform",
+          transform: "translateZ(0)",
         }}
       />
       {/* Static dark overlay — always visible, no transition needed */}
       <div
+        aria-hidden
         className="fixed inset-0 pointer-events-none"
-        style={{ zIndex: 0, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(2px)" }}
+        style={{ zIndex: 0, background: "rgba(0,0,0,0.65)" }}
       />
+
 
       <div className="relative" style={{ zIndex: 1 }}>
         {/* Header */}
