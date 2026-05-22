@@ -193,7 +193,7 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          op: "upsert",
+          op: "register",
           values: {
             username: nick.trim(),
             telegram_id: tgUser ? String(tgUser.id) : null,
