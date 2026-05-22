@@ -1,9 +1,10 @@
 // /api/db.ts — захищений проксі для INSERT/UPDATE/DELETE/UPSERT.
-// v2: bcrypt-пароли, узкий CORS, нейтрализация текста ошибок.
+// v3: bcrypt-пароли, узкий CORS, нейтрализация текста ошибок, rate limiting.
 
 import { createClient } from "@supabase/supabase-js";
 import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger.js";
 import { verifyCredentials, applyCors, safeDbError } from "./_auth.js";
+import { checkMutationLimit } from "./_ratelimit.js";
 
 const ALLOWED_TABLES = new Set<string>([
   "users","license_applications","car_plates","faction_applications",
@@ -85,6 +86,13 @@ export default async function handler(req: any, res: any) {
 
   const ip = getClientIp(req);
   const ua = getUserAgent(req);
+
+  // Rate limiting
+  const rawNick = nick ? String(nick).toLowerCase().trim() : null;
+  if (checkMutationLimit(rawNick, ip)) {
+    console.warn(`[db] rate limit: nick=${rawNick} ip=${ip}`);
+    return res.status(429).json({ error: "Too many requests" });
+  }
 
   const deny = async (status: number, error: string, role: string | null = null) => {
     await logDbRequest(supabaseAdmin, {
