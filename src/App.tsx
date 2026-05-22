@@ -91,53 +91,114 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4" style={{ background: "radial-gradient(ellipse at 50% 0%, hsl(84 81% 44% / 0.08) 0%, #000 60%)" }}>
+      <style>{`
+        @keyframes crp-fade-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes crp-glow-pulse { 0%,100% { box-shadow: 0 0 0 0 hsl(84 81% 44% / 0); } 50% { box-shadow: 0 0 32px 4px hsl(84 81% 44% / 0.18); } }
+        @keyframes crp-scanline { 0% { background-position: 0 0; } 100% { background-position: 0 4px; } }
+        .crp-card { animation: crp-fade-up 0.45s cubic-bezier(.22,1,.36,1) both; }
+        .crp-input:focus { border-color: hsl(84 81% 44% / 0.6) !important; box-shadow: 0 0 0 3px hsl(84 81% 44% / 0.1), inset 0 1px 0 hsl(84 81% 44% / 0.05) !important; }
+        .crp-btn-main { position: relative; overflow: hidden; transition: all 0.2s; }
+        .crp-btn-main:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 8px 32px hsl(84 81% 44% / 0.4) !important; }
+        .crp-btn-main:not(:disabled):active { transform: translateY(0); }
+        .crp-btn-main::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 100%); pointer-events: none; }
+        .crp-avatar-ring { animation: crp-glow-pulse 3s ease-in-out infinite; }
+      `}</style>
       <Particles />
-      <div className="relative w-full max-w-sm animate-fade-in" style={{ zIndex: 1 }}>
-        <div className="rounded-2xl p-6"
-          style={{ background: "linear-gradient(145deg, hsl(0 0% 8%), hsl(0 0% 5%))", border: "1px solid hsl(84 81% 44% / 0.2)", boxShadow: "0 0 40px hsl(84 81% 44% / 0.1)" }}>
-          <div className="text-center mb-6">
-            <h1 className="font-display text-2xl font-bold tracking-wider neon-text-lime mb-1">CHERNIHIV RP</h1>
-            <p className="text-xs text-muted-foreground">Вхід в акаунт</p>
+      <div className="relative w-full max-w-[340px] crp-card" style={{ zIndex: 1 }}>
+        {/* Top accent line */}
+        <div style={{ height: 2, borderRadius: "2px 2px 0 0", background: "linear-gradient(90deg, transparent, hsl(84 81% 44%), transparent)", marginBottom: -1 }} />
+        <div style={{
+          background: "linear-gradient(160deg, hsl(0 0% 9%) 0%, hsl(0 0% 6%) 100%)",
+          border: "1px solid hsl(84 81% 44% / 0.15)",
+          borderTop: "none",
+          borderRadius: "0 0 20px 20px",
+          padding: "28px 24px 24px",
+          backdropFilter: "blur(20px)",
+        }}>
+          {/* Header */}
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 8, padding: "3px 10px", borderRadius: 20, background: "hsl(84 81% 44% / 0.08)", border: "1px solid hsl(84 81% 44% / 0.15)" }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "hsl(84 81% 44%)", boxShadow: "0 0 6px hsl(84 81% 44%)" }} />
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "hsl(84 81% 44%)", textTransform: "uppercase" }}>Chernihiv RP</span>
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", letterSpacing: "-0.01em", lineHeight: 1.2 }}>З поверненням</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 4 }}>Введи пароль для входу</div>
           </div>
-          <div className="flex items-center justify-center mb-5">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ background: "hsl(84 81% 44% / 0.1)", border: "2px solid hsl(84 81% 44% / 0.3)", boxShadow: "0 0 20px hsl(84 81% 44% / 0.3)" }}>
-              <User className="w-8 h-8 text-primary" />
+
+          {/* Avatar */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+            <div className="crp-avatar-ring" style={{
+              width: 72, height: 72, borderRadius: 18,
+              background: "linear-gradient(135deg, hsl(84 81% 44% / 0.15), hsl(84 81% 44% / 0.05))",
+              border: "1.5px solid hsl(84 81% 44% / 0.35)",
+              display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 2,
+            }}>
+              <User style={{ width: 28, height: 28, color: "hsl(84 81% 44%)" }} />
             </div>
           </div>
-          <p className="text-center text-sm font-bold text-foreground mb-1">{savedNick}</p>
-          <p className="text-center text-xs text-primary/60 mb-5">Введи свій пароль</p>
-          <div className="mb-4">
-            <div className="relative">
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "0.01em" }}>{savedNick}</div>
+            <div style={{ fontSize: 11, color: "hsl(84 81% 44% / 0.6)", marginTop: 2 }}>Гравець</div>
+          </div>
+
+          {/* Password field */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ position: "relative" }}>
               <input
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Твій пароль..."
+                placeholder="Пароль..."
                 type={showPass ? "text" : "password"}
-                className="w-full liquid-glass rounded-xl px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent text-center font-semibold"
+                className="crp-input"
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  background: "hsl(0 0% 5%)", border: "1.5px solid hsl(0 0% 18%)",
+                  borderRadius: 12, padding: "12px 40px 12px 14px",
+                  fontSize: 14, fontWeight: 600, color: "#fff",
+                  outline: "none", transition: "all 0.2s",
+                  letterSpacing: "0.02em",
+                }}
                 onKeyDown={e => e.key === "Enter" && handleLogin()}
                 autoFocus
               />
-              <button type="button" onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              <button type="button" onClick={() => setShowPass(!showPass)} style={{
+                position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+                background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 0, display: "flex",
+              }}>
+                {showPass ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
               </button>
             </div>
           </div>
+
+          {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-3"
-              style={{ background: "hsl(0 70% 50% / 0.1)", border: "1px solid hsl(0 70% 50% / 0.25)" }}>
-              <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
-              <p className="text-xs text-destructive">{error}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, marginBottom: 12, background: "hsl(0 70% 50% / 0.08)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
+              <AlertTriangle style={{ width: 14, height: 14, color: "#ef4444", flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: "#ef4444" }}>{error}</span>
             </div>
           )}
-          <GradientButton variant="green" className="w-full" onClick={handleLogin} disabled={loading || !password}>
+
+          {/* Login button */}
+          <button className="crp-btn-main" onClick={handleLogin} disabled={loading || !password} style={{
+            width: "100%", padding: "13px 0", borderRadius: 12, border: "none", cursor: loading || !password ? "not-allowed" : "pointer",
+            background: loading || !password ? "hsl(0 0% 15%)" : "linear-gradient(135deg, hsl(84 81% 44%), hsl(100 70% 38%))",
+            color: loading || !password ? "rgba(255,255,255,0.3)" : "#000",
+            fontSize: 14, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase",
+            boxShadow: loading || !password ? "none" : "0 4px 20px hsl(84 81% 44% / 0.3)",
+            transition: "all 0.2s",
+          }}>
             {loading ? "Перевіряю..." : "Увійти"}
-          </GradientButton>
-          <button onClick={onReset}
-            className="w-full mt-3 text-xs text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors py-1">
-            Це не я — вийти з акаунту
+          </button>
+
+          {/* Reset link */}
+          <button onClick={onReset} style={{
+            width: "100%", marginTop: 12, background: "none", border: "none", cursor: "pointer",
+            fontSize: 11, color: "rgba(255,255,255,0.2)", padding: "4px 0", transition: "color 0.2s",
+          }}
+            onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.2)")}>
+            Це не я — змінити акаунт
           </button>
         </div>
       </div>
@@ -219,71 +280,129 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
     setLoading(false);
   };
 
+  const regReady = !loading && nick.trim().length >= 2 && password.length >= 6 && !!confirmPass && !blocked;
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4" style={{ background: "radial-gradient(ellipse at 50% 0%, hsl(84 81% 44% / 0.07) 0%, #000 55%)" }}>
+      <style>{`
+        @keyframes crp-fade-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes crp-glow-pulse { 0%,100% { box-shadow: 0 0 0 0 hsl(84 81% 44% / 0); } 50% { box-shadow: 0 0 32px 4px hsl(84 81% 44% / 0.18); } }
+        .crp-card { animation: crp-fade-up 0.45s cubic-bezier(.22,1,.36,1) both; }
+        .crp-input { transition: border-color 0.2s, box-shadow 0.2s; }
+        .crp-input:focus { border-color: hsl(84 81% 44% / 0.55) !important; box-shadow: 0 0 0 3px hsl(84 81% 44% / 0.09) !important; outline: none; }
+        .crp-input::placeholder { color: rgba(255,255,255,0.2); }
+        .crp-btn-main { position: relative; overflow: hidden; transition: all 0.2s; }
+        .crp-btn-main:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.08); }
+        .crp-btn-main:not(:disabled):active { transform: translateY(0); }
+        .crp-btn-main::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.09) 0%, transparent 60%); pointer-events: none; }
+        .crp-avatar-ring { animation: crp-glow-pulse 3s ease-in-out infinite; }
+        .crp-field-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 6px; display: block; }
+      `}</style>
       <Particles />
-      <div className="relative w-full max-w-sm animate-fade-in" style={{ zIndex: 1 }}>
-        <div className="rounded-2xl p-6" style={{ background: "linear-gradient(145deg, hsl(0 0% 8%), hsl(0 0% 5%))", border: "1px solid hsl(84 81% 44% / 0.2)", boxShadow: "0 0 40px hsl(84 81% 44% / 0.1)" }}>
-          <div className="text-center mb-6">
-            <h1 className="font-display text-2xl font-bold tracking-wider neon-text-lime mb-1">CHERNIHIV RP</h1>
-            <p className="text-xs text-muted-foreground">Портал гравця</p>
+      <div className="relative w-full max-w-[340px] crp-card" style={{ zIndex: 1 }}>
+        {/* Top lime accent */}
+        <div style={{ height: 2, borderRadius: "2px 2px 0 0", background: "linear-gradient(90deg, transparent, hsl(84 81% 44%), transparent)" }} />
+        <div style={{
+          background: "linear-gradient(160deg, hsl(0 0% 9%) 0%, hsl(0 0% 6%) 100%)",
+          border: "1px solid hsl(84 81% 44% / 0.14)",
+          borderTop: "none",
+          borderRadius: "0 0 20px 20px",
+          padding: "24px 22px 22px",
+        }}>
+          {/* Badge + title */}
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 10, padding: "3px 10px", borderRadius: 20, background: "hsl(84 81% 44% / 0.08)", border: "1px solid hsl(84 81% 44% / 0.15)" }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "hsl(84 81% 44%)", boxShadow: "0 0 6px hsl(84 81% 44%)" }} />
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "hsl(84 81% 44%)", textTransform: "uppercase" }}>Chernihiv RP</span>
+            </div>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: "-0.01em" }}>Реєстрація</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>Створи свій акаунт гравця</div>
           </div>
-          <div className="flex justify-center mb-5">
-            <div className="relative">
-              {tgUser?.photo_url ? (
-                <img src={tgUser.photo_url} alt="avatar" className="w-20 h-20 rounded-2xl object-cover border-2 border-primary/30" style={{ boxShadow: "0 0 20px hsl(84 81% 44% / 0.3)" }} />
-              ) : (
-                <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: "hsl(84 81% 44% / 0.1)", border: "2px solid hsl(84 81% 44% / 0.3)" }}>
-                  <User className="w-10 h-10 text-primary/50" />
+
+          {/* Avatar */}
+          {(tgUser) && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 18 }}>
+              <div className="crp-avatar-ring" style={{ position: "relative", width: 64, height: 64 }}>
+                {tgUser.photo_url ? (
+                  <img src={tgUser.photo_url} alt="avatar" style={{ width: 64, height: 64, borderRadius: 16, objectFit: "cover", border: "1.5px solid hsl(84 81% 44% / 0.4)", display: "block" }} />
+                ) : (
+                  <div style={{ width: 64, height: 64, borderRadius: 16, background: "hsl(84 81% 44% / 0.1)", border: "1.5px solid hsl(84 81% 44% / 0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <User style={{ width: 26, height: 26, color: "hsl(84 81% 44% / 0.7)" }} />
+                  </div>
+                )}
+                <div style={{ position: "absolute", bottom: -4, right: -4, width: 20, height: 20, borderRadius: "50%", background: "hsl(84 81% 44%)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #000" }}>
+                  <CheckCircle style={{ width: 12, height: 12, color: "#000" }} />
                 </div>
-              )}
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary flex items-center justify-center" style={{ boxShadow: "0 0 10px hsl(84 81% 44%)" }}>
-                <CheckCircle className="w-4 h-4 text-black" />
+              </div>
+              <div style={{ marginTop: 10, textAlign: "center" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{tgUser.first_name}{tgUser.last_name ? " " + tgUser.last_name : ""}</div>
+                {tgUser.username && <div style={{ fontSize: 11, color: "hsl(84 81% 44% / 0.55)", marginTop: 1 }}>@{tgUser.username}</div>}
               </div>
             </div>
-          </div>
-          {tgUser && <p className="text-center text-sm text-foreground font-semibold mb-1">{tgUser.first_name}{tgUser.last_name ? " " + tgUser.last_name : ""}</p>}
-          {tgUser?.username && <p className="text-center text-xs text-primary/60 mb-5">@{tgUser.username}</p>}
+          )}
+
+          {/* Blocked warning */}
           {blocked && (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-3 animate-fade-in" style={{ background: "hsl(0 70% 50% / 0.1)", border: "1px solid hsl(0 70% 50% / 0.3)" }}>
-              <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
-              <p className="text-xs text-destructive">Забагато спроб. Зачекайте {blockMinutes} хв.</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, marginBottom: 12, background: "hsl(0 70% 50% / 0.08)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
+              <AlertTriangle style={{ width: 14, height: 14, color: "#ef4444", flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: "#ef4444" }}>Забагато спроб. Зачекайте {blockMinutes} хв.</span>
             </div>
           )}
-          <div className="mb-3">
-            <label className="text-xs text-muted-foreground mb-2 block uppercase tracking-wider">Ваш ігровий нікнейм</label>
-            <input value={nick} onChange={e => setNick(e.target.value)} placeholder="Введіть нік..." maxLength={24}
-              className="w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent text-center font-semibold"
+
+          {/* Divider */}
+          <div style={{ height: 1, background: "hsl(0 0% 18%)", marginBottom: 16 }} />
+
+          {/* Nick */}
+          <div style={{ marginBottom: 10 }}>
+            <label className="crp-field-label">Ігровий нікнейм</label>
+            <input value={nick} onChange={e => setNick(e.target.value)} placeholder="Введи нік..." maxLength={24}
+              className="crp-input"
+              style={{ width: "100%", boxSizing: "border-box", background: "hsl(0 0% 5%)", border: "1.5px solid hsl(0 0% 18%)", borderRadius: 11, padding: "11px 14px", fontSize: 14, fontWeight: 600, color: "#fff" }}
               onKeyDown={e => e.key === "Enter" && nick.trim().length >= 2 && handleRegister()} autoFocus />
-            <p className="text-[10px] text-muted-foreground/50 text-center mt-1.5">Мінімум 2 символи</p>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", marginTop: 5, textAlign: "center" }}>Мінімум 2 символи · макс. 24</div>
           </div>
-          <div className="mb-3">
-            <label className="text-xs text-muted-foreground mb-2 block uppercase tracking-wider flex items-center gap-1.5"><Shield className="w-3 h-3" /> Придумай пароль</label>
-            <div className="relative">
+
+          {/* Password */}
+          <div style={{ marginBottom: 10 }}>
+            <label className="crp-field-label">Пароль</label>
+            <div style={{ position: "relative" }}>
               <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Мінімум 6 символів" type={showPass ? "text" : "password"}
-                className="w-full liquid-glass rounded-xl px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent text-center font-semibold" />
-              <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                className="crp-input"
+                style={{ width: "100%", boxSizing: "border-box", background: "hsl(0 0% 5%)", border: "1.5px solid hsl(0 0% 18%)", borderRadius: 11, padding: "11px 40px 11px 14px", fontSize: 14, fontWeight: 600, color: "#fff" }} />
+              <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", padding: 0, display: "flex" }}>
+                {showPass ? <EyeOff style={{ width: 15, height: 15 }} /> : <Eye style={{ width: 15, height: 15 }} />}
               </button>
             </div>
           </div>
-          <div className="mb-4">
-            <label className="text-xs text-muted-foreground mb-2 block uppercase tracking-wider flex items-center gap-1.5"><Shield className="w-3 h-3" /> Підтвердження пароля</label>
+
+          {/* Confirm password */}
+          <div style={{ marginBottom: 14 }}>
+            <label className="crp-field-label">Підтвердження</label>
             <input value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="Повтори пароль" type="password"
-              className="w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 bg-transparent text-center font-semibold"
+              className="crp-input"
+              style={{ width: "100%", boxSizing: "border-box", background: "hsl(0 0% 5%)", border: "1.5px solid hsl(0 0% 18%)", borderRadius: 11, padding: "11px 14px", fontSize: 14, fontWeight: 600, color: "#fff" }}
               onKeyDown={e => e.key === "Enter" && handleRegister()} />
-            <p className="text-[10px] text-muted-foreground/50 text-center mt-1.5">Запам'ятай пароль — він потрібен для входу</p>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", marginTop: 5, textAlign: "center" }}>Запам'ятай — він потрібен для входу</div>
           </div>
+
+          {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-3 animate-fade-in" style={{ background: "hsl(0 70% 50% / 0.1)", border: "1px solid hsl(0 70% 50% / 0.25)" }}>
-              <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
-              <p className="text-xs text-destructive">{error}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, marginBottom: 12, background: "hsl(0 70% 50% / 0.08)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
+              <AlertTriangle style={{ width: 14, height: 14, color: "#ef4444", flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: "#ef4444" }}>{error}</span>
             </div>
           )}
-          <GradientButton variant="green" className="w-full" onClick={handleRegister}
-            disabled={loading || nick.trim().length < 2 || password.length < 6 || !confirmPass || blocked}>
-            {loading ? "Реєструю..." : "Розпочати гру"}
-          </GradientButton>
+
+          {/* Register button */}
+          <button className="crp-btn-main" onClick={handleRegister} disabled={!regReady} style={{
+            width: "100%", padding: "13px 0", borderRadius: 12, border: "none", cursor: regReady ? "pointer" : "not-allowed",
+            background: regReady ? "linear-gradient(135deg, hsl(84 81% 44%), hsl(100 70% 38%))" : "hsl(0 0% 14%)",
+            color: regReady ? "#000" : "rgba(255,255,255,0.25)",
+            fontSize: 14, fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase",
+            boxShadow: regReady ? "0 4px 24px hsl(84 81% 44% / 0.3)" : "none",
+          }}>
+            {loading ? "Реєструю..." : "Розпочати гру →"}
+          </button>
         </div>
       </div>
     </div>
