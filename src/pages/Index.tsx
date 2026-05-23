@@ -116,8 +116,12 @@ const Index = () => {
     if (!sosDesc.trim()) return toast.error("Опишіть ситуацію");
     setSosSending(true);
     const reporter = sosNick || localStorage.getItem("crp_nick") || "Гравець";
-    await store.addSosFull(reporter, sosViolator.trim(), sosType, sosDesc, sosType);
+    const ok = await store.addSosFull(reporter, sosViolator.trim(), sosType, sosDesc, sosType);
     setSosSending(false);
+    if (!ok) {
+      toast.error("Помилка відправки. Перевір чи ти увійшов у систему");
+      return;
+    }
     setShowSos(false);
     setSosDesc(""); setSosNick(""); setSosViolator("");
     toast.success("Виклик відправлено адміністрації!");
