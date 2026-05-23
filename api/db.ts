@@ -163,9 +163,11 @@ export default async function handler(req: any, res: any) {
   }
   const hasAnyAdminPerm = isAdmin || Object.values(adminPermsGlobal).some(Boolean);
 
-  if (ADMIN_ONLY_TABLES.has(table) && !isAdmin) {
+  if (ADMIN_ONLY_TABLES.has(table) && !isSuperAdmin) {
     const requiredPerm = TABLE_PERM_MAP[table];
-    if (!requiredPerm || !adminPermsGlobal[requiredPerm]) {
+    // Allow: superadmin always, isAdmin always, OR correct specific perm
+    const passedAdminOnly = isAdmin || (requiredPerm && !!adminPermsGlobal[requiredPerm]);
+    if (!passedAdminOnly) {
       return deny(403, `Forbidden: missing permission "${requiredPerm || table}"`);
     }
   }
