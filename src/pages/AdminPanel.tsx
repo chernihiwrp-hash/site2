@@ -2639,11 +2639,12 @@ const RestrictionsTab = () => {
 const LeaderAssignmentBlock = ({ factionId, factionName, onAssigned }: { factionId: number; factionName: string; onAssigned: () => void }) => {
   const [members, setMembers] = useState<{ name: string; avatar: string | null }[]>([]);
   const [currentLeader, setCurrentLeader] = useState("");
+  const [currentDeputy, setCurrentDeputy] = useState("");
+  const [assignMode, setAssignMode] = useState<"leader" | "deputy">("leader");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
-      // Load approved members
       const { data: apps } = await supabase
         .from("faction_applications")
         .select("username, form_data, faction_id, faction_name")
@@ -2660,77 +2661,134 @@ const LeaderAssignmentBlock = ({ factionId, factionName, onAssigned }: { faction
         return (fd.nick as string) || (a.username as string) || "";
       }).filter(Boolean);
 
-      // Load avatars
       const { data: usersData } = await supabase.from("users").select("username, avatar_url").in("username", usernames);
       const avatarMap: Record<string, string | null> = {};
       (usersData || []).forEach((u: Record<string, unknown>) => {
         avatarMap[(u.username as string).toLowerCase()] = (u.avatar_url as string) || null;
       });
-
       setMembers(usernames.map(n => ({ name: n, avatar: avatarMap[n.toLowerCase()] || null })));
 
-      // Load current leader from faction_leaders table
       const { data: leaderData } = await supabase
         .from("faction_leaders")
-        .select("leader_username")
+        .select("leader_username, deputy_username")
         .eq("faction_name", factionName.toLowerCase())
         .maybeSingle();
       setCurrentLeader((leaderData?.leader_username as string) || "");
+      setCurrentDeputy((leaderData?.deputy_username as string) || "");
     };
     if (factionName) load();
   }, [factionId, factionName]);
 
-  const assignLeader = async (memberName: string) => {
+  const assignRole = async (memberName: string) => {
     setLoading(true);
-    // Always use faction_leaders table (works for both static and DB factions)
-    await dbUpsert(
-      "faction_leaders",
-      { faction_name: factionName.toLowerCase(), leader_username: memberName, updated_at: new Date().toISOString() },
-      { onConflict: "faction_name" }
-    );
-    // Also update factions table if it's a DB faction
+    const isLeader = assignMode === "leader";
+    const updatePayload: Record<string, string> = {
+      faction_name: factionName.toLowerCase(),
+      updated_at: new Date().toISOString(),
+      ...(isLeader ? { leader_username: memberName } : { deputy_username: memberName }),
+    };
+    await dbUpsert("faction_leaders", updatePayload, { onConflict: "faction_name" });
     if (factionId > 0) {
-      await dbUpdate("factions", { leader_username: memberName }, { id: eq(factionId) });
+      await dbUpdate("factions",
+        isLeader ? { leader_username: memberName } : { deputy_username: memberName },
+        { id: eq(factionId) }
+      );
     }
-    setCurrentLeader(memberName);
+    if (isLeader) setCurrentLeader(memberName);
+    else setCurrentDeputy(memberName);
     setLoading(false);
     onAssigned();
   };
 
-  if (members.length === 0) {
-    return <p className="text-xs text-muted-foreground text-center py-2">Немає учасників для призначення</p>;
-  }
+  const clearRole = async (role: "leader" | "deputy") => {
+    setLoading(true);
+    await dbUpsert("faction_leaders",
+      { faction_name: factionName.toLowerCase(), [role === "leader" ? "leader_username" : "deputy_username"]: null, updated_at: new Date().toISOString() },
+      { onConflict: "faction_name" }
+    );
+    if (role === "leader") setCurrentLeader("");
+    else setCurrentDeputy("");
+    setLoading(false);
+  };
 
   return (
-    <div className="space-y-2">
-      {currentLeader && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2"
-          style={{ background: "hsl(45 100% 55% / 0.08)", border: "1px solid hsl(45 100% 55% / 0.2)" }}>
-          <Crown className="w-3.5 h-3.5 text-yellow-400" />
-          <span className="text-xs text-yellow-400 font-semibold">Поточний лідер: {currentLeader}</span>
-        </div>
-      )}
-      <div className="space-y-1.5 max-h-48 overflow-y-auto">
-        {members.map(m => (
-          <button key={m.name} onClick={() => assignLeader(m.name)} disabled={loading}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all active:scale-[0.98] text-left ${
-              currentLeader === m.name
-                ? "border"
-                : "liquid-glass hover:border-primary/20"
-            }`}
-            style={currentLeader === m.name ? { background: "hsl(45 100% 55% / 0.08)", borderColor: "hsl(45 100% 55% / 0.3)" } : {}}>
-            {m.avatar ? (
-              <img src={m.avatar} className="w-7 h-7 rounded-lg object-cover" alt={m.name} />
-            ) : (
-              <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
-                {m.name.charAt(0).toUpperCase()}
-              </div>
+    <div className="space-y-3">
+      {/* Current assignments */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-xl px-3 py-2" style={{ background: "hsl(45 100% 55% / 0.08)", border: "1px solid hsl(45 100% 55% / 0.2)" }}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <Crown className="w-3 h-3 text-yellow-400" />
+            <span className="text-[10px] text-yellow-400 font-bold uppercase tracking-wide">Лідер</span>
+          </div>
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs text-foreground font-medium truncate">{currentLeader || "—"}</span>
+            {currentLeader && (
+              <button onClick={() => clearRole("leader")} className="text-muted-foreground hover:text-red-400 transition-colors text-[10px]">✕</button>
             )}
-            <span className="text-xs text-foreground flex-1">{m.name}</span>
-            {currentLeader === m.name && <Crown className="w-3.5 h-3.5 text-yellow-400 shrink-0" />}
+          </div>
+        </div>
+        <div className="rounded-xl px-3 py-2" style={{ background: "hsl(200 80% 55% / 0.08)", border: "1px solid hsl(200 80% 55% / 0.2)" }}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <Shield className="w-3 h-3 text-blue-400" />
+            <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wide">Зам</span>
+          </div>
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs text-foreground font-medium truncate">{currentDeputy || "—"}</span>
+            {currentDeputy && (
+              <button onClick={() => clearRole("deputy")} className="text-muted-foreground hover:text-red-400 transition-colors text-[10px]">✕</button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mode selector */}
+      <div className="flex gap-1.5 p-1 rounded-xl liquid-glass">
+        {(["leader", "deputy"] as const).map(m => (
+          <button key={m} onClick={() => setAssignMode(m)}
+            className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
+              assignMode === m
+                ? m === "leader" ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30" : "bg-blue-400/20 text-blue-400 border border-blue-400/30"
+                : "text-muted-foreground"
+            }`}>
+            {m === "leader" ? "👑 Лідер" : "🛡 Зам"}
           </button>
         ))}
       </div>
+
+      {members.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-2">Немає учасників для призначення</p>
+      ) : (
+        <div className="space-y-1.5 max-h-44 overflow-y-auto">
+          {members.map(m => {
+            const isL = currentLeader === m.name;
+            const isD = currentDeputy === m.name;
+            return (
+              <button key={m.name} onClick={() => assignRole(m.name)} disabled={loading}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all active:scale-[0.98] text-left ${
+                  (assignMode === "leader" && isL) || (assignMode === "deputy" && isD)
+                    ? "border" : "liquid-glass hover:border-primary/20"
+                }`}
+                style={
+                  assignMode === "leader" && isL ? { background: "hsl(45 100% 55% / 0.08)", borderColor: "hsl(45 100% 55% / 0.3)" } :
+                  assignMode === "deputy" && isD ? { background: "hsl(200 80% 55% / 0.08)", borderColor: "hsl(200 80% 55% / 0.3)" } : {}
+                }>
+                {m.avatar ? (
+                  <img src={m.avatar} className="w-7 h-7 rounded-lg object-cover" alt={m.name} />
+                ) : (
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+                    {m.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-xs text-foreground flex-1">{m.name}</span>
+                <div className="flex items-center gap-1">
+                  {isL && <Crown className="w-3 h-3 text-yellow-400 shrink-0" title="Лідер" />}
+                  {isD && <Shield className="w-3 h-3 text-blue-400 shrink-0" title="Зам" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
@@ -2825,7 +2883,7 @@ useEffect(() => {
     setLoading(true);
     
     // 1. Завантажуємо кастомні фракції (твій код залишається)
-    const { data: f } = await supabase.from("factions").select("*").order("created_at");
+    const { data: f } = await supabase.from("factions").select("*").order("sort_order", { ascending: true, nullsFirst: false }).order("created_at");
     
     if (f) {
       setFactions([...STATIC_FACTION_LIST, ...f]);
@@ -3333,7 +3391,38 @@ return (
           </div>
 
           {/* Кнопки керування */}
-          <div className="flex gap-2.5">
+          <div className="flex gap-2.5 items-center">
+            {/* Сортування ↑↓ */}
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={async () => {
+                  const idx = factions.findIndex(x => x.id === f.id);
+                  if (idx <= 0) return;
+                  const prev = factions[idx - 1];
+                  const newOrder = [...factions];
+                  [newOrder[idx], newOrder[idx - 1]] = [newOrder[idx - 1], newOrder[idx]];
+                  setFactions(newOrder);
+                  if (f.id > 0) await dbUpdate("factions", { sort_order: idx - 1 }, { id: eq(f.id) });
+                  if (prev.id > 0) await dbUpdate("factions", { sort_order: idx }, { id: eq(prev.id) });
+                }}
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-muted-foreground hover:text-primary hover:border-primary/30 transition-all active:scale-90 text-[10px]"
+                title="Вище"
+              >↑</button>
+              <button
+                onClick={async () => {
+                  const idx = factions.findIndex(x => x.id === f.id);
+                  if (idx >= factions.length - 1) return;
+                  const next = factions[idx + 1];
+                  const newOrder = [...factions];
+                  [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+                  setFactions(newOrder);
+                  if (f.id > 0) await dbUpdate("factions", { sort_order: idx + 1 }, { id: eq(f.id) });
+                  if (next.id > 0) await dbUpdate("factions", { sort_order: idx }, { id: eq(next.id) });
+                }}
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-muted-foreground hover:text-primary hover:border-primary/30 transition-all active:scale-90 text-[10px]"
+                title="Нижче"
+              >↓</button>
+            </div>
             <button 
               onClick={() => openEdit(f)}
               className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-black hover:border-primary hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] transition-all active:scale-90"
