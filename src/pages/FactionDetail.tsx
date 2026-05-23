@@ -20,7 +20,7 @@ const factionsData: Record<string, { name: string; color: string; gradient: stri
   mafia:      { name: "МАФІЯ",       color: "hsl(0, 65%, 45%)",   gradient: "linear-gradient(135deg, hsl(0,65%,25%,0.35), hsl(0,0%,5%,0.4))", desc: "Організована злочинність", dangerous: true },
 };
 
-type Member = { name: string; rank: string; avatar: string | null; isLeader: boolean };
+type Member = { name: string; rank: string; avatar: string | null; isLeader: boolean; isDeputy: boolean };
 type AppStatus = "idle" | "sending" | "sent";
 
 const DEFAULT_QUESTIONS = [
@@ -196,12 +196,14 @@ const FactionDetail = () => {
 
       // 5. Лідер — шукаємо по всіх варіантах
       let leaderUsername = "";
+      let deputyUsername = "";
       const leaderName = staticName || dbFactionName;
       if (leaderName) {
         const { data: ld } = await supabase
-          .from("faction_leaders").select("leader_username")
+          .from("faction_leaders").select("leader_username, deputy_username")
           .ilike("faction_name", leaderName).maybeSingle();
         if (ld?.leader_username) leaderUsername = ld.leader_username as string;
+        if (ld?.deputy_username) deputyUsername = ld.deputy_username as string;
       }
       if (!leaderUsername && numericId !== null) {
         const { data: fd2 } = await supabase
@@ -222,9 +224,10 @@ const FactionDetail = () => {
           rank: "Учасник",
           avatar: avatarMap[name.toLowerCase()] || null,
           isLeader: !!leaderUsername && name.toLowerCase() === leaderUsername.toLowerCase(),
+          isDeputy: !!deputyUsername && name.toLowerCase() === deputyUsername.toLowerCase(),
         });
       }
-      mems.sort((a, b) => (b.isLeader ? 1 : 0) - (a.isLeader ? 1 : 0));
+      mems.sort((a, b) => (b.isLeader ? 2 : b.isDeputy ? 1 : 0) - (a.isLeader ? 2 : a.isDeputy ? 1 : 0));
 
       setMembers(mems);
       if (nick) setIsMember(mems.some(m => m.name.toLowerCase() === nick.toLowerCase()));
@@ -518,8 +521,8 @@ const handleResign = async () => {
                   className="liquid-glass rounded-xl p-3 flex items-center gap-3 animate-slide-up"
                   style={{
                     animationDelay: `${i * 50}ms`,
-                    border: m.isLeader ? `1px solid hsl(45 100% 55% / 0.3)` : undefined,
-                    background: m.isLeader ? "hsl(45 100% 55% / 0.05)" : undefined,
+                    border: m.isLeader ? `1px solid hsl(45 100% 55% / 0.3)` : m.isDeputy ? `1px solid hsl(200 80% 55% / 0.25)` : undefined,
+                    background: m.isLeader ? "hsl(45 100% 55% / 0.05)" : m.isDeputy ? "hsl(200 80% 55% / 0.04)" : undefined,
                   }}>
                   {/* Avatar */}
                   <div className="relative shrink-0">
@@ -528,6 +531,12 @@ const handleResign = async () => {
                       <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
                         style={{ background: "hsl(45 100% 55%)", boxShadow: "0 0 8px hsl(45 100% 55% / 0.7)" }}>
                         <Crown className="w-3 h-3 text-black" />
+                      </div>
+                    )}
+                    {m.isDeputy && !m.isLeader && (
+                      <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                        style={{ background: "hsl(200 80% 55%)", boxShadow: "0 0 8px hsl(200 80% 55% / 0.6)" }}>
+                        <Shield className="w-2.5 h-2.5 text-black" />
                       </div>
                     )}
                   </div>
@@ -540,6 +549,12 @@ const handleResign = async () => {
                         <span className="text-[9px] px-1.5 py-0.5 rounded-md font-bold"
                           style={{ background: "hsl(45 100% 55% / 0.15)", color: "hsl(45 100% 55%)", border: "1px solid hsl(45 100% 55% / 0.3)" }}>
                           ЛІДЕР
+                        </span>
+                      )}
+                      {m.isDeputy && !m.isLeader && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-md font-bold"
+                          style={{ background: "hsl(200 80% 55% / 0.15)", color: "hsl(200 80% 60%)", border: "1px solid hsl(200 80% 55% / 0.3)" }}>
+                          ЗАМ
                         </span>
                       )}
                     </div>
