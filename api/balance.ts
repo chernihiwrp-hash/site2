@@ -20,7 +20,7 @@ const STREAK_BONUS: Record<string, number> = {
 
 const HOUSE_CR_MULT = 3;      // 1 EUR = 3 CR
 const MAX_HOUSE_PRICE_CR = 10_000_000;
-const ALLOWED_RENTAL_DAYS = new Set([7, 14, 24, 30, 60, 90]);
+const ALLOWED_RENTAL_DAYS = new Set([3, 7, 14, 15, 24, 30, 60, 90]);
 
 type Op = "daily_claim" | "buy_theme" | "buy_nft" | "game_result" | "buy_house";
 
@@ -211,7 +211,9 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ error: "Failed to record NFT ownership" });
     }
 
-    await supabase.from("nft_gifts").update({ sold: true }).eq("id", nft_id);
+    // NOTE: We do NOT set sold=true on nft_gifts globally.
+    // NFT availability is tracked per-user via nft_owners table.
+    // sold=true is only set manually by admin for truly limited 1-of-1 NFTs.
 
     return res.status(200).json({ data: { balance: newBalance } });
   }
