@@ -3,7 +3,7 @@
 //     зайві дублюючі перевірки видалено, додана пряма карта оп → перм.
 
 import { createClient } from "@supabase/supabase-js";
-import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger.js";
+import { logDbRequest, getClientIp, getUserAgent, keysOf, safeSnapshot, matchSnapshot } from "./_logger.js";
 import { verifyCredentials, applyCors, safeDbError } from "./_auth.js";
 import { checkMutationLimit } from "./_ratelimit.js";
 
@@ -108,6 +108,9 @@ export default async function handler(req: any, res: any) {
       endpoint: "db", username: rawNick,
       role, table_name: table || null, op: op || null,
       match_keys: keysOf(match), value_keys: keysOf(values),
+      match_snapshot: matchSnapshot(match),
+      value_snapshot: safeSnapshot(values),
+      telegram_id: null,
       status, allowed: false, error, ip, user_agent: ua,
     });
     return res.status(status).json({ error });
@@ -117,6 +120,9 @@ export default async function handler(req: any, res: any) {
       endpoint: "db", username: rawNick ?? "",
       role, table_name: table, op,
       match_keys: keysOf(match), value_keys: keysOf(values),
+      match_snapshot: matchSnapshot(match),
+      value_snapshot: safeSnapshot(values),
+      telegram_id: null,
       status, allowed: true, error: null, ip, user_agent: ua,
     });
     return res.status(status).json(payload);
@@ -308,6 +314,8 @@ export default async function handler(req: any, res: any) {
       await logDbRequest(supabaseAdmin, {
         endpoint: "db", username: normalizedNick, role,
         table_name: table, op, match_keys: keysOf(match), value_keys: keysOf(values),
+        match_snapshot: matchSnapshot(match), value_snapshot: safeSnapshot(values),
+        telegram_id: null,
         status: 400, allowed: false, error: error.message, ip, user_agent: ua,
       });
       return res.status(400).json({ error: safeDbError(error) });
@@ -317,6 +325,8 @@ export default async function handler(req: any, res: any) {
     await logDbRequest(supabaseAdmin, {
       endpoint: "db", username: normalizedNick, role,
       table_name: table, op, match_keys: keysOf(match), value_keys: keysOf(values),
+      match_snapshot: matchSnapshot(match), value_snapshot: safeSnapshot(values),
+      telegram_id: null,
       status: 500, allowed: false, error: e?.message || "server error", ip, user_agent: ua,
     });
     return res.status(500).json({ error: "Server error" });
