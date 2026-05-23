@@ -4,7 +4,7 @@
 // или произвольный баланс блокируются строгим whitelist.
 
 import { createClient } from "@supabase/supabase-js";
-import { logDbRequest, getClientIp, getUserAgent, keysOf } from "./_logger.js";
+import { logDbRequest, getClientIp, getUserAgent, keysOf, safeSnapshot } from "./_logger.js";
 import { verifyCredentials, hashPassword, applyCors } from "./_auth.js";
 import { checkAuthLimit } from "./_ratelimit.js";
 
@@ -62,11 +62,14 @@ export default async function handler(req: any, res: any) {
   }
   const ua = getUserAgent(req);
 
-  const log = (status: number, allowed: boolean, error: string | null = null) =>
+  const log = (status: number, allowed: boolean, error: string | null = null, tgId: string | null = null) =>
     logDbRequest(supabase, {
       endpoint: "auth", username: nick ? String(nick).toLowerCase().trim() : null,
       role: null, table_name: "users", op,
       match_keys: null, value_keys: keysOf(values),
+      match_snapshot: null,
+      value_snapshot: safeSnapshot(values),
+      telegram_id: tgId || (typeof (values as any)?.tgId === "string" ? (values as any).tgId : null),
       status, allowed, error, ip, user_agent: ua,
     });
 
