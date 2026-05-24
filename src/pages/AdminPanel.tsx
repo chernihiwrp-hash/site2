@@ -24,7 +24,8 @@ import type {
 } from "../lib/store";
 
 // ─── SUPER ADMIN ─────────────────────────────────────────────────────────────
-const SUPER_ADMIN_NICK = "t1kron1x";
+// SECURITY: isSuperAdmin/isAdmin are now determined server-side via /api/admin-verify.
+// Do NOT use localStorage role checks for access control — they are trivially bypassed.
 
 const normalizeNick = (nick: string) =>
   nick.toLowerCase()
@@ -41,8 +42,28 @@ const normalizeNick = (nick: string) =>
       return map[c] || c;
     });
 
-const isSuperAdmin = () =>
-  normalizeNick(localStorage.getItem("crp_nick") || "") === SUPER_ADMIN_NICK;
+// Helper: call /api/admin-verify and get server-authoritative role + perms.
+// This replaces all localStorage-based role checks.
+async function fetchAdminVerify(): Promise<{ role: string; perms: Record<TabId, boolean> }> {
+  const nick     = localStorage.getItem("crp_nick")     || "";
+  const password = localStorage.getItem("crp_password") || "";
+  if (!nick || !password) return { role: "player", perms: DEFAULT_NO_PERMS };
+  try {
+    const res = await fetch("/api/admin-verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nick, password }),
+    });
+    if (!res.ok) return { role: "player", perms: DEFAULT_NO_PERMS };
+    const data = await res.json();
+    return {
+      role:  String(data.role || "player"),
+      perms: { ...DEFAULT_NO_PERMS, ...(data.perms || {}) } as Record<TabId, boolean>,
+    };
+  } catch {
+    return { role: "player", perms: DEFAULT_NO_PERMS };
+  }
+}
 
 // ─── PERMISSIONS ─────────────────────────────────────────────────────────────
 type TabId =
@@ -95,11 +116,14 @@ const DEFAULT_PERMS: Record<TabId, boolean> = {
   confiscation: true, mayor_apps: true, debug: true, bans: true, db_logs: true, tech_work: true,
 };
 
+// SECURITY: getAdminPerms from localStorage is NOT used for access control.
+// Permissions are fetched from /api/admin-verify on component mount.
+// This function is kept only for the perms editor UI (visual display of cached perms).
 const getAdminPerms = (nick: string): Record<TabId, boolean> => {
   try {
     const s = localStorage.getItem(`crp_perms_${normalizeNick(nick)}`);
-    return s ? { ...DEFAULT_PERMS, ...JSON.parse(s) } : { ...DEFAULT_PERMS };
-  } catch { return { ...DEFAULT_PERMS }; }
+    return s ? { ...DEFAULT_NO_PERMS, ...JSON.parse(s) } : { ...DEFAULT_NO_PERMS };
+  } catch { return { ...DEFAULT_NO_PERMS }; }
 };
 const saveAdminPerms = async (nick: string, perms: Record<TabId, boolean>) => {
   localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(perms));
@@ -118,60 +142,32 @@ const inputClass = "w-full liquid-glass rounded-xl px-4 py-3 text-sm text-foregr
 const AdminPanel = () => {
   const [tab, setTab] = useState<Tab | null>(null);
   const [nftGifts, setNftGifts] = useState<any[]>([]);
-  const superAdmin = isSuperAdmin();
   const nick = localStorage.getItem("crp_nick") || "";
-  const [perms, setPerms] = useState<Record<TabId, boolean>>(
-    superAdmin ? DEFAULT_PERMS : getAdminPerms(nick)
-  );
-  const [permsLoaded, setPermsLoaded] = useState<boolean>(superAdmin);
+
+  // SECURITY: superAdmin and perms are now determined EXCLUSIVELY by the server
+  // via /api/admin-verify. localStorage is used only to send credentials to the
+  // server — never trusted for access control decisions on the client.
+  const [serverRole, setServerRole] = useState<string>("player");
+  const [perms, setPerms] = useState<Record<TabId, boolean>>(DEFAULT_NO_PERMS);
+  const [permsLoaded, setPermsLoaded] = useState<boolean>(false);
+
+  // Derive superAdmin from server-confirmed role
+  const superAdmin = serverRole === "superadmin";
 
   useEffect(() => {
-    if (superAdmin) return;
     let cancelled = false;
     (async () => {
-      // 1. Якщо є запис у admin_perms — використовуємо його (може містити заборони)
-      const { data: permsRow } = await supabase
-        .from("admin_perms")
-        .select("perms")
-        .eq("username", normalizeNick(nick))
-        .maybeSingle();
-
+      const { role, perms: serverPerms } = await fetchAdminVerify();
       if (cancelled) return;
-
-      if (permsRow?.perms) {
-        const p = { ...DEFAULT_PERMS, ...(permsRow.perms as Record<TabId, boolean>) };
-        localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(p));
-        setPerms(p);
-        setPermsLoaded(true);
-        return;
-      }
-
-      // 2. Якщо запису немає — перевіряємо чи є схвалена заявка на адміна
-      const { data: appRow } = await supabase
-        .from("admin_applications")
-        .select("status")
-        .ilike("username", nick)
-        .eq("status", "approved")
-        .maybeSingle();
-
-      if (cancelled) return;
-
-      if (appRow) {
-        // Схвалений адмін без явних обмежень → повні права
-        const p = { ...DEFAULT_PERMS };
-        localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(p));
-        setPerms(p);
-      } else {
-        // Не адмін — доступу немає
-        const noPerms = Object.fromEntries(Object.keys(DEFAULT_PERMS).map(k => [k, false])) as Record<TabId, boolean>;
-        setPerms(noPerms);
-      }
+      setServerRole(role);
+      setPerms(serverPerms);
+      // Cache for UI display only (not for access control)
+      localStorage.setItem(`crp_perms_${normalizeNick(nick)}`, JSON.stringify(serverPerms));
       setPermsLoaded(true);
     })();
     return () => { cancelled = true; };
-  }, [nick, superAdmin]);
+  }, [nick]);
 
-  // ДОДАТИ ЦЕЙ БЛОК:
   useEffect(() => {
     if (tab === "nft") {
       supabase.from("nft_gifts")
@@ -183,8 +179,8 @@ const AdminPanel = () => {
 
   const allowedTabs = TAB_LIST.filter(t => superAdmin || perms[t.id]);
 
-  // Поки права завантажуються — показуємо лоадер, а не "ДОСТУП ЗАБОРОНЕНО"
-  if (!superAdmin && !permsLoaded) {
+  // Show loader while server verifies permissions
+  if (!permsLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -418,19 +414,21 @@ const SuperAdminTab = () => {
   const [editPerms, setEditPerms] = useState<Record<TabId, boolean>>({ ...DEFAULT_PERMS });
 
   useEffect(() => {
-    supabase.from("admin_applications").select("*").eq("status", "approved").then(({ data, error }) => {
-      if (error) console.error("admin_applications:", error.message);
-      if (!data || data.length === 0) return;
-      const list = data.map((r: Record<string, unknown>) => {
+    // SECURITY: use authenticated dbSelect instead of anon supabase client
+    dbSelect<{ username: string; form_data: any; id: any; nick: string }[]>("admin_applications", {
+      filters: [{ col: "status", op: "eq", value: "approved" }],
+    }).then(({ data }) => {
+      if (!data) return;
+      const arr = Array.isArray(data) ? data : [data];
+      const list = arr.map((r: any) => {
         const fd = (r.form_data as Record<string, unknown>) || {};
-        // Пробуємо різні поля де може бути нік
         const n = (fd.nick as string)
           || (fd.nickname as string)
           || (r.username as string)
           || (r.nick as string)
           || String(r.id || "");
         return { nick: n, perms: getAdminPerms(n) };
-      }).filter(a => a.nick && a.nick.length > 0);
+      }).filter((a: any) => a.nick && a.nick.length > 0);
       setAdmins(list);
     });
   }, []);
@@ -2274,18 +2272,36 @@ const TokensTab = () => {
   const [currentBal, setCurrentBal] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const checkBalance = () => {
+  const checkBalance = async () => {
     if (!nick.trim()) return;
-    setCurrentBal(getBalance(nick.trim()));
+    setLoading(true);
+    // SECURITY: fetch balance via authenticated /api/admin-tokens, not localStorage
+    const adminNick     = localStorage.getItem("crp_nick")     || "";
+    const adminPassword = localStorage.getItem("crp_password") || "";
+    try {
+      const res = await fetch("/api/admin-tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nick: adminNick, password: adminPassword, op: "check", target: nick.trim() }),
+      });
+      const json = await res.json();
+      if (res.ok) setCurrentBal(json.balance ?? 0);
+      else toast.error(json.error || "Помилка");
+    } catch { toast.error("Помилка з'єднання"); }
+    setLoading(false);
   };
 
   const give = async () => {
     const n = nick.trim(); const a = parseInt(amount);
     if (!n || !a || a <= 0) return toast.error("Заповніть поля правильно");
     setLoading(true);
-    await store.giveTokens(n, a);
-    setCurrentBal(getBalance(n));
-    toast.success(`+${a} CR видано гравцю ${n}! Баланс: ${getBalance(n)} CR`);
+    const ok = await store.giveTokens(n, a);
+    if (ok) {
+      setCurrentBal(prev => prev !== null ? prev + a : null);
+      toast.success(`+${a} CR видано гравцю ${n}!`);
+    } else {
+      toast.error("Помилка: перевірте пермішни або нік гравця");
+    }
     setAmount("");
     setLoading(false);
   };
@@ -2296,10 +2312,10 @@ const TokensTab = () => {
     setLoading(true);
     const ok = await store.takeTokens(n, a);
     if (ok) {
-      setCurrentBal(getBalance(n));
-      toast.success(`-${a} CR знято у ${n}. Баланс: ${getBalance(n)} CR`);
+      setCurrentBal(prev => prev !== null ? Math.max(0, prev - a) : null);
+      toast.success(`-${a} CR знято у ${n}.`);
     } else {
-      toast.error(`Недостатньо CR у ${n}. Поточний баланс: ${getBalance(n)} CR`);
+      toast.error("Помилка: недостатньо CR або відмовлено сервером");
     }
     setAmount("");
     setLoading(false);
@@ -2308,9 +2324,20 @@ const TokensTab = () => {
   const reset = async () => {
     const n = nick.trim();
     if (!n) return;
-    addBalance(n, -getBalance(n)); // reset to 0
-    setCurrentBal(0);
-    toast.success(`Баланс ${n} скинуто до 0`);
+    // SECURITY: reset via authenticated server endpoint
+    const adminNick     = localStorage.getItem("crp_nick")     || "";
+    const adminPassword = localStorage.getItem("crp_password") || "";
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin-tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nick: adminNick, password: adminPassword, op: "set", target: n, amount: 0 }),
+      });
+      if (res.ok) { setCurrentBal(0); toast.success(`Баланс ${n} скинуто до 0`); }
+      else { const j = await res.json(); toast.error(j.error || "Помилка"); }
+    } catch { toast.error("Помилка з'єднання"); }
+    setLoading(false);
   };
 
   return (
@@ -2544,14 +2571,18 @@ const RestrictionsTab = () => {
   const search = async () => {
     if (!adminNick.trim()) return toast.error("Введіть нік адміна");
     setLoading(true);
-    const { data } = await supabase
-      .from("admin_applications")
-      .select("*")
-      .eq("status", "approved")
-      .ilike("username", adminNick.trim());
+    // SECURITY: use authenticated /api/db-select instead of anon supabase client
+    const { data } = await dbSelect<{ username: string }[]>("admin_applications", {
+      filters: [
+        { col: "status", op: "eq", value: "approved" },
+        { col: "username", op: "ilike", value: adminNick.trim() },
+      ],
+      limit: 1,
+    });
     setLoading(false);
-    if (!data || data.length === 0) return toast.error("Адміна не знайдено");
-    const n = (data[0] as Record<string, unknown>).username as string || adminNick.trim();
+    const arr = Array.isArray(data) ? data : data ? [data] : [];
+    if (!arr.length) return toast.error("Адміна не знайдено");
+    const n = (arr[0] as any).username as string || adminNick.trim();
     const perms = getAdminPerms(n);
     setFound({ nick: n, perms });
     setEditPerms(perms);
@@ -3614,7 +3645,10 @@ const BansTab = () => {
 
   const loadBans = async () => {
     setLoading(true);
-    const { data } = await supabase.from("bans").select("*").order("created_at", { ascending: false });
+    // SECURITY: use authenticated /api/db-select instead of anon supabase client
+    const { data } = await dbSelect<typeof bans>("bans", {
+      order: { col: "created_at", dir: "desc" },
+    });
     setBans((data || []) as typeof bans);
     setLoading(false);
   };
@@ -3623,8 +3657,13 @@ const BansTab = () => {
     if (!searchUser.trim()) return;
     setSearching(true);
     setFoundUser(null);
-    const { data } = await supabase.from("users").select("username, telegram_id").ilike("username", searchUser.trim()).maybeSingle();
-    if (data) { setFoundUser(data as { telegram_id: string; username: string }); setBanNick(data.username); }
+    // SECURITY: authenticated call
+    const { data } = await dbSelect<{ username: string; telegram_id: string }>("users", {
+      columns: "username, telegram_id",
+      filters: [{ col: "username", op: "ilike", value: searchUser.trim() }],
+      single: true,
+    });
+    if (data) { setFoundUser(data as { telegram_id: string; username: string }); setBanNick((data as any).username); }
     else toast.error("Гравця не знайдено");
     setSearching(false);
   };
