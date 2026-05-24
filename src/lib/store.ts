@@ -695,30 +695,36 @@ export const store = {
 
   // ── TOKENS / BALANCE ──────────────────────────────────────────────────────
   giveTokens: async (nick: string, amount: number): Promise<boolean> => {
-    const { data: user } = await dbSelect<{ balance: number }>("users", {
-      columns: "balance", filters: [{ col: "username", op: "ilike", value: nick }], single: true,
-    });
-    const currentBalance = (user?.balance as number) || 0;
-    const newBalance = currentBalance + amount;
-    const { error } = await dbUpdate("users", { balance: newBalance }, { username: ilike(nick) });
-    if (error) { console.error("giveTokens error:", error); return false; }
-    setBalance(nick, newBalance);
-    await store.addNotification(nick, `Вам нараховано ${amount} CR від адміністрації!`);
-    return true;
+    // SECURITY: all token operations go through /api/admin-tokens which
+    // verifies admin credentials and "tokens" permission server-side.
+    const adminNick     = localStorage.getItem("crp_nick")     || "";
+    const adminPassword = localStorage.getItem("crp_password") || "";
+    if (!adminNick || !adminPassword) return false;
+    try {
+      const res = await fetch("/api/admin-tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nick: adminNick, password: adminPassword, op: "give", target: nick, amount }),
+      });
+      if (!res.ok) { console.error("giveTokens:", await res.json()); return false; }
+      return true;
+    } catch (e) { console.error("giveTokens network error:", e); return false; }
   },
 
   takeTokens: async (nick: string, amount: number): Promise<boolean> => {
-    const { data: user } = await dbSelect<{ balance: number }>("users", {
-      columns: "balance", filters: [{ col: "username", op: "ilike", value: nick }], single: true,
-    });
-    const currentBalance = (user?.balance as number) || 0;
-    if (currentBalance < amount) return false;
-    const newBalance = currentBalance - amount;
-    const { error } = await dbUpdate("users", { balance: newBalance }, { username: ilike(nick) });
-    if (error) { console.error("takeTokens error:", error); return false; }
-    setBalance(nick, newBalance);
-    await store.addNotification(nick, `З вашого балансу списано ${amount} CR.`);
-    return true;
+    // SECURITY: same — server verifies perms before touching balance
+    const adminNick     = localStorage.getItem("crp_nick")     || "";
+    const adminPassword = localStorage.getItem("crp_password") || "";
+    if (!adminNick || !adminPassword) return false;
+    try {
+      const res = await fetch("/api/admin-tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nick: adminNick, password: adminPassword, op: "take", target: nick, amount }),
+      });
+      if (!res.ok) { console.error("takeTokens:", await res.json()); return false; }
+      return true;
+    } catch (e) { console.error("takeTokens network error:", e); return false; }
   },
 
   // ── THEMES ────────────────────────────────────────────────────────────────
