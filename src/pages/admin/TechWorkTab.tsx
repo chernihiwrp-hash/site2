@@ -6,7 +6,7 @@ import GradientButton from "../../components/GradientButton";
 import { toast } from "sonner";
 import { Wrench, Power, PowerOff, RefreshCw } from "lucide-react";
 
-const PRESET_ICONS = ["🔧","⚙️","🛠️","🚧","🔨","💻","🖥️","⚡","🔌","🌐","🎮","🏗️","🔒","🛡️","🎯"];
+const PRESET_ICONS = ["fix","⚙️","🛠️","🚧","🔨","💻","🖥️","⚡","🔌","🌐","🎮","🏗️","🔒","🛡️","🎯"];
 const PRESET_COLORS = ["#f59e0b","#ef4444","#8b5cf6","#06b6d4","#10b981","#f97316","#ec4899","#6366f1","#84cc16","#14b8a6"];
 
 export type MaintenanceConfig = {
