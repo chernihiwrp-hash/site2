@@ -80,6 +80,7 @@ export default async function handler(req: any, res: any) {
       endpoint: "db-select", username: nick ? String(nick).toLowerCase().trim() : null,
       role, table_name: table || null, op: "select",
       match_keys: null, value_keys: null,
+      match_snapshot: null, value_snapshot: null, telegram_id: null,
       status, allowed: false, error, ip, user_agent: ua,
     });
     return res.status(status).json({ error });
@@ -139,6 +140,7 @@ export default async function handler(req: any, res: any) {
       await logDbRequest(supabaseAdmin, {
         endpoint: "db-select", username: normalizedNick, role,
         table_name: table, op: "select.count", match_keys: null, value_keys: null,
+        match_snapshot: null, value_snapshot: null, telegram_id: null,
         status: 200, allowed: true, error: null, ip, user_agent: ua,
       });
       return res.status(200).json({ data: null, count: cnt ?? 0 });
@@ -165,6 +167,7 @@ export default async function handler(req: any, res: any) {
     await logDbRequest(supabaseAdmin, {
       endpoint: "db-select", username: normalizedNick, role,
       table_name: table, op: "select", match_keys: null, value_keys: null,
+      match_snapshot: null, value_snapshot: null, telegram_id: null,
       status: 200, allowed: true, error: null, ip, user_agent: ua,
     });
     return res.status(200).json({ data: stripSensitive(data) ?? null });
