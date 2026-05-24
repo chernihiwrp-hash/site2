@@ -28,6 +28,8 @@ import Vip from "./pages/Vip";
 import { supabase } from "./lib/store";
 import { User, CheckCircle, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react";
 import GradientButton from "./components/GradientButton";
+import { MaintenanceScreen } from "./pages/admin/TechWorkTab";
+import type { MaintenanceConfig } from "./pages/admin/TechWorkTab";
 
 const queryClient = new QueryClient();
 
@@ -477,6 +479,8 @@ const BanScreen = ({ reason, expiresAt, isPermanent }: { reason: string; expires
 const App = () => {
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [banInfo, setBanInfo] = useState<{ reason: string; expiresAt: string | null; isPermanent: boolean } | null | undefined>(undefined);
+  const [maintenance, setMaintenance] = useState<MaintenanceConfig | null>(null);
+  const [isAdminUser, setIsAdminUser] = useState(false);
 
   if (!isTelegramWebApp()) return <BrowserBlockScreen />;
 
@@ -506,6 +510,27 @@ const App = () => {
         }
       }
       setBanInfo(null);
+
+      // Перевірка режиму тех. робіт
+      const { data: mt } = await supabase.from("maintenance_mode").select("*").eq("id", 1).maybeSingle();
+      if (mt?.enabled) {
+        // Перевіряємо чи гравець є адміном (approved admin application або role=admin)
+        const nick = localStorage.getItem("crp_nick") || "";
+        let isAdmin = false;
+        if (nick) {
+          const { data: adminApp } = await supabase
+            .from("admin_applications").select("status").ilike("username", nick).maybeSingle();
+          if (adminApp?.status === "approved") isAdmin = true;
+          if (!isAdmin) {
+            const { data: userRow } = await supabase
+              .from("users").select("role").ilike("username", nick).maybeSingle();
+            if (userRow?.role === "admin" || nick.toLowerCase() === "t1kron1x") isAdmin = true;
+          }
+        }
+        setIsAdminUser(isAdmin);
+        if (!isAdmin) setMaintenance(mt as MaintenanceConfig);
+      }
+
       const isReg = localStorage.getItem("crp_registered") === "1";
       const savedNickCheck = localStorage.getItem("crp_nick") || "";
       const hasPassword = !!localStorage.getItem("crp_password");
@@ -513,6 +538,16 @@ const App = () => {
     };
     checkBan();
   }, []);
+
+  if (maintenance) return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Sonner />
+        <Particles />
+        <MaintenanceScreen cfg={maintenance} />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
 
   if (banInfo) return <BanScreen reason={banInfo.reason} expiresAt={banInfo.expiresAt} isPermanent={banInfo.isPermanent} />;
 
