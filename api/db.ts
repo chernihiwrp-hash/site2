@@ -256,6 +256,15 @@ export default async function handler(req: any, res: any) {
         if (!isOwn) return deny(403, "Forbidden: can only modify your own user record");
       }
     } else if (!isSuperAdmin) {
+      // SECURITY: balance/rare_balance can only be changed via /api/admin-tokens
+      // which enforces the "tokens" permission. Block it here so admins without
+      // that permission cannot bypass it by calling /api/db directly.
+      if ((op === "update" || op === "upsert") && values && typeof values === "object") {
+        const hasBalanceField = "balance" in (values as any) || "rare_balance" in (values as any);
+        if (hasBalanceField && !hasPerm("tokens")) {
+          return deny(403, "Forbidden: balance changes require \"tokens\" permission — use /api/admin-tokens");
+        }
+      }
       // Адмін — не може змінити роль/бан іншого адміна
       if ((op === "update" || op === "upsert") && values && typeof values === "object") {
         if ("role" in (values as any) || "is_banned" in (values as any)) {
