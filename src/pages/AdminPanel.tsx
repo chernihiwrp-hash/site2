@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import DbLogsTab from "./admin/DbLogsTab";
+import TechWorkTab from "./admin/TechWorkTab";
 import { store, supabase, getBalance, addBalance, subtractBalance } from "../lib/store";
 import { dbInsert, dbUpdate, dbDelete, dbUpsert, eq } from "../lib/db";
 import type {
@@ -48,7 +49,7 @@ type TabId =
   "sos" | "applications" | "factions" | "licenses" | "plates" | "house_requests" |
   "news" | "houses" | "wanted" | "election" | "documents" |
   "add_faction" | "voice" | "tokens" | "nft" | "manage_factions" | "recruitment" |
-  "confiscation" | "mayor_apps" | "debug" | "bans" | "db_logs";
+  "confiscation" | "mayor_apps" | "debug" | "bans" | "db_logs" | "tech_work";
 
 const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boolean; category: string }[] = [
   { id: "sos",             label: "SOS Сигнали",           icon: AlertTriangle, sub: "Realtime",    danger: true,  category: "Виклики" },
@@ -73,6 +74,7 @@ const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boo
   { id: "add_faction",     label: "Додати фракцію",        icon: Plus,          sub: "Фракції",                   category: "Фракції" },
   { id: "debug",           label: "Діагностика",           icon: Settings,      sub: "Система",                   category: "Система" },
   { id: "db_logs",         label: "Журнал запитів",        icon: ScrollText,    sub: "Система",                   category: "Система" },
+  { id: "tech_work",       label: "Технічні роботи",       icon: Settings,      sub: "Система",    danger: true,  category: "Система" },
 ];
 
 const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
@@ -81,7 +83,7 @@ const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
   house_requests: false, news: false, houses: false, wanted: false,
   election: false, documents: false, add_faction: false, voice: false, 
   tokens: false, nft: false, manage_factions: false, recruitment: false,
-  confiscation: false, mayor_apps: false, debug: false, bans: false, db_logs: false,
+  confiscation: false, mayor_apps: false, debug: false, bans: false, db_logs: false, tech_work: false,
 };
 
 const DEFAULT_PERMS: Record<TabId, boolean> = {
@@ -90,7 +92,7 @@ const DEFAULT_PERMS: Record<TabId, boolean> = {
   house_requests: true, news: true, houses: true, wanted: true,
   election: true, documents: true, add_faction: true, voice: true, 
   tokens: true, nft: true, manage_factions: true, recruitment: true,
-  confiscation: true, mayor_apps: true, debug: true, bans: true, db_logs: true,
+  confiscation: true, mayor_apps: true, debug: true, bans: true, db_logs: true, tech_work: true,
 };
 
 const getAdminPerms = (nick: string): Record<TabId, boolean> => {
@@ -298,6 +300,7 @@ const AdminPanel = () => {
         {tab === "bans"            && <BansTab />}
         {tab === "debug"           && <DebugTab />}
         {tab === "db_logs"         && <DbLogsTab />}
+        {tab === "tech_work"        && <TechWorkTab />}
         {/* ─── ВСТАВЛЯЙ СЮДА ─── */}
         {tab === "nft" && (
           <NftGiftsTab nftGifts={nftGifts} setNftGifts={setNftGifts} />
