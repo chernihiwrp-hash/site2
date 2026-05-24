@@ -511,21 +511,25 @@ const App = () => {
       }
       setBanInfo(null);
 
-      // Перевірка режиму тех. робіт
+      // SECURITY: Check admin status via server — not via anon supabase client.
+      // This prevents someone from bypassing maintenance mode by reading
+      // admin_applications directly with an anon key.
       const { data: mt } = await supabase.from("maintenance_mode").select("*").eq("id", 1).maybeSingle();
+      const password = localStorage.getItem("crp_password") || "";
       if (mt?.enabled) {
-        // Перевіряємо чи гравець є адміном (approved admin application або role=admin)
-        const nick = localStorage.getItem("crp_nick") || "";
         let isAdmin = false;
-        if (nick) {
-          const { data: adminApp } = await supabase
-            .from("admin_applications").select("status").ilike("username", nick).maybeSingle();
-          if (adminApp?.status === "approved") isAdmin = true;
-          if (!isAdmin) {
-            const { data: userRow } = await supabase
-              .from("users").select("role").ilike("username", nick).maybeSingle();
-            if (userRow?.role === "admin" || nick.toLowerCase() === "t1kron1x") isAdmin = true;
-          }
+        if (nick && password) {
+          try {
+            const verifyRes = await fetch("/api/admin-verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ nick, password }),
+            });
+            if (verifyRes.ok) {
+              const verifyData = await verifyRes.json();
+              isAdmin = verifyData.role === "admin" || verifyData.role === "superadmin" || verifyData.role === "moderator";
+            }
+          } catch { isAdmin = false; }
         }
         setIsAdminUser(isAdmin);
         if (!isAdmin) setMaintenance(mt as MaintenanceConfig);
