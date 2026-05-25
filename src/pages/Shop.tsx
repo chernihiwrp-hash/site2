@@ -388,11 +388,20 @@ const Shop = () => {
     supabase.from("nft_gifts").select("*").order("price", { ascending: true }).limit(5)
       .then(({ data }: any) => { if (data) setNftGifts(data); });
 
-    // Load claimed NFTs from localStorage
-    const saved = localStorage.getItem("crp_claimed_nfts");
-    if (saved) {
-      try { setClaimedNfts(new Set(JSON.parse(saved))); } catch {}
-    }
+    // Load claimed NFTs from DB (source of truth) + merge localStorage cache
+    supabase.from("nft_owners").select("nft_id").ilike("owner_nick", nick)
+      .then(({ data }: any) => {
+        const dbIds: Set<number> = new Set((data || []).map((r: any) => Number(r.nft_id)));
+        // Merge any cached ids from localStorage
+        const saved = localStorage.getItem("crp_claimed_nfts");
+        if (saved) {
+          try { (JSON.parse(saved) as number[]).forEach((id: number) => dbIds.add(Number(id))); } catch {}
+        }
+        if (dbIds.size > 0) {
+          setClaimedNfts(dbIds);
+          localStorage.setItem("crp_claimed_nfts", JSON.stringify([...dbIds]));
+        }
+      });
   }, [nick]);
 
   const timeLeft = () => {
@@ -447,14 +456,14 @@ const Shop = () => {
       const { data: existing } = await supabase
         .from("nft_owners")
         .select("id")
-        .eq("owner_nick", nick)
-        .eq("nft_id", String(nft.id))
+        .ilike("owner_nick", nick)
+        .eq("nft_id", nft.id)
         .maybeSingle();
 
       if (!existing) {
         const { error } = await dbInsert("nft_owners", {
           owner_nick: nick,
-          nft_id: String(nft.id),
+          nft_id: nft.id,
         });
         if (error) {
           toast.error(`Помилка отримання NFT: ${error.message}`);
