@@ -182,10 +182,10 @@ export const store = {
     try {
       const { data: owners, error: ownerError } = await dbSelect<{ nft_id: string }[]>("nft_owners", {
         columns: "nft_id",
-        filters: [{ col: "owner_nick", op: "eq", value: nick }],
+        filters: [{ col: "owner_nick", op: "ilike", value: nick }],
       });
       if (ownerError || !owners || owners.length === 0) return [];
-      const giftIds = owners.map(o => o.nft_id);
+      const giftIds = owners.map(o => Number(o.nft_id)).filter(id => !isNaN(id));
       const { data: nfts, error: nftError } = await dbSelect<NftGift[]>("nft_gifts", {
         filters: [{ col: "id", op: "in", value: giftIds }],
       });
@@ -1216,7 +1216,7 @@ export const store = {
       // перевіряємо, чи вже є
       const { data: existing } = await dbSelect("nft_owners", {
         columns: "nft_id",
-        filters: [{ col: "owner_nick", op: "eq", value: nick }, { col: "nft_id", op: "eq", value: nftId }],
+        filters: [{ col: "owner_nick", op: "ilike", value: nick }, { col: "nft_id", op: "eq", value: nftId }],
         single: true,
       });
       if (existing) return true; // вже є — теж "успіх"
