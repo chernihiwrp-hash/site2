@@ -141,12 +141,12 @@ const Profile = () => {
       const [data, carsData, ownedData, balanceResult, userData] = await Promise.all([
         store.getPlayerProfile(nick),
         store.getCarPlates(nick),
-        supabase.from('nft_owners').select('nft_id').eq('owner_nick', nick),
+        supabase.from('nft_owners').select('nft_id').ilike('owner_nick', nick),
         getBalanceFromDB(nick),
         supabase.from("users").select("role, vip_expires_at").ilike("username", nick).maybeSingle(),
       ]);
 
-      const ownedIds = ownedData.data?.map((item: any) => item.nft_id) || [];
+      const ownedIds = (ownedData.data?.map((item: any) => Number(item.nft_id)) || []).filter((id: number) => !isNaN(id));
 
       if (ownedIds.length > 0) {
         const { data: nfts } = await supabase.from('nft_gifts').select('*').in('id', ownedIds);
