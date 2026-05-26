@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import DbLogsTab from "./admin/DbLogsTab";
 import TechWorkTab from "./admin/TechWorkTab";
 import { store, supabase, getBalance, addBalance, subtractBalance } from "../lib/store";
-import { dbInsert, dbUpdate, dbDelete, dbUpsert, eq } from "../lib/db";
+import { dbInsert, dbUpdate, dbDelete, dbUpsert, dbSelect, eq } from "../lib/db";
 import type {
   NewsItem, HouseItem, WantedPerson, FactionApplication, AdminApplication,
   CityVoiceItem, MayorCandidate, DocumentItem, SosMessage, LicenseApplication,
