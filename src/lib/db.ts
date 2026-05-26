@@ -1,4 +1,4 @@
-// Клієнтські хелпери для мутацій і SELECT-ів.
+
 
 type Filter = { op: "eq" | "ilike"; value: unknown };
 type Match  = Record<string, Filter>;
@@ -33,7 +33,7 @@ interface Result<T = any> {
 
 function getCredentials(): { nick: string; password: string } | null {
   const nick     = localStorage.getItem("crp_nick");
-  const password = sessionStorage.getItem("crp_password");
+  const password = localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password");
   if (!nick || !password) return null;
   return { nick, password };
 }
