@@ -101,3 +101,51 @@ export function getAdmin(): SupabaseClient | null {
   if (!url || !key) return null;
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
+
+// ─── Telegram-алерты для подозрительных действий ────────────────────────────
+// Нужны переменные окружения: TG_BOT_TOKEN и TG_ALERT_CHAT_ID
+
+const SUSPICIOUS_OPS = new Set([
+  "tokens.give", "tokens.take", "tokens.set",
+  "update", "delete", "upsert",
+]);
+
+const SENSITIVE_TABLES = new Set([
+  "users", "bans", "admin_perms", "factions", "faction_leaders",
+  "houses", "house_confiscations",
+]);
+
+export async function sendTelegramAlert(message: string): Promise<void> {
+  const token  = process.env.TG_BOT_TOKEN;
+  const chatId = process.env.TG_ALERT_CHAT_ID;
+  if (!token || !chatId) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+    });
+  } catch { /* не критично */ }
+}
+
+export function shouldAlert(entry: DbLogEntry): boolean {
+  // Алерт если: действие с чувствительной таблицей + подозрительная операция
+  if (!entry.allowed) return false; // уже заблокировано — не шумим
+  if (!entry.table_name || !SENSITIVE_TABLES.has(entry.table_name)) return false;
+  if (!entry.op) return false;
+  return SUSPICIOUS_OPS.has(entry.op);
+}
+
+export function formatAlert(entry: DbLogEntry): string {
+  const time = new Date().toLocaleString("uk-UA", { timeZone: "Europe/Kyiv" });
+  return (
+    `🚨 <b>Адмін-дія на сервері</b>\n` +
+    `🕐 ${time}\n` +
+    `👤 Користувач: <code>${entry.username || "?"}</code> (${entry.role || "?"})\n` +
+    `📋 Таблиця: <code>${entry.table_name}</code>\n` +
+    `⚙️ Операція: <code>${entry.op}</code>\n` +
+    `🌐 IP: <code>${entry.ip || "?"}</code>\n` +
+    (entry.match_snapshot ? `🔍 Match: <code>${JSON.stringify(entry.match_snapshot)}</code>\n` : "") +
+    (entry.value_snapshot ? `📝 Values: <code>${JSON.stringify(entry.value_snapshot)}</code>\n` : "")
+  );
+}
