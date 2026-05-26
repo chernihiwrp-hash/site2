@@ -293,7 +293,7 @@ export default function TechWorkTab() {
   const [preview, setPreview] = useState(false);
 
   useEffect(() => {
-    supabase.from("maintenance_mode").select("*").eq("id", 1).maybeSingle()
+    dbSelect("maintenance_mode", { filters: [{ col: "id", op: "eq", value: 1 }] }).then(({ data }) => ({ data: data?.[0] || null }))
       .then(({ data }) => { if (data) setCfg({ ...DEFAULT, ...data }); setLoading(false); });
   }, []);
 
