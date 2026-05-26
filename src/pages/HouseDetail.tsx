@@ -35,7 +35,7 @@ const HouseDetail = () => {
   const [house, setHouse] = useState<HouseItem | null>(null);
   const [photoIdx, setPhotoIdx] = useState(0);
   const [nick] = useState(() => localStorage.getItem("crp_nick") || "");
-  const [password] = useState(() => localStorage.getItem("crp_password") || "");
+  const [password] = useState(() => sessionStorage.getItem("crp_password") || "");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [rentalDays, setRentalDays] = useState(7);
