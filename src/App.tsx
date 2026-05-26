@@ -83,7 +83,7 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
         setLoading(false);
         return;
       }
-      localStorage.setItem("crp_password", password);
+      sessionStorage.setItem("crp_password", password);
       setLoading(false);
       onDone();
     } catch (e: any) {
@@ -274,7 +274,7 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
       }
       localStorage.setItem("crp_registered", "1");
       localStorage.setItem("crp_nick", nick.trim());
-      localStorage.setItem("crp_password", password);
+      sessionStorage.setItem("crp_password", password);
       onDone(nick.trim());
     } catch (e: any) {
       setError("Помилка реєстрації: " + (e?.message || "Network error"));
@@ -515,7 +515,7 @@ const App = () => {
       // This prevents someone from bypassing maintenance mode by reading
       // admin_applications directly with an anon key.
       const { data: mt } = await supabase.from("maintenance_mode").select("*").eq("id", 1).maybeSingle();
-      const password = localStorage.getItem("crp_password") || "";
+      const password = sessionStorage.getItem("crp_password") || "";
       if (mt?.enabled) {
         let isAdmin = false;
         if (nick && password) {
@@ -537,7 +537,7 @@ const App = () => {
 
       const isReg = localStorage.getItem("crp_registered") === "1";
       const savedNickCheck = localStorage.getItem("crp_nick") || "";
-      const hasPassword = !!localStorage.getItem("crp_password");
+      const hasPassword = !!sessionStorage.getItem("crp_password");
       setRegistered(isReg && !!savedNickCheck && hasPassword);
     };
     checkBan();
@@ -576,7 +576,7 @@ const App = () => {
               onReset={() => {
                 localStorage.removeItem("crp_registered");
                 localStorage.removeItem("crp_nick");
-                localStorage.removeItem("crp_password");
+                sessionStorage.removeItem("crp_password");
                 window.location.reload();
               }}
             />
