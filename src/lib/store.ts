@@ -6,13 +6,11 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 export { dbInsert, dbUpdate, dbDelete, dbUpsert, eq, ilike };
 
-// Все мутации идут через сервер (api/db.ts) — обходит RLS через SERVICE_ROLE_KEY.
 const secureInsert = async (table: string, data: object): Promise<void> => {
   const { error } = await dbInsert(table, data);
   if (error) throw new Error(error.message);
 };
 
-// ─── TYPES ───────────────────────────────────────────────────────────────────
 export type NewsItem = {
   id: number; title: string; text: string; date: string;
   image?: string; type?: "news" | "update"; button_data?: string;
@@ -66,7 +64,7 @@ export type HousePurchaseRequest = {
   rental_days?: number;
   status: "pending" | "approved" | "rejected"; created_at: string;
 };
-export type RecruitmentTarget = "admin" | string; // "admin" або faction slug/назва
+export type RecruitmentTarget = "admin" | string; 
 export type RecruitmentSettings = { target: string; is_open: boolean; updated_at?: string };
 export type HouseConfiscation = {
   id: number; house_id: number; house_name?: string;
@@ -77,14 +75,14 @@ export type MayorCandidateApplication = {
   status: "pending" | "approved" | "rejected"; created_at: string;
 };
 
-// Курс CR (для покупки за криптовалюту замість €) — 1 € ≈ X3 CR
+
 export const CR_RATE = 3;
 export const toCR = (eur: number) => Math.round(eur * CR_RATE);
 
-// Фіксована ціна ліцензії у CR (одразу видається після оплати)
+
 export const LICENSE_CR_PRICE = 80000;
 
-// СТАЛО — всі операції з балансом через Supabase
+
 export const getBalance = (_nick: string): number => 0;
 
 export const getBalanceFromDB = async (nick: string): Promise<number> => {
@@ -123,7 +121,6 @@ export type NftGift = {
   created_at?: string;
 };
 
-// ─── NOTIFICATIONS HELPERS ────────────────────────────────────────────────────
 const _getNotifs = (): Notification[] => {
   try { return JSON.parse(localStorage.getItem("crp_notifications") || "[]"); } catch { return []; }
 };
@@ -131,10 +128,10 @@ const _saveNotifs = (items: Notification[]) => {
   localStorage.setItem("crp_notifications", JSON.stringify(items.slice(0, 50)));
 };
 
-// ─── STORE ───────────────────────────────────────────────────────────────────
+
 export const store = {
 
-  // ─── NFT GIFTS LOGIC ──────────────────────────────────────────────────────
+
   getNftGifts: async (): Promise<NftGift[]> => {
     const { data, error } = await dbSelect<NftGift[]>("nft_gifts", {
       order: { col: "created_at", dir: "desc" },
@@ -144,7 +141,7 @@ export const store = {
   },
 
   addNftGift: async (name: string, price: number, imageUrl: string) => {
-    // ✅ БЕЗОПАСНО: INSERT через сервер
+
     await secureInsert("nft_gifts", { name, price, image_url: imageUrl });
     return true;
   },
@@ -162,7 +159,7 @@ export const store = {
       const success = await subtractBalance(nick, gift.price);
       if (success) {
         try {
-          // ✅ БЕЗОПАСНО: INSERT через сервер
+
           await secureInsert("nft_owners", { owner_nick: nick, nft_id: gift.id });
           return true;
         } catch (e) {
@@ -203,7 +200,6 @@ export const store = {
     return true;
   },
 
-  // ── LICENSES & PLATES ──────────────────────────────────────────────────────
   getLicenseApplications: async (): Promise<LicenseApplication[]> => {
     const { data } = await dbSelect("license_applications", {
       order: { col: "created_at", dir: "desc" },
@@ -215,7 +211,6 @@ export const store = {
     }));
   },
 
-  // ── NEWS ──────────────────────────────────────────────────────────────────
   getNews: async (): Promise<NewsItem[]> => {
     const { data } = await dbSelect("news", { order: { col: "created_at", dir: "desc" } });
     if (!data) return [];
@@ -228,7 +223,7 @@ export const store = {
     }));
   },
   addNews: async (title: string, text: string, imageUrl?: string, type: "news" | "update" = "news", buttonData?: string) => {
-    // ✅ БЕЗОПАСНО: INSERT через сервер
+
     await secureInsert("news", {
       title, content: text, image_url: imageUrl || null,
       type, author_id: "admin", button_data: buttonData || null,
@@ -237,9 +232,6 @@ export const store = {
   deleteNews: async (id: number) => { await dbDelete("news", { id: eq(id) }); },
   setNews: (_: NewsItem[]) => {},
 
-  // ── HOUSES ────────────────────────────────────────────────────────────────
-  // Автоматически освобождает дома, у которых истёк срок аренды.
-  // Помечает запись в house_purchase_requests как expired и возвращает дом в продажу.
   releaseExpiredHouses: async (): Promise<void> => {
     try {
       const { data } = await dbSelect("house_purchase_requests", {
@@ -261,7 +253,7 @@ export const store = {
   },
 
   getHouses: async (username?: string): Promise<HouseItem[]> => {
-    // Подчищаем просроченные аренды перед чтением, чтобы дом не висел "занятым".
+
     await (store as any).releaseExpiredHouses?.();
     const { data: housesData } = await dbSelect("houses", { order: { col: "created_at", dir: "desc" } });
     if (!housesData) return [];
@@ -272,12 +264,12 @@ export const store = {
       photos: r.image_url ? [r.image_url as string] : [], rental_days: 0,
     }));
     if (username) {
-      // Тільки будинки де owner_username збігається з username
+     
       const myHouses = allHouses.filter(h =>
         h.owner && h.owner.toLowerCase() === username.toLowerCase()
       );
       if (myHouses.length > 0) {
-        // Додаємо rental_days з заявок
+  
         const { data: requests } = await dbSelect("house_purchase_requests", {
           columns: "house_id, rental_days",
           filters: [
@@ -304,7 +296,7 @@ export const store = {
   },
 
   addHouse: async (name: string, desc: string, price: number, imageUrl?: string, category?: string) => {
-    // ✅ БЕЗОПАСНО: INSERT через сервер
+
     await secureInsert("houses", {
       name, description: desc, price, image_url: imageUrl || null,
       category: category || "Люкс", owner_username: null, is_for_sale: true,
@@ -312,7 +304,7 @@ export const store = {
   },
 
   deleteHouse: async (id: number) => {
-    // Clean up linked purchase requests first
+ 
     await dbDelete("house_purchase_requests", { house_id: eq(id) });
     const { error } = await dbDelete("houses", { id: eq(id) });
     if (error) throw error;
@@ -331,10 +323,10 @@ export const store = {
 
   setHouses: (_: HouseItem[]) => {},
 
-  // ── HOUSE PURCHASE ────────────────────────────────────────────────────────
+  
   submitHousePurchase: async (houseId: number, username: string, rentalDays?: number): Promise<boolean> => {
     try {
-      // ✅ БЕЗОПАСНО: INSERT через сервер
+
       await secureInsert("house_purchase_requests", {
         house_id: houseId, username, status: "pending", rental_days: rentalDays || 7,
       });
@@ -378,7 +370,6 @@ export const store = {
     }
   },
 
-  // ── FACTION APPLICATIONS ──────────────────────────────────────────────────
   getFactionApps: async (): Promise<FactionApplication[]> => {
     const { data } = await dbSelect("faction_applications", { order: { col: "created_at", dir: "desc" } });
     if (!data) return [];
@@ -414,7 +405,7 @@ export const store = {
       if (!nick) throw new Error("Nick is required");
 
       const factionIdRaw = payload.factionId || "";
-      // Зберігаємо faction_id як число якщо можливо (для DB-фракцій)
+    
       const factionIdValue = !isNaN(Number(factionIdRaw)) && factionIdRaw !== ""
         ? Number(factionIdRaw)
         : factionIdRaw;
@@ -448,7 +439,6 @@ export const store = {
     return true;
   },
 
-  // Игрок сам уходит из фракции — то же, что kickFromFaction, но семантически отдельный метод.
   resignFromFaction: async (nick: string, factionName: string): Promise<boolean> => {
     const dbFactionName = factionName.replace(/^фракція\s*/i, "").trim();
     const { error } = await dbUpdate(
@@ -460,7 +450,6 @@ export const store = {
     return true;
   },
 
-  // ── WANTED ────────────────────────────────────────────────────────────────
   getWanted: async (): Promise<WantedPerson[]> => {
     const { data, error } = await dbSelect("wanted", {
       filters: [{ op: "or", value: "status.eq.active,status.is.null" }],
@@ -484,7 +473,7 @@ export const store = {
 
   addWanted: async (name: string, reason: string, stars: number): Promise<boolean> => {
     const s = Math.max(0, Math.min(5, stars));
-    // Основна колонка в БД — target_username. Фолбеки на випадок альтернативних схем.
+  
     const tryPayloads = [
       { target_username: name, reason, stars: s, status: "active", issued_by: "admin" },
       { target_username: name, reason, stars: s, status: "active" },
@@ -503,7 +492,6 @@ export const store = {
     await dbDelete("wanted", { id: eq(id) });
   },
 
-  // ── ADMIN APPLICATIONS ────────────────────────────────────────────────────
   getAdminApps: async (): Promise<AdminApplication[]> => {
     const { data } = await dbSelect("admin_applications", { order: { col: "created_at", dir: "desc" } });
     if (!data) return [];
@@ -552,7 +540,6 @@ export const store = {
   },
   setAdminApps: (_: AdminApplication[]) => {},
 
-  // ── CITY VOICE ────────────────────────────────────────────────────────────
   getCityVoice: async (): Promise<CityVoiceItem[]> => {
     const { data } = await dbSelect("city_voice", { order: { col: "created_at", dir: "desc" } });
     if (!data) return [];
@@ -589,7 +576,7 @@ export const store = {
   },
 
   submitCityVoice: async (author: string, text: string, type: "idea" | "petition") => {
-    // ✅ БЕЗОПАСНО: INSERT через сервер
+ 
     await secureInsert("city_voice", { username: author, message: text, type, status: "pending", likes: 0, dislikes: 0 });
   },
 
@@ -598,7 +585,7 @@ export const store = {
   },
   deleteCityVoice: async (id: number) => { await dbDelete("city_voice", { id: eq(id) }); },
 
-  // ── MAYOR ELECTION ────────────────────────────────────────────────────────
+
   getCandidates: async (): Promise<MayorCandidate[]> => {
     const { data } = await dbSelect("mayor_election", { order: { col: "votes", dir: "desc" } });
     if (!data) return [];
@@ -609,7 +596,7 @@ export const store = {
     }));
   },
   addCandidate: async (name: string, program: string, bio: string) => {
-    // ✅ БЕЗОПАСНО: INSERT через сервер
+ 
     await secureInsert("mayor_election", { candidate_username: name, description: program, bio, created_by: "admin", votes: 0 });
   },
   deleteCandidate: async (id: number) => { await dbDelete("mayor_election", { id: eq(id) }); },
@@ -621,7 +608,6 @@ export const store = {
   },
   setCandidates: (_: MayorCandidate[]) => {},
 
-  // ── DOCUMENTS ─────────────────────────────────────────────────────────────
   getDocs: async (): Promise<DocumentItem[]> => {
     const { data } = await dbSelect("documents", { order: { col: "id", dir: "asc" } });
     if (!data || data.length === 0) return [
@@ -655,12 +641,12 @@ export const store = {
   },
 
   submitLicense: async (username: string, licenseType: string) => {
-    // ✅ БЕЗОПАСНО: INSERT через сервер
+
     await secureInsert("license_applications", { username, license_type: licenseType, status: "pending" });
   },
 
   submitCarPlate: async (username: string, model: string, plate: string) => {
-    // ✅ БЕЗОПАСНО: INSERT через сервер
+
     await secureInsert("car_plates", { username, plate_number: plate, car_model: model, status: "pending" });
   },
 
@@ -674,7 +660,6 @@ export const store = {
 
   setCars: (_: CarRecord[]) => {},
 
-  // ── SOS ───────────────────────────────────────────────────────────────────
   getSos: async (): Promise<SosMessage[]> => {
     const { data } = await dbSelect("sos_signals", {
       filters: [{ col: "status", op: "eq", value: "active" }],
@@ -687,18 +672,17 @@ export const store = {
     }));
   },
   addSos: async (username: string, reason: string, description: string, type: "raid" | "cheater" | "nrp" | "other" = "other") => {
-    // ✅ БЕЗОПАСНО: INSERT через сервер
+
     await secureInsert("sos_signals", { username, message: description, type, status: "active" });
   },
   resolveSos: async (id: number) => { await dbUpdate("sos_signals", { status: "resolved" }, { id: eq(id) }); },
   setSos: (_: SosMessage[]) => {},
 
-  // ── TOKENS / BALANCE ──────────────────────────────────────────────────────
+
   giveTokens: async (nick: string, amount: number): Promise<boolean> => {
-    // SECURITY: all token operations go through /api/admin-tokens which
-    // verifies admin credentials and "tokens" permission server-side.
+ 
     const adminNick     = localStorage.getItem("crp_nick")     || "";
-    const adminPassword = sessionStorage.getItem("crp_password") || "";
+    const adminPassword = (localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password")) || "";
     if (!adminNick || !adminPassword) return false;
     try {
       const res = await fetch("/api/admin-tokens", {
@@ -712,9 +696,9 @@ export const store = {
   },
 
   takeTokens: async (nick: string, amount: number): Promise<boolean> => {
-    // SECURITY: same — server verifies perms before touching balance
+ 
     const adminNick     = localStorage.getItem("crp_nick")     || "";
-    const adminPassword = sessionStorage.getItem("crp_password") || "";
+    const adminPassword = (localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password")) || "";
     if (!adminNick || !adminPassword) return false;
     try {
       const res = await fetch("/api/admin-tokens", {
@@ -727,7 +711,6 @@ export const store = {
     } catch (e) { console.error("takeTokens network error:", e); return false; }
   },
 
-  // ── THEMES ────────────────────────────────────────────────────────────────
   getOwnedThemes: async (nick: string): Promise<string[]> => {
     const { data, error } = await dbSelect<{ owned_themes: string[] }>("users", {
       columns: "owned_themes", filters: [{ col: "username", op: "ilike", value: nick }], single: true,
@@ -747,7 +730,7 @@ export const store = {
     }
   },
 
-  // ── PULSE CITY ────────────────────────────────────────────────────────────
+ 
   getPulse: async (): Promise<{ citizens: number; houses: number; factions: number }> => {
     const [usersRes, housesRes, factionsRes] = await Promise.all([
       dbSelect("users", { columns: "id", count: true }),
@@ -758,11 +741,11 @@ export const store = {
   },
   setPulse: (_: { citizens: number; houses: number; factions: number }) => {},
 
-  // ── PROFILE DATA ──────────────────────────────────────────────────────────
+  
   getPlayerProfile: async (nick: string) => {
-    // Перед чтением профиля чистим просроченные дома, чтобы их не показывало в "моих".
+
     await (store as any).releaseExpiredHouses?.();
-    const [houseRes, factionRes, licRes, platesRes] = await Promise.all([
+    const [houseRes, factionRes, licRes, platesRes, familyRes] = await Promise.all([
       dbSelect("house_purchase_requests", {
         columns: "id, rental_days, created_at, house_id",
         filters: [{ col: "username", op: "eq", value: nick }, { col: "status", op: "eq", value: "approved" }],
@@ -780,19 +763,37 @@ export const store = {
         columns: "id, plate_number, car_model, status",
         filters: [{ col: "username", op: "ilike", value: nick }, { col: "status", op: "ilike", value: "approved" }],
       }),
+      dbSelect("house_families", {
+        columns: "house_purchase_id, role",
+        filters: [{ col: "username", op: "ilike", value: nick }],
+      }),
     ]);
     let housesWithDetails: any[] = [];
-    if (houseRes.data && houseRes.data.length > 0) {
-      const houseIds = houseRes.data.map((h: any) => h.house_id);
+    const familyHouseRequestIds = (familyRes.data || []).map((f: any) => f.house_purchase_id).filter(Boolean);
+ 
+    const ownRequestIds = (houseRes.data || []).map((h: any) => h.id);
+    const extraFamilyIds = familyHouseRequestIds.filter((id: number) => !ownRequestIds.includes(id));
+    let allRequests = houseRes.data || [];
+    if (extraFamilyIds.length > 0) {
+      const { data: familyRequests } = await dbSelect("house_purchase_requests", {
+        columns: "id, rental_days, created_at, house_id",
+        filters: [{ col: "id", op: "in", value: extraFamilyIds }, { col: "status", op: "eq", value: "approved" }],
+      });
+      allRequests = [...allRequests, ...(familyRequests || [])];
+    }
+    if (allRequests.length > 0) {
+      const houseIds = allRequests.map((h: any) => h.house_id);
       const { data: housesData } = await dbSelect("houses", {
         columns: "id, name, price, image_url",
         filters: [{ col: "id", op: "in", value: houseIds }],
       });
-      housesWithDetails = houseRes.data.map((req: any) => {
-        const details = housesData?.find(d => d.id === req.house_id);
+      housesWithDetails = allRequests.map((req: any) => {
+        const details = housesData?.find((d: any) => d.id === req.house_id);
+        const isFamilyMember = familyHouseRequestIds.includes(req.id) && !ownRequestIds.includes(req.id);
         return {
           id: req.id, name: details?.name || "Будинок", price: details?.price || 0,
-          rental_days: req.rental_days || 7, created_at: req.created_at, image: details?.image_url
+          rental_days: req.rental_days || 7, created_at: req.created_at, image: details?.image_url,
+          isFamilyHouse: isFamilyMember,
         };
       });
     }
@@ -804,7 +805,6 @@ export const store = {
     };
   },
 
-  // ── NOTIFICATIONS ─────────────────────────────────────────────────────────
   addNotification: async (nick: string, text: string) => {
     const notifs = _getNotifs();
     const newNotif: Notification = {
@@ -820,13 +820,11 @@ export const store = {
     _saveNotifs(notifs);
   },
 
-  // Alias — позначити всі нотифікації як прочитані (використовується в Profile)
   markNotificationsRead: async (_nick: string) => {
     const notifs = _getNotifs().map(n => ({ ...n, read: true }));
     _saveNotifs(notifs);
   },
 
-  // ── REALTIME ──────────────────────────────────────────────────────────────
   onNewSos: (cb: (msg: SosMessage) => void) => {
     return supabase.channel("sos_live")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "sos_signals" }, (p) => {
@@ -861,7 +859,6 @@ export const store = {
       }).subscribe();
   },
 
-  // ── HOUSE FAMILIES ────────────────────────────────────────────────────────
   getFamily: async (housePurchaseId: number): Promise<FamilyMember[]> => {
     const { data, error } = await supabase
       .from("house_families")
@@ -904,7 +901,6 @@ export const store = {
     await dbDelete("house_families", { id: eq(id) });
   },
 
-  // Розумний пошук користувачів (для додавання в сім'ю)
   searchUsers: async (query: string, limit = 10): Promise<UserSearchResult[]> => {
     const q = (query || "").trim();
     if (!q) return [];
@@ -922,11 +918,6 @@ export const store = {
     } catch (e) { console.error("searchUsers:", e); return []; }
   },
 
-  // ════════════════════════════════════════════════════════════════════════
-  // ──────────────── НОВІ ФУНКЦІЇ АДМІН-ПАНЕЛІ ─────────────────────────────
-  // ════════════════════════════════════════════════════════════════════════
-
-  // ── FACTIONS (CRUD) ──── фікс крашу z.addFaction is not a function ──────
   addFaction: async (
     name: string,
     color: string,
@@ -967,9 +958,6 @@ export const store = {
     return true;
   },
 
-  // ── RECRUITMENT OPEN / CLOSED (фракції + адміни) ────────────────────────
-  // Зберігається в таблиці recruitment_settings (target text PRIMARY KEY, is_open bool).
-  // target = "admin" для адмін-набору, або точна назва фракції (lowercase).
   getRecruitmentMap: async (): Promise<Record<string, boolean>> => {
     try {
       const { data } = await dbSelect("recruitment_settings");
@@ -982,7 +970,7 @@ export const store = {
   isRecruitmentOpen: async (target: string): Promise<boolean> => {
     try {
       const targetKey = target.toLowerCase().trim();
-      // Завантажуємо всю таблицю і шукаємо в JS — надійніше
+  
       const { data, error } = await dbSelect("recruitment_settings", {
         columns: "is_open, target",
       });
@@ -990,7 +978,7 @@ export const store = {
       if (!data || data.length === 0) return true;
       const row = data.find((r: any) => String(r.target).toLowerCase().trim() === targetKey);
       console.log("[isRecruitmentOpen] target:", targetKey, "row:", row, "all:", data);
-      if (!row) return true; // запису немає — відкрито
+      if (!row) return true; 
       return row.is_open !== false;
     } catch (e) {
       console.error("[isRecruitmentOpen] exception:", e);
@@ -1008,7 +996,6 @@ export const store = {
     return true;
   },
 
-  // ── HOUSES (повне оновлення з категорією) ───────────────────────────────
   updateHouseFull: async (
     id: number,
     updates: Partial<{ name: string; price: number; description: string; category: string; image_url: string }>,
@@ -1018,7 +1005,6 @@ export const store = {
     return true;
   },
 
-  // ── HOUSE CONFISCATION ──────────────────────────────────────────────────
   confiscateHouse: async (
     houseId: number,
     formerOwner: string,
@@ -1026,19 +1012,19 @@ export const store = {
     admin: string,
   ): Promise<boolean> => {
     try {
-      // 1. Лог
+     
       await secureInsert("house_confiscations", {
         house_id: houseId, former_owner: formerOwner, reason, admin,
       });
-      // 2. Звільняємо будинок (повертаємо у продаж)
+  
       await dbUpdate("houses", { owner_username: null, is_for_sale: true }, { id: eq(houseId) });
-      // 3. Закриваємо схвалені оренди цього юзера на цей будинок
+
       await dbUpdate(
         "house_purchase_requests",
         { status: "rejected" },
         { house_id: eq(houseId), username: ilike(formerOwner), status: eq("approved") },
       );
-      // 4. Нотифікація гравцю
+
       await store.addNotification(formerOwner, `Ваш будинок конфіскований адміністрацією. Причина: ${reason}`);
       return true;
     } catch (e) {
@@ -1066,14 +1052,13 @@ export const store = {
     }));
   },
 
-  // Список конфіскацій конкретного гравця (для його профілю)
+
   getUserConfiscations: async (nick: string): Promise<HouseConfiscation[]> => {
     const all = await store.getConfiscations();
     return all.filter(c => c.former_owner.toLowerCase() === nick.toLowerCase());
   },
 
-  // ── LICENSE PURCHASE ────────────────────────────────────────────────────
-  // submitLicense із підтримкою telegram + типу оплати
+
   submitLicenseFull: async (
     username: string,
     licenseType: string,
@@ -1081,7 +1066,7 @@ export const store = {
     paymentMethod: "money" | "cr" = "money",
   ): Promise<{ ok: boolean; auto?: boolean; error?: string }> => {
     if (paymentMethod === "cr") {
-      // Списуємо CR і одразу видаємо approved-ліцензію
+
       const balance = await getBalanceFromDB(username);
       if (balance < LICENSE_CR_PRICE) {
         return { ok: false, error: `Недостатньо CR. Потрібно ${LICENSE_CR_PRICE.toLocaleString()}` };
@@ -1097,12 +1082,12 @@ export const store = {
         await store.addNotification(username, `Ліцензію видано (оплата ${LICENSE_CR_PRICE.toLocaleString()} CR)`);
         return { ok: true, auto: true };
       } catch (e: any) {
-        // повертаємо CR
+
         await addBalance(username, LICENSE_CR_PRICE);
         return { ok: false, error: e?.message || "DB error" };
       }
     }
-    // Звичайна заявка (за гроші) — як було
+
     try {
       await secureInsert("license_applications", {
         username,
@@ -1115,7 +1100,7 @@ export const store = {
     }
   },
 
-  // ── MAYOR CANDIDATE APPLICATIONS ────────────────────────────────────────
+  
   submitMayorApplication: async (
     username: string, program: string, bio: string,
   ): Promise<boolean> => {
@@ -1136,7 +1121,7 @@ export const store = {
   },
 
   updateMayorApplicationStatus: async (id: number, status: "approved" | "rejected") => {
-    // Якщо схвалено — додаємо як кандидата на вибори
+
     if (status === "approved") {
       const { data: app } = await dbSelect("mayor_candidate_applications", {
         filters: [{ col: "id", op: "eq", value: id }], single: true,
@@ -1157,7 +1142,6 @@ export const store = {
     await dbUpdate("mayor_candidate_applications", { status }, { id: eq(id) });
   },
 
-  // ── SOS (нік репортера + нік порушника) ─────────────────────────────────
   addSosFull: async (
     reporterNick: string,
     violatorNick: string,
@@ -1179,16 +1163,10 @@ export const store = {
     }
   },
 
-  // ── HOUSE PURCHASE WITH CR (через защищённый /api/balance buy_house) ───
-  // Раньше клиент сам делал dbUpdate("houses",...) — этот путь:
-  //  а) ломался RLS-патчем (houses — admin-only для прямых апдейтов);
-  //  б) позволял хакеру подменить владельца, минуя баланс.
-  // Теперь вся логика на сервере: проверка кредов, баланса, занятости дома,
-  // атомарная установка owner_username — без шанса на race / подмену.
   buyHouseWithCR: async (
     houseId: number, username: string, _priceEUR: number, rentalDays = 24,
   ): Promise<{ ok: boolean; error?: string }> => {
-    const password = sessionStorage.getItem("crp_password") || "";
+    const password = (localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password")) || "";
     if (!username || !password) return { ok: false, error: "Not logged in" };
     try {
       const res = await fetch("/api/balance", {
@@ -1203,23 +1181,23 @@ export const store = {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) return { ok: false, error: json?.error || `HTTP ${res.status}` };
-      await store.addNotification(username, `🏠 Будинок придбано за ${(json?.data?.cr_spent ?? 0).toLocaleString()} CR`);
+      await store.addNotification(username, `Будинок придбано за ${(json?.data?.cr_spent ?? 0).toLocaleString()} CR`);
       return { ok: true };
     } catch (e: any) {
       return { ok: false, error: e?.message || "Network error" };
     }
   },
 
-  // ── NFT GIVE (примусова видача користувачу, fix: "Отримати" не видавав) ─
+
   giveNftToUser: async (nick: string, nftId: string): Promise<boolean> => {
     try {
-      // перевіряємо, чи вже є
+ 
       const { data: existing } = await dbSelect("nft_owners", {
         columns: "nft_id",
         filters: [{ col: "owner_nick", op: "ilike", value: nick }, { col: "nft_id", op: "eq", value: nftId }],
         single: true,
       });
-      if (existing) return true; // вже є — теж "успіх"
+      if (existing) return true; 
       await secureInsert("nft_owners", { owner_nick: nick, nft_id: nftId });
       await store.addNotification(nick, "Ви отримали NFT-нагороду!");
       return true;
