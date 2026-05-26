@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import DbLogsTab from "./admin/DbLogsTab";
 import TechWorkTab from "./admin/TechWorkTab";
 import { store, supabase, getBalance, addBalance, subtractBalance } from "../lib/store";
-import { dbInsert, dbUpdate, dbDelete, dbUpsert, dbSelect, eq } from "../lib/db";
+import { dbInsert, dbUpdate, dbDelete, dbUpsert, eq } from "../lib/db";
 import type {
   NewsItem, HouseItem, WantedPerson, FactionApplication, AdminApplication,
   CityVoiceItem, MayorCandidate, DocumentItem, SosMessage, LicenseApplication,
@@ -46,7 +46,7 @@ const normalizeNick = (nick: string) =>
 // This replaces all localStorage-based role checks.
 async function fetchAdminVerify(): Promise<{ role: string; perms: Record<TabId, boolean> }> {
   const nick     = localStorage.getItem("crp_nick")     || "";
-  const password = sessionStorage.getItem("crp_password") || "";
+  const password = localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password") || "";
   if (!nick || !password) return { role: "player", perms: DEFAULT_NO_PERMS };
   try {
     const res = await fetch("/api/admin-verify", {
