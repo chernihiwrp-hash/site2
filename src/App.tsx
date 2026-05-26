@@ -84,7 +84,8 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
         setLoading(false);
         return;
       }
-      sessionStorage.setItem("crp_password", password);
+      localStorage.setItem("crp_password", password);
+      saveAccount(savedNick, password);
       setLoading(false);
       onDone();
     } catch (e: any) {
@@ -275,7 +276,8 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
       }
       localStorage.setItem("crp_registered", "1");
       localStorage.setItem("crp_nick", nick.trim());
-      sessionStorage.setItem("crp_password", password);
+      localStorage.setItem("crp_password", password);
+      saveAccount(nick.trim(), password);
       onDone(nick.trim());
     } catch (e: any) {
       setError("Помилка реєстрації: " + (e?.message || "Network error"));
@@ -477,7 +479,131 @@ const BanScreen = ({ reason, expiresAt, isPermanent }: { reason: string; expires
   );
 };
 
+
+// ─── МУЛЬТИАКАУНТ (до 2 акаунтів) ────────────────────────────────────────────
+const ACCOUNTS_KEY = "crp_accounts";
+
+interface SavedAccount { nick: string; password: string; }
+
+function getSavedAccounts(): SavedAccount[] {
+  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || "[]"); }
+  catch { return []; }
+}
+
+function saveAccount(nick: string, password: string) {
+  const accounts = getSavedAccounts().filter(a => a.nick.toLowerCase() !== nick.toLowerCase());
+  accounts.unshift({ nick, password });
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts.slice(0, 2)));
+}
+
+function removeAccount(nick: string) {
+  const accounts = getSavedAccounts().filter(a => a.nick.toLowerCase() !== nick.toLowerCase());
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+}
+
+function switchAccount(account: SavedAccount) {
+  localStorage.setItem("crp_nick", account.nick);
+  localStorage.setItem("crp_password", account.password);
+  localStorage.setItem("crp_registered", "1");
+  sessionStorage.removeItem("crp_password");
+  window.location.reload();
+}
+
+
+// ─── ACCOUNT SWITCHER MODAL ────────────────────────────────────────────────────
+const AccountSwitcherModal = ({ onClose }: { onClose: () => void }) => {
+  const accounts = getSavedAccounts();
+  const currentNick = localStorage.getItem("crp_nick") || "";
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end justify-center px-4 pb-6"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}>
+      <div className="w-full max-w-[340px] rounded-2xl overflow-hidden"
+        style={{ background: "hsl(0 0% 8%)", border: "1px solid hsl(84 81% 44% / 0.2)" }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ height: 2, background: "linear-gradient(90deg, transparent, hsl(84 81% 44%), transparent)" }} />
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm font-bold text-white">Акаунти</span>
+            <button onClick={onClose} className="text-muted-foreground hover:text-white transition-colors">✕</button>
+          </div>
+
+          <div className="space-y-2 mb-4">
+            {accounts.map(acc => {
+              const isCurrent = acc.nick.toLowerCase() === currentNick.toLowerCase();
+              return (
+                <div key={acc.nick}
+                  className="flex items-center justify-between p-3 rounded-xl"
+                  style={{ background: isCurrent ? "hsl(84 81% 44% / 0.1)" : "hsl(0 0% 5%)", border: `1px solid ${isCurrent ? "hsl(84 81% 44% / 0.3)" : "hsl(0 0% 15%)"}` }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ background: isCurrent ? "hsl(84 81% 44% / 0.2)" : "hsl(0 0% 12%)" }}>
+                      <User className="w-4 h-4" style={{ color: isCurrent ? "hsl(84 81% 44%)" : "rgba(255,255,255,0.4)" }} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-white">{acc.nick}</p>
+                      {isCurrent && <p className="text-[10px]" style={{ color: "hsl(84 81% 44%)" }}>Поточний</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!isCurrent && (
+                      <button onClick={() => switchAccount(acc)}
+                        className="text-[11px] px-3 py-1.5 rounded-lg font-semibold transition-all active:scale-95"
+                        style={{ background: "hsl(84 81% 44% / 0.15)", color: "hsl(84 81% 44%)", border: "1px solid hsl(84 81% 44% / 0.3)" }}>
+                        Увійти
+                      </button>
+                    )}
+                    <button onClick={() => {
+                        removeAccount(acc.nick);
+                        if (isCurrent) {
+                          localStorage.removeItem("crp_registered");
+                          localStorage.removeItem("crp_nick");
+                          localStorage.removeItem("crp_password");
+                          sessionStorage.removeItem("crp_password");
+                          window.location.reload();
+                        } else {
+                          window.location.reload();
+                        }
+                      }}
+                      className="text-[11px] px-2 py-1.5 rounded-lg transition-all active:scale-95"
+                      style={{ background: "hsl(0 70% 50% / 0.1)", color: "hsl(0 70% 50%)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {accounts.length < 2 && (
+            <button onClick={() => {
+                const currentNick = localStorage.getItem("crp_nick") || "";
+                // Зберігаємо поточний і виходимо для реєстрації нового
+                localStorage.removeItem("crp_registered");
+                localStorage.removeItem("crp_nick");
+                localStorage.removeItem("crp_password");
+                sessionStorage.removeItem("crp_password");
+                window.location.reload();
+              }}
+              className="w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-95"
+              style={{ background: "hsl(84 81% 44% / 0.1)", color: "hsl(84 81% 44%)", border: "1px solid hsl(84 81% 44% / 0.2)" }}>
+              + Додати акаунт
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const App = () => {
+  const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
+  useEffect(() => {
+    const handler = () => setShowAccountSwitcher(true);
+    window.addEventListener("crp:open-accounts", handler);
+    return () => window.removeEventListener("crp:open-accounts", handler);
+  }, []);
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [banInfo, setBanInfo] = useState<{ reason: string; expiresAt: string | null; isPermanent: boolean } | null | undefined>(undefined);
   const [maintenance, setMaintenance] = useState<MaintenanceConfig | null>(null);
@@ -517,7 +643,7 @@ const App = () => {
       // admin_applications directly with an anon key.
       const { data: mtArr } = await dbSelect("maintenance_mode", { filters: [{ col: "id", op: "eq", value: 1 }] });
       const mt = mtArr?.[0] || null;
-      const password = sessionStorage.getItem("crp_password") || "";
+      const password = localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password") || "";
       if (mt?.enabled) {
         let isAdmin = false;
         if (nick && password) {
@@ -539,7 +665,7 @@ const App = () => {
 
       const isReg = localStorage.getItem("crp_registered") === "1";
       const savedNickCheck = localStorage.getItem("crp_nick") || "";
-      const hasPassword = !!sessionStorage.getItem("crp_password");
+      const hasPassword = !!(localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password"));
       setRegistered(isReg && !!savedNickCheck && hasPassword);
     };
     checkBan();
@@ -578,6 +704,7 @@ const App = () => {
               onReset={() => {
                 localStorage.removeItem("crp_registered");
                 localStorage.removeItem("crp_nick");
+                localStorage.removeItem("crp_password");
                 sessionStorage.removeItem("crp_password");
                 window.location.reload();
               }}
@@ -602,6 +729,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Particles />
+          {showAccountSwitcher && <AccountSwitcherModal onClose={() => setShowAccountSwitcher(false)} />}
           <div className="max-w-lg mx-auto relative" style={{ zIndex: 1 }}>
             <Routes>
               <Route path="/" element={<Index />} />
