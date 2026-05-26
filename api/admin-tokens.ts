@@ -4,7 +4,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { verifyCredentials, applyCors, safeDbError } from "./_auth.js";
-import { logDbRequest, getClientIp, getUserAgent } from "./_logger.js";
+import { logDbRequest, getClientIp, getUserAgent, sendTelegramAlert, shouldAlert, formatAlert } from "./_logger.js";
 import { checkMutationLimit } from "./_ratelimit.js";
 
 const SUPER_ADMIN_NICK = "t1kron1x";
@@ -169,15 +169,17 @@ export default async function handler(req: any, res: any) {
     created_at: new Date().toISOString(),
   }).select().maybeSingle(); // помилка тут не критична
 
-  await logDbRequest(supabase, {
-    endpoint: "db", username: normalizedNick, role,
+  const alertEntry = {
+    endpoint: "db" as const, username: normalizedNick, role,
     table_name: "users", op: `tokens.${op}`,
     match_keys: ["username"], value_keys: ["balance"],
     match_snapshot: { target: normalizedTarget },
     value_snapshot: { old: currentBalance, new: newBalance, delta },
     telegram_id: null,
     status: 200, allowed: true, error: null, ip, user_agent: ua,
-  });
+  };
+  await logDbRequest(supabase, alertEntry);
+  await sendTelegramAlert(formatAlert(alertEntry));
 
   return res.status(200).json({ balance: newBalance, delta });
 }
