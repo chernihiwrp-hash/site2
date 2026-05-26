@@ -108,7 +108,7 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
       `}</style>
       <Particles />
       <div className="relative w-full max-w-[340px] crp-card" style={{ zIndex: 1 }}>
-        {/* Top accent line */}
+
         <div style={{ height: 2, borderRadius: "2px 2px 0 0", background: "linear-gradient(90deg, transparent, hsl(84 81% 44%), transparent)", marginBottom: -1 }} />
         <div style={{
           background: "linear-gradient(160deg, hsl(0 0% 9%) 0%, hsl(0 0% 6%) 100%)",
@@ -118,7 +118,7 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
           padding: "28px 24px 24px",
           backdropFilter: "blur(20px)",
         }}>
-          {/* Header */}
+      
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 8, padding: "3px 10px", borderRadius: 20, background: "hsl(84 81% 44% / 0.08)", border: "1px solid hsl(84 81% 44% / 0.15)" }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: "hsl(84 81% 44%)", boxShadow: "0 0 6px hsl(84 81% 44%)" }} />
@@ -128,7 +128,6 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 4 }}>Введи пароль для входу</div>
           </div>
 
-          {/* Avatar */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
             <div className="crp-avatar-ring" style={{
               width: 72, height: 72, borderRadius: 18,
@@ -144,7 +143,7 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
             <div style={{ fontSize: 11, color: "hsl(84 81% 44% / 0.6)", marginTop: 2 }}>Гравець</div>
           </div>
 
-          {/* Password field */}
+     
           <div style={{ marginBottom: 12 }}>
             <div style={{ position: "relative" }}>
               <input
@@ -173,7 +172,7 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
             </div>
           </div>
 
-          {/* Error */}
+     
           {error && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, marginBottom: 12, background: "hsl(0 70% 50% / 0.08)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
               <AlertTriangle style={{ width: 14, height: 14, color: "#ef4444", flexShrink: 0 }} />
@@ -181,7 +180,7 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
             </div>
           )}
 
-          {/* Login button */}
+      
           <button className="crp-btn-main" onClick={handleLogin} disabled={loading || !password} style={{
             width: "100%", padding: "13px 0", borderRadius: 12, border: "none", cursor: loading || !password ? "not-allowed" : "pointer",
             background: loading || !password ? "hsl(0 0% 15%)" : "linear-gradient(135deg, hsl(84 81% 44%), hsl(100 70% 38%))",
@@ -193,7 +192,7 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
             {loading ? "Перевіряю..." : "Увійти"}
           </button>
 
-          {/* Reset link */}
+ 
           <button onClick={onReset} style={{
             width: "100%", marginTop: 12, background: "none", border: "none", cursor: "pointer",
             fontSize: 11, color: "rgba(255,255,255,0.2)", padding: "4px 0", transition: "color 0.2s",
@@ -302,7 +301,7 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
       `}</style>
       <Particles />
       <div className="relative w-full max-w-[340px] crp-card" style={{ zIndex: 1 }}>
-        {/* Top lime accent */}
+
         <div style={{ height: 2, borderRadius: "2px 2px 0 0", background: "linear-gradient(90deg, transparent, hsl(84 81% 44%), transparent)" }} />
         <div style={{
           background: "linear-gradient(160deg, hsl(0 0% 9%) 0%, hsl(0 0% 6%) 100%)",
@@ -311,7 +310,7 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
           borderRadius: "0 0 20px 20px",
           padding: "24px 22px 22px",
         }}>
-          {/* Badge + title */}
+
           <div style={{ textAlign: "center", marginBottom: 20 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 10, padding: "3px 10px", borderRadius: 20, background: "hsl(84 81% 44% / 0.08)", border: "1px solid hsl(84 81% 44% / 0.15)" }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: "hsl(84 81% 44%)", boxShadow: "0 0 6px hsl(84 81% 44%)" }} />
@@ -321,7 +320,6 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>Створи свій акаунт гравця</div>
           </div>
 
-          {/* Avatar */}
           {(tgUser) && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 18 }}>
               <div className="crp-avatar-ring" style={{ position: "relative", width: 64, height: 64 }}>
@@ -343,7 +341,6 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
             </div>
           )}
 
-          {/* Blocked warning */}
           {blocked && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, marginBottom: 12, background: "hsl(0 70% 50% / 0.08)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
               <AlertTriangle style={{ width: 14, height: 14, color: "#ef4444", flexShrink: 0 }} />
@@ -351,10 +348,8 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
             </div>
           )}
 
-          {/* Divider */}
           <div style={{ height: 1, background: "hsl(0 0% 18%)", marginBottom: 16 }} />
 
-          {/* Nick */}
           <div style={{ marginBottom: 10 }}>
             <label className="crp-field-label">Ігровий нікнейм</label>
             <input value={nick} onChange={e => setNick(e.target.value)} placeholder="Введи нік..." maxLength={24}
@@ -364,7 +359,6 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", marginTop: 5, textAlign: "center" }}>Мінімум 2 символи · макс. 24</div>
           </div>
 
-          {/* Password */}
           <div style={{ marginBottom: 10 }}>
             <label className="crp-field-label">Пароль</label>
             <div style={{ position: "relative" }}>
@@ -377,7 +371,6 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
             </div>
           </div>
 
-          {/* Confirm password */}
           <div style={{ marginBottom: 14 }}>
             <label className="crp-field-label">Підтвердження</label>
             <input value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="Повтори пароль" type="password"
@@ -387,7 +380,6 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", marginTop: 5, textAlign: "center" }}>Запам'ятай — він потрібен для входу</div>
           </div>
 
-          {/* Error */}
           {error && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, marginBottom: 12, background: "hsl(0 70% 50% / 0.08)", border: "1px solid hsl(0 70% 50% / 0.2)" }}>
               <AlertTriangle style={{ width: 14, height: 14, color: "#ef4444", flexShrink: 0 }} />
@@ -395,7 +387,6 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
             </div>
           )}
 
-          {/* Register button */}
           <button className="crp-btn-main" onClick={handleRegister} disabled={!regReady} style={{
             width: "100%", padding: "13px 0", borderRadius: 12, border: "none", cursor: regReady ? "pointer" : "not-allowed",
             background: regReady ? "linear-gradient(135deg, hsl(84 81% 44%), hsl(100 70% 38%))" : "hsl(0 0% 14%)",
@@ -511,10 +502,9 @@ const App = () => {
       }
       setBanInfo(null);
 
-      // SECURITY: Check admin status via server — not via anon supabase client.
-      // This prevents someone from bypassing maintenance mode by reading
-      // admin_applications directly with an anon key.
-      const { data: mt } = await supabase.from("maintenance_mode").select("*").eq("id", 1).maybeSingle();
+
+      const { data: mtArr } = await import("./lib/db").then(m => m.dbSelect("maintenance_mode", { filters: [{ col: "id", op: "eq", value: 1 }] }));
+      const mt = mtArr?.[0] || null;
       const password = sessionStorage.getItem("crp_password") || "";
       if (mt?.enabled) {
         let isAdmin = false;
