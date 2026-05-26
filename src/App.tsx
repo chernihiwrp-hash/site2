@@ -232,7 +232,11 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
     if (password !== confirmPass) { setError("Паролі не співпадають!"); return; }
     setLoading(true);
 
-    if (tgUser?.id) {
+    // Якщо вже є збережений акаунт — дозволяємо реєстрацію другого (без перевірки TG)
+    const existingAccounts = (() => { try { return JSON.parse(localStorage.getItem("crp_accounts") || "[]"); } catch { return []; } })();
+    const isAddingSecondAccount = existingAccounts.length > 0;
+
+    if (tgUser?.id && !isAddingSecondAccount) {
       const { data: tgBound } = await supabase.from("users").select("username").eq("telegram_id", String(tgUser.id)).maybeSingle();
       if (tgBound?.username && tgBound.username.toLowerCase() !== nick.trim().toLowerCase()) {
         setError(`Твій Telegram вже прив'язаний до акаунту "${tgBound.username}". 1 TG = 1 акаунт.`);
