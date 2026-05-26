@@ -146,7 +146,10 @@ const Profile = () => {
         supabase.from("users").select("role, vip_expires_at").ilike("username", nick).maybeSingle(),
       ]);
 
-      const ownedIds = (ownedData.data?.map((item: any) => Number(item.nft_id)) || []).filter((id: number) => !isNaN(id));
+      // nft_id может быть как числом, так и UUID-строкой — НЕ кастуем,
+      // иначе UUID -> NaN и подарки исчезают из профиля (баг #1).
+      const ownedIds = (ownedData.data?.map((item: any) => item.nft_id) || [])
+        .filter((id: any) => id !== null && id !== undefined && id !== "");
 
       if (ownedIds.length > 0) {
         const { data: nfts } = await supabase.from('nft_gifts').select('*').in('id', ownedIds);
@@ -154,7 +157,9 @@ const Profile = () => {
           setAvailableNfts(nfts);
           const saved = localStorage.getItem("orbit_nft_ids");
           const parsedSaved = saved ? JSON.parse(saved) : [];
-          const validSelected = parsedSaved.filter((id: string) => ownedIds.includes(id));
+          // Сравнение по строке — id могут быть числом/UUID
+          const ownedSet = new Set(ownedIds.map(String));
+          const validSelected = parsedSaved.filter((id: any) => ownedSet.has(String(id)));
           setSelectedNftIds(validSelected.length > 0 ? validSelected : nfts.slice(0, 6).map((n: any) => n.id));
         }
       } else {
