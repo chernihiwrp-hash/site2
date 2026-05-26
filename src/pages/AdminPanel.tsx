@@ -46,7 +46,7 @@ const normalizeNick = (nick: string) =>
 // This replaces all localStorage-based role checks.
 async function fetchAdminVerify(): Promise<{ role: string; perms: Record<TabId, boolean> }> {
   const nick     = localStorage.getItem("crp_nick")     || "";
-  const password = localStorage.getItem("crp_password") || "";
+  const password = sessionStorage.getItem("crp_password") || "";
   if (!nick || !password) return { role: "player", perms: DEFAULT_NO_PERMS };
   try {
     const res = await fetch("/api/admin-verify", {
@@ -2277,7 +2277,7 @@ const TokensTab = () => {
     setLoading(true);
     // SECURITY: fetch balance via authenticated /api/admin-tokens, not localStorage
     const adminNick     = localStorage.getItem("crp_nick")     || "";
-    const adminPassword = localStorage.getItem("crp_password") || "";
+    const adminPassword = sessionStorage.getItem("crp_password") || "";
     try {
       const res = await fetch("/api/admin-tokens", {
         method: "POST",
@@ -2326,7 +2326,7 @@ const TokensTab = () => {
     if (!n) return;
     // SECURITY: reset via authenticated server endpoint
     const adminNick     = localStorage.getItem("crp_nick")     || "";
-    const adminPassword = localStorage.getItem("crp_password") || "";
+    const adminPassword = sessionStorage.getItem("crp_password") || "";
     setLoading(true);
     try {
       const res = await fetch("/api/admin-tokens", {
