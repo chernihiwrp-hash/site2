@@ -199,15 +199,22 @@ const FactionDetail = () => {
       let deputyUsername = "";
       const leaderName = staticName || dbFactionName;
       if (leaderName) {
-        const { data: ld } = await supabase
-          .from("faction_leaders").select("leader_username, deputy_username")
-          .ilike("faction_name", leaderName).maybeSingle();
+        const { data: ldArr } = await dbSelect("faction_leaders", {
+          columns: "leader_username, deputy_username",
+          filters: [{ col: "faction_name", op: "ilike", value: leaderName }],
+          limit: 1,
+        });
+        const ld = ldArr?.[0];
         if (ld?.leader_username) leaderUsername = ld.leader_username as string;
         if (ld?.deputy_username) deputyUsername = ld.deputy_username as string;
       }
       if (!leaderUsername && numericId !== null) {
-        const { data: fd2 } = await supabase
-          .from("factions").select("leader_username").eq("id", numericId).maybeSingle();
+        const { data: fd2Arr } = await dbSelect("factions", {
+          columns: "leader_username",
+          filters: [{ col: "id", op: "eq", value: numericId }],
+          limit: 1,
+        });
+        const fd2 = fd2Arr?.[0];
         if (fd2?.leader_username) leaderUsername = fd2.leader_username as string;
       }
 
