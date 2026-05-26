@@ -141,8 +141,17 @@ export default async function handler(req: any, res: any) {
     const { theme_id } = body;
     if (!theme_id) return res.status(400).json({ error: "theme_id required" });
 
+    // Должно полностью совпадать с THEMES в src/pages/Shop.tsx.
+    // Источник правды — сервер: клиент НЕ диктует цену.
     const THEME_PRICES: Record<string, number> = {
-      "default": 0, "neon": 500, "dark": 750, "gold": 1000, "purple": 800, "ocean": 600,
+      lime: 0,
+      neon_blue: 300,
+      cyber_red: 300,
+      gold_vip: 750,
+      purple_haze: 500,
+      arctic: 400,
+      matrix: 600,
+      sunset: 450,
     };
 
     const price = THEME_PRICES[theme_id];
