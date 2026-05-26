@@ -8,6 +8,7 @@ import {
 import GradientButton from "../components/GradientButton";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { dbSelect } from '../lib/db';
 import { store, supabase, getBalanceFromDB } from "../lib/store";
 import type { Notification } from "../lib/store";
 import HouseFamilyModal from "../components/HouseFamilyModal";
@@ -141,18 +142,16 @@ const Profile = () => {
       const [data, carsData, ownedData, balanceResult, userData] = await Promise.all([
         store.getPlayerProfile(nick),
         store.getCarPlates(nick),
-        supabase.from('nft_owners').select('nft_id').ilike('owner_nick', nick),
+        dbSelect('nft_owners', { columns: 'nft_id', filters: [{ col: 'owner_nick', op: 'ilike', value: nick }] }),
         getBalanceFromDB(nick),
-        supabase.from("users").select("role, vip_expires_at").ilike("username", nick).maybeSingle(),
+        dbSelect("users", { columns: "role, vip_expires_at", filters: [{ col: "username", op: "ilike", value: nick }], limit: 1 }),
       ]);
 
-      // nft_id может быть как числом, так и UUID-строкой — НЕ кастуем,
-      // иначе UUID -> NaN и подарки исчезают из профиля (баг #1).
       const ownedIds = (ownedData.data?.map((item: any) => item.nft_id) || [])
         .filter((id: any) => id !== null && id !== undefined && id !== "");
 
       if (ownedIds.length > 0) {
-        const { data: nfts } = await supabase.from('nft_gifts').select('*').in('id', ownedIds);
+        const { data: nfts } = await dbSelect('nft_gifts', { filters: [{ col: 'id', op: 'in', value: ownedIds }] });
         if (nfts) {
           setAvailableNfts(nfts);
           const saved = localStorage.getItem("orbit_nft_ids");
@@ -196,15 +195,22 @@ const Profile = () => {
   useEffect(() => {
     if (!nick) return;
     if (nick.toLowerCase() === "t1kron1x") { setIsApprovedAdmin(true); return; }
-    supabase.from("admin_applications").select("status").ilike("username", nick).eq("status", "approved").maybeSingle()
-      .then(({ data }) => { if (data) setIsApprovedAdmin(true); });
-    supabase.from("admin_perms").select("perms").eq("username", nick.toLowerCase()).maybeSingle()
-      .then(({ data }) => {
-        if (data?.perms) {
-          const perms = data.perms as Record<string, boolean>;
-          if (Object.values(perms).some(Boolean)) setIsApprovedAdmin(true);
-        }
-      });
+    dbSelect("admin_applications", {
+      columns: "status",
+      filters: [{ col: "username", op: "ilike", value: nick }, { col: "status", op: "eq", value: "approved" }],
+      limit: 1,
+    }).then(({ data }) => { if (data && data.length > 0) setIsApprovedAdmin(true); });
+    dbSelect("admin_perms", {
+      columns: "perms",
+      filters: [{ col: "username", op: "eq", value: nick.toLowerCase() }],
+      limit: 1,
+    }).then(({ data }) => {
+      const row = data?.[0];
+      if (row?.perms) {
+        const perms = row.perms as Record<string, boolean>;
+        if (Object.values(perms).some(Boolean)) setIsApprovedAdmin(true);
+      }
+    });
   }, [nick]);
 
   const [, forceUpdate] = useState(0);
