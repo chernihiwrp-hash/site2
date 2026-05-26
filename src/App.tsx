@@ -258,6 +258,10 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
     }
 
     try {
+      // Якщо додаємо другий акаунт — не прив'язуємо TG (він вже у першого)
+      const existingAccs = (() => { try { return JSON.parse(localStorage.getItem("crp_accounts") || "[]"); } catch { return []; } })();
+      const isSecondAccount = existingAccs.length > 0;
+
       const regRes = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -265,8 +269,8 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
           op: "register",
           values: {
             username: nick.trim(),
-            telegram_id: tgUser ? String(tgUser.id) : null,
-            avatar_url: tgUser?.photo_url || null,
+            telegram_id: (tgUser && !isSecondAccount) ? String(tgUser.id) : null,
+            avatar_url: (tgUser && !isSecondAccount) ? (tgUser?.photo_url || null) : null,
             role: "player",
             balance: 0,
             password: password,
