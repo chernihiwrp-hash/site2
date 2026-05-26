@@ -123,7 +123,7 @@ export async function sendTelegramAlert(message: string): Promise<void> {
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+      body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML", ...(process.env.TG_ALERT_THREAD_ID ? { message_thread_id: Number(process.env.TG_ALERT_THREAD_ID) } : {}) }),
     });
   } catch { /* не критично */ }
 }
