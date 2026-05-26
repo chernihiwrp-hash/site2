@@ -199,12 +199,22 @@ const FactionDetail = () => {
       let deputyUsername = "";
       const leaderName = staticName || dbFactionName;
       if (leaderName) {
+        // Пробуємо по оригінальній назві
         const { data: ldArr } = await dbSelect("faction_leaders", {
           columns: "leader_username, deputy_username",
           filters: [{ col: "faction_name", op: "ilike", value: leaderName }],
           limit: 1,
         });
-        const ld = ldArr?.[0];
+        let ld = ldArr?.[0];
+        // Якщо не знайшло — пробуємо по lowercase (бо AdminPanel зберігає toLowerCase)
+        if (!ld) {
+          const { data: ldArr2 } = await dbSelect("faction_leaders", {
+            columns: "leader_username, deputy_username",
+            filters: [{ col: "faction_name", op: "ilike", value: leaderName.toLowerCase() }],
+            limit: 1,
+          });
+          ld = ldArr2?.[0];
+        }
         if (ld?.leader_username) leaderUsername = ld.leader_username as string;
         if (ld?.deputy_username) deputyUsername = ld.deputy_username as string;
       }
@@ -234,6 +244,26 @@ const FactionDetail = () => {
           isDeputy: !!deputyUsername && name.toLowerCase() === deputyUsername.toLowerCase(),
         });
       }
+      // Якщо лідер або зам не в списку членів — додаємо їх окремо
+      if (leaderUsername && !mems.some(m => m.name.toLowerCase() === leaderUsername.toLowerCase())) {
+        mems.unshift({
+          name: leaderUsername,
+          rank: "Учасник",
+          avatar: avatarMap[leaderUsername.toLowerCase()] || null,
+          isLeader: true,
+          isDeputy: false,
+        });
+      }
+      if (deputyUsername && !mems.some(m => m.name.toLowerCase() === deputyUsername.toLowerCase())) {
+        mems.splice(leaderUsername ? 1 : 0, 0, {
+          name: deputyUsername,
+          rank: "Учасник",
+          avatar: avatarMap[deputyUsername.toLowerCase()] || null,
+          isLeader: false,
+          isDeputy: true,
+        });
+      }
+
       mems.sort((a, b) => (b.isLeader ? 2 : b.isDeputy ? 1 : 0) - (a.isLeader ? 2 : a.isDeputy ? 1 : 0));
 
       setMembers(mems);
