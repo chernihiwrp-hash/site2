@@ -844,6 +844,26 @@ const Profile = () => {
         </div>
       )}
 
+      {/* Кнопка перемикання акаунтів */}
+      <div className="mt-4" style={blockAnim(contentVisible, 400)}>
+        <button onClick={() => window.dispatchEvent(new CustomEvent("crp:open-accounts"))}
+          className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl transition-all active:scale-[0.98] hover:scale-[1.01]"
+          style={{ background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 18%)" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "hsl(0 0% 12%)", border: "1px solid hsl(0 0% 20%)" }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-bold text-foreground">Акаунти</p>
+            <p className="text-[10px] text-muted-foreground">Перемикання між акаунтами</p>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+
       {isApprovedAdmin && (
         <div className="mt-4" style={blockAnim(contentVisible, 420)}>
           <button onClick={() => navigate("/admin-panel")}
