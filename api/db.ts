@@ -3,7 +3,7 @@
 //     зайві дублюючі перевірки видалено, додана пряма карта оп → перм.
 
 import { createClient } from "@supabase/supabase-js";
-import { logDbRequest, getClientIp, getUserAgent, keysOf, safeSnapshot, matchSnapshot } from "./_logger.js";
+import { logDbRequest, getClientIp, getUserAgent, keysOf, safeSnapshot, matchSnapshot, sendTelegramAlert, shouldAlert, formatAlert } from "./_logger.js";
 import { verifyCredentials, applyCors, safeDbError } from "./_auth.js";
 import { checkMutationLimit } from "./_ratelimit.js";
 
@@ -116,15 +116,19 @@ export default async function handler(req: any, res: any) {
     return res.status(status).json({ error });
   };
   const allow = async (status: number, role: string, payload: any) => {
-    await logDbRequest(supabaseAdmin, {
-      endpoint: "db", username: rawNick ?? "",
+    const logEntry = {
+      endpoint: "db" as const, username: rawNick ?? "",
       role, table_name: table, op,
       match_keys: keysOf(match), value_keys: keysOf(values),
       match_snapshot: matchSnapshot(match),
       value_snapshot: safeSnapshot(values),
       telegram_id: null,
       status, allowed: true, error: null, ip, user_agent: ua,
-    });
+    };
+    await logDbRequest(supabaseAdmin, logEntry);
+    if (shouldAlert(logEntry)) {
+      await sendTelegramAlert(formatAlert(logEntry));
+    }
     return res.status(status).json(payload);
   };
 
