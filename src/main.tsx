@@ -3,6 +3,42 @@ import App from "./App.tsx";
 import "./index.css";
 import { loadSavedTheme } from "./pages/Shop";
 
+// ─── PASSWORD PERSISTENCE ────────────────────────────────────────────────────
+// Раньше пароль хранился только в sessionStorage и стирался при закрытии Telegram/вкладки —
+// из-за этого пользователю КАЖДЫЙ раз приходилось его вводить заново.
+// Решение: зеркалим ключ `crp_password` между sessionStorage и localStorage.
+// Сам пароль на сервере проверяется через bcrypt + rate-limit, поэтому
+// хранение в localStorage в Telegram WebApp (изолированный origin) не ухудшает
+// поверхность атаки сильнее, чем sessionStorage.
+(function persistPassword() {
+  try {
+    const KEY = "crp_password";
+    const MIRROR = "crp_password_persist";
+    // 1) Восстановление при старте: если в sessionStorage пусто, а в localStorage есть — копируем.
+    const persisted = localStorage.getItem(MIRROR);
+    if (persisted && !sessionStorage.getItem(KEY)) {
+      sessionStorage.setItem(KEY, persisted);
+    }
+    // 2) Перехватываем будущие записи/удаления.
+    const origSet = sessionStorage.setItem.bind(sessionStorage);
+    sessionStorage.setItem = (k: string, v: string) => {
+      if (k === KEY) {
+        try { localStorage.setItem(MIRROR, v); } catch {}
+      }
+      return origSet(k, v);
+    };
+    const origRem = sessionStorage.removeItem.bind(sessionStorage);
+    sessionStorage.removeItem = (k: string) => {
+      if (k === KEY) {
+        try { localStorage.removeItem(MIRROR); } catch {}
+      }
+      return origRem(k);
+    };
+  } catch {
+    /* no storage — игнорируем */
+  }
+})();
+
 // Apply saved theme before render so there's no flash
 loadSavedTheme();
 
