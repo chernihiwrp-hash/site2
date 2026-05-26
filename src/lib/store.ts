@@ -698,7 +698,7 @@ export const store = {
     // SECURITY: all token operations go through /api/admin-tokens which
     // verifies admin credentials and "tokens" permission server-side.
     const adminNick     = localStorage.getItem("crp_nick")     || "";
-    const adminPassword = localStorage.getItem("crp_password") || "";
+    const adminPassword = sessionStorage.getItem("crp_password") || "";
     if (!adminNick || !adminPassword) return false;
     try {
       const res = await fetch("/api/admin-tokens", {
@@ -714,7 +714,7 @@ export const store = {
   takeTokens: async (nick: string, amount: number): Promise<boolean> => {
     // SECURITY: same — server verifies perms before touching balance
     const adminNick     = localStorage.getItem("crp_nick")     || "";
-    const adminPassword = localStorage.getItem("crp_password") || "";
+    const adminPassword = sessionStorage.getItem("crp_password") || "";
     if (!adminNick || !adminPassword) return false;
     try {
       const res = await fetch("/api/admin-tokens", {
@@ -1188,7 +1188,7 @@ export const store = {
   buyHouseWithCR: async (
     houseId: number, username: string, _priceEUR: number, rentalDays = 24,
   ): Promise<{ ok: boolean; error?: string }> => {
-    const password = localStorage.getItem("crp_password") || "";
+    const password = sessionStorage.getItem("crp_password") || "";
     if (!username || !password) return { ok: false, error: "Not logged in" };
     try {
       const res = await fetch("/api/balance", {
