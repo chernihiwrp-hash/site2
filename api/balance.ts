@@ -1,9 +1,4 @@
-/**
- * /api/balance.ts — защищённый эндпоинт для всех операций с балансом.
- * v3: добавлен op="buy_house" — серверная покупка дома за CR (раньше
- *     клиент сам делал dbUpdate("houses",...), что блокировалось RLS и
- *     открывало путь подменить владельца. Теперь — только через сервер.
- */
+
 
 import { createClient } from "@supabase/supabase-js";
 import { verifyCredentials, applyCors } from "./_auth.js";
@@ -18,7 +13,7 @@ const STREAK_BONUS: Record<string, number> = {
   high:   200,
 };
 
-const HOUSE_CR_MULT = 3;      // 1 EUR = 3 CR
+const HOUSE_CR_MULT = 3; 
 const MAX_HOUSE_PRICE_CR = 10_000_000;
 const ALLOWED_RENTAL_DAYS = new Set([3, 7, 14, 15, 24, 30, 60, 90]);
 
@@ -66,7 +61,6 @@ export default async function handler(req: any, res: any) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // ── Авторизация (bcrypt) ──────────────────────────────────────────────────
   const user = await verifyCredentials(supabase, nick, password);
   if (!user) return res.status(401).json({ error: "Unauthorized" });
 
@@ -96,9 +90,7 @@ export default async function handler(req: any, res: any) {
   const currentBalance = (userRow.balance as number) || 0;
   const realUsername   = String(userRow.username);
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // DAILY CLAIM
-  // ══════════════════════════════════════════════════════════════════════════
+
   if (op === "daily_claim") {
     const lastClaim = dailyRow?.last_daily_claim ? new Date((dailyRow as any).last_daily_claim).getTime() : 0;
     const now = Date.now();
@@ -134,24 +126,14 @@ export default async function handler(req: any, res: any) {
     });
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // BUY THEME
-  // ══════════════════════════════════════════════════════════════════════════
+
   if (op === "buy_theme") {
     const { theme_id } = body;
     if (!theme_id) return res.status(400).json({ error: "theme_id required" });
 
-    // Должно полностью совпадать с THEMES в src/pages/Shop.tsx.
-    // Источник правды — сервер: клиент НЕ диктует цену.
     const THEME_PRICES: Record<string, number> = {
-      lime: 0,
-      neon_blue: 300,
-      cyber_red: 300,
-      gold_vip: 750,
-      purple_haze: 500,
-      arctic: 400,
-      matrix: 600,
-      sunset: 450,
+      "lime": 0, "neon_blue": 300, "cyber_red": 300, "gold_vip": 750,
+      "purple_haze": 500, "arctic": 400, "matrix": 600, "sunset": 450,
     };
 
     const price = THEME_PRICES[theme_id];
@@ -174,9 +156,7 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ data: { balance: newBalance, owned_themes: newOwned } });
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // BUY NFT
-  // ══════════════════════════════════════════════════════════════════════════
+
   if (op === "buy_nft") {
     const { nft_id } = body;
     if (!nft_id) return res.status(400).json({ error: "nft_id required" });
@@ -220,16 +200,9 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ error: "Failed to record NFT ownership" });
     }
 
-    // NOTE: We do NOT set sold=true on nft_gifts globally.
-    // NFT availability is tracked per-user via nft_owners table.
-    // sold=true is only set manually by admin for truly limited 1-of-1 NFTs.
-
     return res.status(200).json({ data: { balance: newBalance } });
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // BUY HOUSE — серверная покупка дома за CR
-  // ══════════════════════════════════════════════════════════════════════════
   if (op === "buy_house") {
     const houseId = Number(body.house_id);
     const rentalDays = Number(body.rental_days ?? 24);
@@ -264,14 +237,12 @@ export default async function handler(req: any, res: any) {
 
     const newBalance = currentBalance - crPrice;
 
-    // 1) Списываем CR
     const { error: balErr } = await supabase
       .from("users")
       .update({ balance: newBalance })
       .ilike("username", normalizedNick);
     if (balErr) return res.status(500).json({ error: "Update failed" });
 
-    // 2) Атомарно ставим владельца (только если ещё свободен — защита от гонки)
     const { data: updated, error: hUpdErr } = await supabase
       .from("houses")
       .update({ owner_username: realUsername, is_for_sale: false })
@@ -280,12 +251,12 @@ export default async function handler(req: any, res: any) {
       .select("id");
 
     if (hUpdErr || !updated || updated.length === 0) {
-      // Откат баланса
+
       await supabase.from("users").update({ balance: currentBalance }).ilike("username", normalizedNick);
       return res.status(409).json({ error: "House was taken by someone else" });
     }
 
-    // 3) Регистрируем заявку как approved (для истории)
+
     try {
       await supabase.from("house_purchase_requests").insert({
         house_id: houseId,
@@ -293,22 +264,19 @@ export default async function handler(req: any, res: any) {
         status: "approved",
         rental_days: rentalDays,
       });
-    } catch { /* лог не критичен */ }
+    } catch 
 
-    // 4) Нотификация (тоже не критична)
     try {
       await supabase.from("notifications").insert({
         username: realUsername,
-        message: `🏠 Будинок придбано за ${crPrice.toLocaleString()} CR`,
+        message: `Будинок придбано за ${crPrice.toLocaleString()} CR`,
       });
-    } catch { /* лог не критичен */ }
+    } catch 
 
     return res.status(200).json({ data: { balance: newBalance, cr_spent: crPrice } });
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // GAME RESULT
-  // ══════════════════════════════════════════════════════════════════════════
+ 
   if (op === "game_result") {
     const { game, bet, won, multiplier } = body;
 
