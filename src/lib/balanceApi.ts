@@ -8,7 +8,7 @@ const API_URL = "/api/balance";
 
 function getCreds() {
   const nick     = localStorage.getItem("crp_nick");
-  const password = localStorage.getItem("crp_password");
+  const password = sessionStorage.getItem("crp_password");
   return { nick, password };
 }
 
