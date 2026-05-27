@@ -1,5 +1,3 @@
-
-
 import { createClient } from "@supabase/supabase-js";
 import { verifyCredentials, applyCors } from "./_auth.js";
 
@@ -14,7 +12,7 @@ const STREAK_BONUS: Record<string, number> = {
 };
 
 const HOUSE_CR_MULT = 3; 
-const MAX_HOUSE_PRICE_CR = 10_000_000;
+const MAX_HOUSE_PRICE_CR = 999_000_000_000;
 const ALLOWED_RENTAL_DAYS = new Set([3, 7, 14, 15, 24, 30, 60, 90]);
 
 type Op = "daily_claim" | "buy_theme" | "buy_nft" | "game_result" | "buy_house";
