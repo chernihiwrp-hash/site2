@@ -27,7 +27,7 @@ import NotFound from "./pages/NotFound";
 import BalanceTop from "./pages/BalanceTop";
 import Vip from "./pages/Vip";
 import { supabase } from "./lib/store";
-import { User, CheckCircle, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react";
+import { User, CheckCircle, Eye, EyeOff, Shield, AlertTriangle, ArrowLeft, LogOut } from "lucide-react";
 import GradientButton from "./components/GradientButton";
 import { MaintenanceScreen } from "./pages/admin/TechWorkTab";
 import type { MaintenanceConfig } from "./pages/admin/TechWorkTab";
@@ -210,13 +210,14 @@ const LoginModal = ({ savedNick, onDone, onReset }: { savedNick: string; onDone:
   );
 };
 
-const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
+const RegisterModal = ({ onDone, onBack }: { onDone: (nick: string) => void; onBack?: () => void }) => {
   const [nick, setNick] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showExitWarning, setShowExitWarning] = useState(false);
   const tgUser = getTelegramUser();
 
   const blocked = isBlocked();
@@ -417,8 +418,93 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
           }}>
             {loading ? "Реєструю..." : "Розпочати гру →"}
           </button>
+
+          {/* Back button — only shown if onBack is provided */}
+          {onBack && (
+            <button
+              onClick={() => setShowExitWarning(true)}
+              style={{
+                width: "100%", marginTop: 10, padding: "10px 0", borderRadius: 12, border: "1px solid hsl(0 0% 20%)",
+                background: "transparent", color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 600,
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.7)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "hsl(0 0% 35%)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.35)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "hsl(0 0% 20%)"; }}
+            >
+              <ArrowLeft style={{ width: 14, height: 14 }} />
+              Назад до акаунтів
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Exit warning modal */}
+      {showExitWarning && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 200,
+            background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px",
+          }}
+          onClick={() => setShowExitWarning(false)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: "100%", maxWidth: 300, borderRadius: 18,
+              background: "linear-gradient(160deg, hsl(0 0% 10%) 0%, hsl(0 0% 7%) 100%)",
+              border: "1px solid hsl(0 70% 50% / 0.25)",
+              padding: "22px 20px 18px",
+              animation: "crp-fade-up 0.3s cubic-bezier(.22,1,.36,1) both",
+            }}
+          >
+            {/* Icon */}
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 14,
+                background: "hsl(0 70% 50% / 0.1)", border: "1px solid hsl(0 70% 50% / 0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <LogOut style={{ width: 22, height: 22, color: "#ef4444" }} />
+              </div>
+            </div>
+            {/* Title */}
+            <div style={{ textAlign: "center", marginBottom: 8 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>Вийти з реєстрації?</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 5, lineHeight: 1.5 }}>
+                Всі введені дані буде втрачено.<br />Без акаунту ти не зможеш грати.
+              </div>
+            </div>
+            {/* Divider */}
+            <div style={{ height: 1, background: "hsl(0 0% 16%)", margin: "14px 0" }} />
+            {/* Buttons */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setShowExitWarning(false)}
+                style={{
+                  flex: 1, padding: "11px 0", borderRadius: 11, border: "1px solid hsl(0 0% 22%)",
+                  background: "transparent", color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Залишитись
+              </button>
+              <button
+                onClick={() => { setShowExitWarning(false); onBack?.(); }}
+                style={{
+                  flex: 1, padding: "11px 0", borderRadius: 11, border: "none",
+                  background: "hsl(0 70% 50% / 0.15)", color: "#ef4444",
+                  fontSize: 13, fontWeight: 700, cursor: "pointer",
+                  border: "1px solid hsl(0 70% 50% / 0.25)" as any,
+                }}
+              >
+                Вийти
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
