@@ -383,30 +383,60 @@ const AdminPanel = () => {
                 <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${meta.color}40, transparent)` }} />
               </div>
 
-              {/* Кнопки у 2 колонки якщо > 2 кнопки, інакше в 1 */}
-              {tabs.length >= 3 ? (
+              {/* 3 кнопки — у ряд (cols-3), >3 — 2 колонки, інакше 1 */}
+              {tabs.length === 3 ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {tabs.map((t) => (
+                    <button key={t.id} onClick={() => setTab(t.id)}
+                      className="relative overflow-hidden rounded-2xl p-3 text-left transition-all active:scale-[0.96]"
+                      style={{
+                        background: t.danger
+                          ? `linear-gradient(135deg, hsl(0 70% 50% / 0.18), hsl(0 70% 50% / 0.04))`
+                          : `linear-gradient(135deg, ${meta.color}22, ${meta.color}06)`,
+                        border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.28)" : `${meta.color}30`}`,
+                        boxShadow: `0 0 20px ${t.danger ? "hsl(0 70% 50% / 0.08)" : `${meta.color}10`}`,
+                      }}>
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 mx-auto"
+                        style={{
+                          background: t.danger
+                            ? "linear-gradient(135deg, hsl(0 70% 50% / 0.22), hsl(0 70% 50% / 0.08))"
+                            : `linear-gradient(135deg, ${meta.color}30, ${meta.color}10)`,
+                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.3)" : `${meta.color}40`}`,
+                        }}>
+                        <t.icon className="w-4 h-4" style={{ color: t.danger ? "hsl(0 70% 60%)" : meta.color }} />
+                      </div>
+                      <p className="text-[11px] font-semibold leading-tight text-center"
+                        style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 92%)" }}>{t.label}</p>
+                    </button>
+                  ))}
+                </div>
+              ) : tabs.length > 3 ? (
                 <div className="grid grid-cols-2 gap-2">
-                  {tabs.map((t, i) => (
+                  {tabs.map((t) => (
                     <button key={t.id} onClick={() => setTab(t.id)}
                       className="relative overflow-hidden rounded-2xl p-4 text-left transition-all active:scale-[0.96]"
                       style={{
                         background: t.danger
-                          ? "hsl(0 70% 50% / 0.07)"
-                          : "hsl(0 0% 100% / 0.04)",
-                        border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.2)" : "hsl(0 0% 100% / 0.08)"}`,
+                          ? `linear-gradient(135deg, hsl(0 70% 50% / 0.15), hsl(0 70% 50% / 0.03))`
+                          : `linear-gradient(135deg, ${meta.color}1c, ${meta.color}05)`,
+                        border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.25)" : `${meta.color}28`}`,
+                        boxShadow: `0 0 18px ${t.danger ? "hsl(0 70% 50% / 0.06)" : `${meta.color}0c`}`,
                       }}>
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3"
                         style={{
-                          background: t.danger ? "hsl(0 70% 50% / 0.12)" : `${meta.color}18`,
-                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.25)" : `${meta.color}30`}`,
+                          background: t.danger
+                            ? "linear-gradient(135deg, hsl(0 70% 50% / 0.22), hsl(0 70% 50% / 0.08))"
+                            : `linear-gradient(135deg, ${meta.color}30, ${meta.color}10)`,
+                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.3)" : `${meta.color}40`}`,
                         }}>
                         <t.icon className="w-4 h-4" style={{ color: t.danger ? "hsl(0 70% 60%)" : meta.color }} />
                       </div>
                       <p className="text-xs font-semibold leading-tight"
-                        style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 88%)" }}>{t.label}</p>
+                        style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 90%)" }}>{t.label}</p>
                     </button>
                   ))}
                 </div>
+
               ) : (
                 <div className="space-y-1.5">
                   {tabs.map((t, i) => (
