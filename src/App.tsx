@@ -725,7 +725,13 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Sonner />
-          <RegisterModal onDone={() => setRegistered(true)} />
+          <RegisterModal
+              onDone={() => setRegistered(true)}
+              onBack={getSavedAccounts().length > 0 ? () => {
+                const last = getSavedAccounts()[0];
+                if (last) switchAccount(last);
+              } : undefined}
+            />
         </TooltipProvider>
       </QueryClientProvider>
     );
