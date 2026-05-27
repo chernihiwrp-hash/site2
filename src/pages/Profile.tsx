@@ -581,7 +581,13 @@ const Profile = () => {
                     const photo = h.photos?.find((p: string) => p.startsWith("http")) || h.image;
                     return (
                       <div key={h.id} className="rounded-xl overflow-hidden relative"
-                        style={{ background: "hsl(142 71% 45% / 0.05)", border: "1px solid hsl(142 71% 45% / 0.2)" }}>
+                        style={{ background: (h as any).isFamilyHouse ? "hsl(200 71% 45% / 0.05)" : "hsl(142 71% 45% / 0.05)", border: `1px solid ${(h as any).isFamilyHouse ? "hsl(200 71% 45% / 0.2)" : "hsl(142 71% 45% / 0.2)"}` }}>
+                        {(h as any).isFamilyHouse && (
+                          <div className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-full text-[9px] font-bold"
+                            style={{ background: "hsl(200 71% 45% / 0.85)", color: "white", backdropFilter: "blur(4px)" }}>
+                            Сімʼя
+                          </div>
+                        )}
                         {photo && (
                           <div className="relative h-28 overflow-hidden">
                             <img src={photo} alt={h.name} className="w-full h-full object-cover" />
