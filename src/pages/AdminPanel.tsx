@@ -2773,18 +2773,29 @@ const LeaderAssignmentBlock = ({ factionId, factionName, onAssigned }: { faction
   const assignRole = async (memberName: string) => {
     setLoading(true);
     const isLeader = assignMode === "leader";
-    const updatePayload: Record<string, string> = {
-      faction_name: factionName.toLowerCase(),
+    const fNameLower = factionName.toLowerCase();
+
+    // Upsert з ПОВНИМИ даними — щоб не стерти другу роль
+    // Беремо поточні значення зі стейту і мерджимо
+    const upsertPayload: Record<string, string | null> = {
+      faction_name: fNameLower,
       updated_at: new Date().toISOString(),
-      ...(isLeader ? { leader_username: memberName } : { deputy_username: memberName }),
+      leader_username: isLeader ? memberName : (currentLeader || null),
+      deputy_username: isLeader ? (currentDeputy || null) : memberName,
     };
-    await dbUpsert("faction_leaders", updatePayload, { onConflict: "faction_name" });
+    await dbUpsert("faction_leaders", upsertPayload, { onConflict: "faction_name" });
+
+    // Синхронізуємо таблицю factions — обидва поля одразу
     if (factionId > 0) {
       await dbUpdate("factions",
-        isLeader ? { leader_username: memberName } : { deputy_username: memberName },
+        {
+          leader_username: isLeader ? memberName : (currentLeader || null),
+          deputy_username: isLeader ? (currentDeputy || null) : memberName,
+        },
         { id: eq(factionId) }
       );
     }
+
     if (isLeader) setCurrentLeader(memberName);
     else setCurrentDeputy(memberName);
     setLoading(false);
@@ -2793,10 +2804,28 @@ const LeaderAssignmentBlock = ({ factionId, factionName, onAssigned }: { faction
 
   const clearRole = async (role: "leader" | "deputy") => {
     setLoading(true);
-    await dbUpsert("faction_leaders",
-      { faction_name: factionName.toLowerCase(), [role === "leader" ? "leader_username" : "deputy_username"]: null, updated_at: new Date().toISOString() },
-      { onConflict: "faction_name" }
-    );
+    const fNameLower = factionName.toLowerCase();
+
+    // Upsert з ПОВНИМИ даними — зберігаємо другу роль
+    const upsertPayload: Record<string, string | null> = {
+      faction_name: fNameLower,
+      updated_at: new Date().toISOString(),
+      leader_username: role === "leader" ? null : (currentLeader || null),
+      deputy_username: role === "deputy" ? null : (currentDeputy || null),
+    };
+    await dbUpsert("faction_leaders", upsertPayload, { onConflict: "faction_name" });
+
+    // Синхронізуємо таблицю factions
+    if (factionId > 0) {
+      await dbUpdate("factions",
+        {
+          leader_username: role === "leader" ? null : (currentLeader || null),
+          deputy_username: role === "deputy" ? null : (currentDeputy || null),
+        },
+        { id: eq(factionId) }
+      );
+    }
+
     if (role === "leader") setCurrentLeader("");
     else setCurrentDeputy("");
     setLoading(false);
