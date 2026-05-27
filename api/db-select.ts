@@ -1,5 +1,3 @@
-// /api/db-select.ts — защищённый прокси для SELECT-запросов + db_logs.
-// v2: bcrypt-пароли, узкий CORS, нейтрализация текста ошибок.
 
 import { createClient } from "@supabase/supabase-js";
 import { logDbRequest, getClientIp, getUserAgent } from "./_logger.js";
@@ -12,7 +10,7 @@ const READABLE_TABLES = new Set<string>([
   "sos_signals","wanted","factions","faction_leaders","faction_overrides",
   "mayor_election","nft_gifts","nft_owners","news","houses","documents",
   "bans","house_families","recruitment_settings","house_confiscations",
-  "mayor_candidate_applications","notifications","db_logs",
+  "mayor_candidate_applications","notifications","db_logs","maintenance_mode",
 ]);
 
 const ALLOWED_FILTERS = new Set(["eq", "ilike", "in", "or", "is"]);
