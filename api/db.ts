@@ -197,11 +197,14 @@ export default async function handler(req: any, res: any) {
 
   // ── 5. Обмеження по типу операції ───────────────────────────────────────
 
-  // 5.1 SINGLE_ROW_REQUIRED — delete/update потребує id або slug
+  // 5.1 SINGLE_ROW_REQUIRED — delete/update потребує id, slug або faction_name (для faction_leaders)
   if (SINGLE_ROW_REQUIRED.has(table) && (op === "delete" || op === "update" || op === "upsert") && !isSuperAdmin) {
-    const hasIdOrSlug = match && Object.entries(match).some(([k, c]) =>
-      (k === "id" || k === "slug") && c.op === "eq" && !hasWildcard(c.value)
-    );
+    // faction_leaders: upsert з onConflict="faction_name" дозволяємо без id/slug
+    const isUpsertByFactionName = op === "upsert" && table === "faction_leaders" && onConflict === "faction_name";
+    const allowedKeys = table === "faction_leaders" ? ["id", "slug", "faction_name"] : ["id", "slug"];
+    const hasIdOrSlug = isUpsertByFactionName || (match && Object.entries(match).some(([k, c]) =>
+      allowedKeys.includes(k) && c.op === "eq" && !hasWildcard(c.value)
+    ));
     if (!hasIdOrSlug) {
       return deny(400, `"${op}" on "${table}" requires explicit id/slug match`);
     }
