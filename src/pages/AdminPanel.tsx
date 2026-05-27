@@ -325,7 +325,7 @@ const AdminPanel = () => {
   allowedTabs.forEach(t => { const c = t.category || "Інше"; if (!groups2[c]) groups2[c] = []; groups2[c].push(t); });
 
   return (
-    <div className="min-h-screen pb-24 pt-0" style={{ background: "hsl(0 0% 3%)" }}>
+    <div className="min-h-screen pb-24 pt-0">
       {/* HEADER */}
       <div className="relative overflow-hidden px-4 pt-12 pb-6 mb-2"
         style={{ background: "linear-gradient(180deg, hsl(0 0% 6%) 0%, hsl(0 0% 3%) 100%)" }}>
@@ -388,25 +388,22 @@ const AdminPanel = () => {
                 <div className="grid grid-cols-2 gap-2">
                   {tabs.map((t, i) => (
                     <button key={t.id} onClick={() => setTab(t.id)}
-                      className="relative overflow-hidden rounded-2xl p-3.5 text-left transition-all active:scale-[0.96] hover:scale-[1.02]"
+                      className="relative overflow-hidden rounded-2xl p-4 text-left transition-all active:scale-[0.96]"
                       style={{
                         background: t.danger
-                          ? "linear-gradient(135deg, hsl(0 70% 50% / 0.1), hsl(0 0% 5%))"
-                          : "linear-gradient(135deg, hsl(0 0% 9%), hsl(0 0% 6%))",
-                        border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.25)" : "hsl(0 0% 15%)"}`,
-                        animationDelay: `${(catIdx * 5 + i) * 30}ms`,
+                          ? "hsl(0 70% 50% / 0.07)"
+                          : "hsl(0 0% 100% / 0.04)",
+                        border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.2)" : "hsl(0 0% 100% / 0.08)"}`,
                       }}>
-                      <div className="absolute top-0 right-0 w-16 h-16 opacity-20"
-                        style={{ background: `radial-gradient(circle, ${t.danger ? "hsl(0 70% 50%)" : meta.color}, transparent)`, transform: "translate(40%, -40%)" }} />
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-2.5"
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3"
                         style={{
-                          background: t.danger ? "hsl(0 70% 50% / 0.15)" : `${meta.color}18`,
-                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.3)" : `${meta.color}35`}`,
+                          background: t.danger ? "hsl(0 70% 50% / 0.12)" : `${meta.color}18`,
+                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.25)" : `${meta.color}30`}`,
                         }}>
                         <t.icon className="w-4 h-4" style={{ color: t.danger ? "hsl(0 70% 60%)" : meta.color }} />
                       </div>
                       <p className="text-xs font-semibold leading-tight"
-                        style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 90%)" }}>{t.label}</p>
+                        style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 88%)" }}>{t.label}</p>
                     </button>
                   ))}
                 </div>
@@ -417,23 +414,20 @@ const AdminPanel = () => {
                       <div className="relative overflow-hidden rounded-2xl px-4 py-3.5 flex items-center gap-3"
                         style={{
                           background: t.danger
-                            ? "linear-gradient(135deg, hsl(0 70% 50% / 0.08), hsl(0 0% 5%))"
-                            : "linear-gradient(135deg, hsl(0 0% 9%), hsl(0 0% 6%))",
-                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.2)" : "hsl(0 0% 14%)"}`,
+                            ? "hsl(0 70% 50% / 0.06)"
+                            : "hsl(0 0% 100% / 0.04)",
+                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.18)" : "hsl(0 0% 100% / 0.07)"}`,
                         }}>
-                        <div className="absolute top-0 right-0 w-24 h-24 opacity-10"
-                          style={{ background: `radial-gradient(circle, ${t.danger ? "hsl(0 70% 50%)" : meta.color}, transparent)`, transform: "translate(40%, -40%)" }} />
                         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                           style={{
-                            background: t.danger ? "hsl(0 70% 50% / 0.12)" : `${meta.color}15`,
-                            border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.25)" : `${meta.color}30`}`,
-                            boxShadow: `0 0 12px ${t.danger ? "hsl(0 70% 50% / 0.1)" : `${meta.color}15`}`,
+                            background: t.danger ? "hsl(0 70% 50% / 0.1)" : `${meta.color}12`,
+                            border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.22)" : `${meta.color}28`}`,
                           }}>
                           <t.icon className="w-4 h-4" style={{ color: t.danger ? "hsl(0 70% 60%)" : meta.color }} />
                         </div>
                         <span className="text-sm font-semibold flex-1 text-left"
-                          style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 92%)" }}>{t.label}</span>
-                        <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "hsl(0 0% 30%)" }} />
+                          style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 90%)" }}>{t.label}</span>
+                        <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "hsl(0 0% 28%)" }} />
                       </div>
                     </button>
                   ))}
