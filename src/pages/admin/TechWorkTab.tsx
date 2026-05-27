@@ -1,14 +1,11 @@
-import { useState, useEffect, useRef } from "react";
-import { supabase } from "../../lib/store";
+import { useState, useEffect } from "react";
 import { dbUpsert, dbSelect } from "../../lib/db";
-import NeonCard from "../../components/NeonCard";
-import GradientButton from "../../components/GradientButton";
 import { toast } from "sonner";
 import {
   Wrench, Power, PowerOff, RefreshCw,
-  Settings, HardHat, Construction, Hammer, Laptop, Monitor,
+  Settings, Construction, Hammer, Laptop, Monitor,
   Zap, Plug, Globe, Gamepad2, Building2, Lock, Shield, Target,
-  Server, Cpu, Database, WifiOff, AlertTriangle, Tool
+  Server, Cpu, Database, WifiOff, AlertTriangle,
 } from "lucide-react";
 
 // Icon map for rendering
@@ -41,273 +38,165 @@ const DEFAULT: MaintenanceConfig = {
   color: "#f59e0b",
 };
 
-// ─── Анімований екран тех. робіт ─────────────────────────────────────────────
+// ─── Мінімалістичний екран тех. робіт ────────────────────────────────────────
 export function MaintenanceScreen({ cfg, isPreview = false }: { cfg: MaintenanceConfig; isPreview?: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animRef   = useRef<number>(0);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const resize = () => {
-      canvas.width  = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-    };
-    resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
-
-    // Частинки — самі символи
-    const COUNT = isPreview ? 18 : 36;
-    type Particle = {
-      x: number; y: number; vx: number; vy: number;
-      size: number; opacity: number; char: string; rotation: number; vr: number;
-    };
-
-    const chars = ["⚙", "✦", "◈", "▸", "◉", "⟳", "✕", "◌", "⬡", "✦"];
-
-    const make = (): Particle => ({
-      x:        Math.random() * canvas.width,
-      y:        Math.random() * canvas.height,
-      vx:       (Math.random() - 0.5) * 0.4,
-      vy:       -Math.random() * 0.6 - 0.2,
-      size:     Math.random() * 18 + 10,
-      opacity:  Math.random() * 0.35 + 0.05,
-      char:     chars[Math.floor(Math.random() * chars.length)],
-      rotation: Math.random() * Math.PI * 2,
-      vr:       (Math.random() - 0.5) * 0.01,
-    });
-
-    const particles: Particle[] = Array.from({ length: COUNT }, make);
-
-    // Hex grid points
-    const hex: { x: number; y: number; phase: number }[] = [];
-    const GRID = isPreview ? 40 : 55;
-    for (let row = 0; row * GRID * 0.866 < 800; row++) {
-      for (let col = 0; col * GRID < 400; col++) {
-        hex.push({
-          x: col * GRID + (row % 2 === 0 ? 0 : GRID / 2),
-          y: row * GRID * 0.866,
-          phase: Math.random() * Math.PI * 2,
-        });
-      }
-    }
-
-    let t = 0;
-    const [r, g, b] = hexToRgb(cfg.color);
-
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      t += 0.016;
-
-      // --- hex grid ---
-      hex.forEach(h => {
-        const pulse = (Math.sin(t * 0.8 + h.phase) + 1) / 2;
-        ctx.strokeStyle = `rgba(${r},${g},${b},${0.04 + pulse * 0.06})`;
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-          const a = (Math.PI / 3) * i;
-          const hx = h.x + Math.cos(a) * GRID * 0.48;
-          const hy = h.y + Math.sin(a) * GRID * 0.48;
-          i === 0 ? ctx.moveTo(hx, hy) : ctx.lineTo(hx, hy);
-        }
-        ctx.closePath();
-        ctx.stroke();
-      });
-
-      // --- floating particles ---
-      particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.rotation += p.vr;
-        if (p.y < -40) { Object.assign(p, make()); p.y = canvas.height + 20; }
-        if (p.x < -40 || p.x > canvas.width + 40) { Object.assign(p, make()); }
-
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rotation);
-        ctx.globalAlpha = p.opacity;
-        ctx.font = `${p.size}px serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
-        ctx.fillText(p.char, 0, 0);
-        ctx.restore();
-      });
-
-      // --- scan line ---
-      const scanY = ((t * 60) % (canvas.height + 40)) - 20;
-      const grad = ctx.createLinearGradient(0, scanY - 8, 0, scanY + 8);
-      grad.addColorStop(0,   `rgba(${r},${g},${b},0)`);
-      grad.addColorStop(0.5, `rgba(${r},${g},${b},0.06)`);
-      grad.addColorStop(1,   `rgba(${r},${g},${b},0)`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, scanY - 8, canvas.width, 16);
-
-      // --- corner brackets ---
-      const bSize = 22, bOff = 10;
-      ctx.strokeStyle = `rgba(${r},${g},${b},0.35)`;
-      ctx.lineWidth = 1.5;
-      [[bOff, bOff, 1, 1], [canvas.width - bOff, bOff, -1, 1],
-       [bOff, canvas.height - bOff, 1, -1], [canvas.width - bOff, canvas.height - bOff, -1, -1]]
-        .forEach(([x, y, sx, sy]) => {
-          ctx.beginPath();
-          ctx.moveTo(x as number, (y as number) + (sy as number) * bSize);
-          ctx.lineTo(x as number, y as number);
-          ctx.lineTo((x as number) + (sx as number) * bSize, y as number);
-          ctx.stroke();
-        });
-
-      animRef.current = requestAnimationFrame(draw);
-    };
-
-    animRef.current = requestAnimationFrame(draw);
-    return () => { cancelAnimationFrame(animRef.current); ro.disconnect(); };
-  }, [cfg.color, cfg.icon, isPreview]);
+  const IconComp = ICON_MAP[cfg.icon] || Wrench;
 
   return (
-    <div style={{
-      position: "relative",
-      width: "100%",
-      height: isPreview ? 320 : "100vh",
-      minHeight: isPreview ? 320 : "100vh",
-      background: `radial-gradient(ellipse at 50% 40%, ${cfg.color}12 0%, #000 65%)`,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      overflow: "hidden",
-      borderRadius: isPreview ? 16 : 0,
-    }}>
-      {/* Canvas background */}
-      <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: isPreview ? 360 : "100vh",
+        minHeight: isPreview ? 360 : "100vh",
+        background: "#0a0a0a",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        borderRadius: isPreview ? 16 : 0,
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif",
+      }}
+    >
+      {/* Едина субтильна підсвітка зверху */}
+      <div
+        style={{
+          position: "absolute",
+          top: "-40%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "120%",
+          height: "80%",
+          background: `radial-gradient(ellipse at center, ${cfg.color}10 0%, transparent 60%)`,
+          pointerEvents: "none",
+        }}
+      />
 
-      {/* Vignette */}
-      <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none",
-        background: "radial-gradient(ellipse at 50% 50%, transparent 40%, #000000cc 100%)",
-      }} />
-
-      {/* Content */}
-      <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "0 32px" }}>
-
-        {/* Top label */}
-        <div style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "4px 12px", borderRadius: 20, marginBottom: 28,
-          background: `${cfg.color}18`,
-          border: `1px solid ${cfg.color}40`,
-        }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, boxShadow: `0 0 8px ${cfg.color}`, animation: "maint-blink 1.4s ease-in-out infinite" }} />
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: cfg.color, textTransform: "uppercase" }}>
-            CHERNIHIV RP
-          </span>
-        </div>
-
-        {/* Icon */}
-        <div style={{ position: "relative", marginBottom: 24 }}>
-          {/* Outer ring */}
-          <div style={{
-            position: "absolute", inset: -16, borderRadius: "50%",
+      {/* Контент */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          textAlign: "center",
+          padding: "0 32px",
+          maxWidth: 420,
+        }}
+      >
+        {/* Іконка — чисте коло без зайвих елементів */}
+        <div
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(255,255,255,0.03)",
             border: `1px solid ${cfg.color}30`,
-            animation: "maint-spin-slow 8s linear infinite",
-          }}>
-            {[0, 90, 180, 270].map(deg => (
-              <div key={deg} style={{
-                position: "absolute", width: 6, height: 6, borderRadius: "50%",
-                background: cfg.color, boxShadow: `0 0 6px ${cfg.color}`,
-                top: "50%", left: "50%",
-                transform: `rotate(${deg}deg) translateX(calc(50% + 8px)) translateY(-50%)`,
-              }} />
-            ))}
-          </div>
-          {/* Inner ring */}
-          <div style={{
-            position: "absolute", inset: -8, borderRadius: "50%",
-            border: `1px dashed ${cfg.color}25`,
-            animation: "maint-spin-slow 5s linear infinite reverse",
-          }} />
-          {/* Icon box */}
-          <div style={{
-            width: 80, height: 80, borderRadius: 22, fontSize: 38,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: `${cfg.color}18`,
-            border: `1.5px solid ${cfg.color}50`,
-            boxShadow: `0 0 32px ${cfg.color}35, 0 0 64px ${cfg.color}15`,
-            animation: "maint-pulse 2.5s ease-in-out infinite",
-          }}>
-            {(() => {
-              const IconComp = ICON_MAP[cfg.icon];
-              return IconComp
-                ? <IconComp style={{ width: 38, height: 38, color: cfg.color }} />
-                : <span style={{ fontSize: 38 }}>{cfg.icon}</span>;
-            })()}
-          </div>
+            marginBottom: 32,
+            animation: "maint-breath 3s ease-in-out infinite",
+          }}
+        >
+          <IconComp style={{ width: 30, height: 30, color: cfg.color }} strokeWidth={1.5} />
         </div>
-
-        {/* Divider */}
-        <div style={{
-          width: 48, height: 1, marginBottom: 20,
-          background: `linear-gradient(90deg, transparent, ${cfg.color}80, transparent)`,
-        }} />
 
         {/* Title */}
-        <h1 style={{
-          fontSize: 24, fontWeight: 900, color: "#fff",
-          letterSpacing: "-0.02em", lineHeight: 1.15,
-          marginBottom: 12, maxWidth: 280,
-          textShadow: `0 0 24px ${cfg.color}40`,
-        }}>
+        <h1
+          style={{
+            fontSize: isPreview ? 22 : 28,
+            fontWeight: 600,
+            color: "#fafafa",
+            letterSpacing: "-0.02em",
+            lineHeight: 1.2,
+            marginBottom: 12,
+            margin: 0,
+          }}
+        >
           {cfg.title}
         </h1>
 
         {/* Description */}
-        <p style={{
-          fontSize: 13, color: "rgba(255,255,255,0.45)",
-          lineHeight: 1.65, maxWidth: 260, marginBottom: 28,
-        }}>
+        <p
+          style={{
+            fontSize: 14,
+            color: "rgba(255,255,255,0.5)",
+            lineHeight: 1.6,
+            maxWidth: 320,
+            marginTop: 14,
+            marginBottom: 32,
+            fontWeight: 400,
+          }}
+        >
           {cfg.description}
         </p>
 
-        {/* Dots */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {[0, 1, 2].map(i => (
-            <div key={i} style={{
-              width: 7, height: 7, borderRadius: "50%",
+        {/* Status badge — тонкий мінімалістичний індикатор */}
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 14px",
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
               background: cfg.color,
-              boxShadow: `0 0 8px ${cfg.color}`,
-              opacity: 0.8,
-              animation: `maint-bounce 1.4s ease-in-out ${i * 0.18}s infinite`,
-            }} />
-          ))}
+              animation: "maint-pulse 1.6s ease-in-out infinite",
+            }}
+          />
+          <span
+            style={{
+              fontSize: 11,
+              color: "rgba(255,255,255,0.55)",
+              letterSpacing: "0.08em",
+              fontWeight: 500,
+              textTransform: "uppercase",
+            }}
+          >
+            CHERNIHIV RP
+          </span>
         </div>
       </div>
 
-      {/* Keyframes */}
+      {/* Тонка лінія знизу */}
+      {!isPreview && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 28,
+            left: "50%",
+            transform: "translateX(-50%)",
+            fontSize: 11,
+            color: "rgba(255,255,255,0.25)",
+            letterSpacing: "0.05em",
+          }}
+        >
+          Дякуємо за терпіння
+        </div>
+      )}
+
       <style>{`
-        @keyframes maint-blink   { 0%,100%{opacity:1} 50%{opacity:0.3} }
-        @keyframes maint-pulse   { 0%,100%{box-shadow:0 0 32px ${cfg.color}35,0 0 64px ${cfg.color}15} 50%{box-shadow:0 0 48px ${cfg.color}55,0 0 96px ${cfg.color}25} }
-        @keyframes maint-bounce  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-        @keyframes maint-spin-slow { to{transform:rotate(360deg)} }
+        @keyframes maint-pulse  { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.85)} }
+        @keyframes maint-breath { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
       `}</style>
     </div>
   );
 }
 
-function hexToRgb(hex: string): [number, number, number] {
-  const r = parseInt(hex.slice(1, 3), 16) || 245;
-  const g = parseInt(hex.slice(3, 5), 16) || 158;
-  const b = parseInt(hex.slice(5, 7), 16) || 11;
-  return [r, g, b];
-}
-
 // ─── Таб в адмінці ────────────────────────────────────────────────────────────
 export default function TechWorkTab() {
-  const [cfg, setCfg]       = useState<MaintenanceConfig>(DEFAULT);
+  const [cfg, setCfg]         = useState<MaintenanceConfig>(DEFAULT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [preview, setPreview] = useState(false);
@@ -325,11 +214,23 @@ export default function TechWorkTab() {
     const next = { ...cfg, ...patch };
     setCfg(next);
     setSaving(true);
-    await dbUpsert("maintenance_mode", { id: 1, ...next, updated_at: new Date().toISOString() }, { onConflict: "id" });
+    const { error } = await dbUpsert(
+      "maintenance_mode",
+      { id: 1, ...next, updated_at: new Date().toISOString() },
+      { onConflict: "id" }
+    );
     setSaving(false);
-    toast.success(patch.enabled !== undefined
-      ? (patch.enabled ? "🔴 Тех. роботи УВІМКНЕНО" : "🟢 Тех. роботи ВИМКНЕНО")
-      : "✅ Збережено");
+    if (error) {
+      toast.error("❌ Помилка збереження: " + error.message);
+      // Відкочуємо локально, щоб UI відповідав реальному стану
+      setCfg(c => ({ ...c, ...(patch.enabled !== undefined ? { enabled: !patch.enabled } : {}) }));
+      return;
+    }
+    toast.success(
+      patch.enabled !== undefined
+        ? (patch.enabled ? "🔴 Тех. роботи УВІМКНЕНО" : "🟢 Тех. роботи ВИМКНЕНО")
+        : "✅ Збережено"
+    );
   };
 
   if (loading) return (
@@ -433,8 +334,7 @@ export default function TechWorkTab() {
                   style={{ background: color }} />
               ))}
               <input type="color" value={cfg.color} onChange={e => setCfg(c => ({ ...c, color: e.target.value }))}
-                className="w-8 h-8 rounded-full border-0 cursor-pointer bg-transparent" />
-              <span className="text-xs font-mono text-muted-foreground">{cfg.color}</span>
+                className="w-8 h-8 rounded-full cursor-pointer bg-transparent border-0" />
             </div>
           </div>
 
