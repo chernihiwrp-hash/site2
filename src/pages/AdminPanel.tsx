@@ -1,3 +1,4 @@
+import { dbSelect, dbInsert, dbUpdate, dbDelete, dbUpsert } from "../lib/db";
 import { useState, useEffect } from "react";
 import PageHeader from "../components/PageHeader";
 import { createPortal } from 'react-dom';
@@ -304,99 +305,150 @@ const AdminPanel = () => {
   } // 3. Закриваємо фігурну дужку блоку if (tab)
 
   // ── MENU ──
+  const CAT_META: Record<string, { icon: any; color: string; glow: string; danger?: boolean }> = {
+    "Виклики":   { icon: AlertTriangle, color: "hsl(0 80% 60%)",    glow: "hsl(0 80% 60% / 0.3)",   danger: true },
+    "Заявки":    { icon: FileText,      color: "hsl(210 80% 60%)",  glow: "hsl(210 80% 60% / 0.25)" },
+    "Ліцензії":  { icon: FileCheck,     color: "hsl(170 70% 50%)",  glow: "hsl(170 70% 50% / 0.25)" },
+    "Будинки":   { icon: Home,          color: "hsl(142 70% 50%)",  glow: "hsl(142 70% 50% / 0.25)" },
+    "Документи": { icon: ScrollText,    color: "hsl(45 90% 55%)",   glow: "hsl(45 90% 55% / 0.25)"  },
+    "Новини":    { icon: Newspaper,     color: "hsl(280 70% 65%)",  glow: "hsl(280 70% 65% / 0.25)" },
+    "Важливе":   { icon: ShieldAlert,   color: "hsl(0 80% 60%)",    glow: "hsl(0 80% 60% / 0.3)",   danger: true },
+    "Фінанси":   { icon: Coins,         color: "hsl(45 100% 55%)",  glow: "hsl(45 100% 55% / 0.3)"  },
+    "Фракції":   { icon: Shield,        color: "hsl(200 80% 60%)",  glow: "hsl(200 80% 60% / 0.25)" },
+    "Система":   { icon: Settings,      color: "hsl(0 0% 60%)",     glow: "hsl(0 0% 60% / 0.2)"     },
+  };
+
+  const seen2 = new Set<string>();
+  const catOrder2: string[] = [];
+  allowedTabs.forEach(t => { const c = t.category || "Інше"; if (!seen2.has(c)) { seen2.add(c); catOrder2.push(c); } });
+  const groups2: Record<string, typeof allowedTabs> = {};
+  allowedTabs.forEach(t => { const c = t.category || "Інше"; if (!groups2[c]) groups2[c] = []; groups2[c].push(t); });
+
   return (
-    <div className="min-h-screen pb-20 px-4 pt-4">
-      <PageHeader title="АДМІН ПАНЕЛЬ" subtitle="Управління сервером" backTo="/profile" />
-
-      {superAdmin && (
-        <div className="mb-4 animate-fade-in">
-          <div className="rounded-2xl px-4 py-3 flex items-center gap-3"
-            style={{ background: "linear-gradient(135deg, hsl(45 100% 55% / 0.1), hsl(45 100% 55% / 0.04))", border: "1px solid hsl(45 100% 55% / 0.25)", boxShadow: "0 0 20px hsl(45 100% 55% / 0.08)" }}>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "hsl(45 100% 55% / 0.15)", border: "1px solid hsl(45 100% 55% / 0.3)" }}>
-              <Crown className="w-5 h-5 text-yellow-400" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-yellow-400">Супер-адміністратор</p>
-              <p className="text-[10px] text-muted-foreground">Повний доступ · Управління правами</p>
-            </div>
-            <button onClick={() => setTab("superadmin")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium active:scale-95 transition-all"
-              style={{ background: "hsl(45 100% 55% / 0.15)", border: "1px solid hsl(45 100% 55% / 0.3)", color: "hsl(45 100% 55%)" }}>
-              <UserCog className="w-3.5 h-3.5" /> Права
-            </button>
+    <div className="min-h-screen pb-24 pt-0" style={{ background: "hsl(0 0% 3%)" }}>
+      {/* HEADER */}
+      <div className="relative overflow-hidden px-4 pt-12 pb-6 mb-2"
+        style={{ background: "linear-gradient(180deg, hsl(0 0% 6%) 0%, hsl(0 0% 3%) 100%)" }}>
+        <div className="absolute inset-0 opacity-30"
+          style={{ background: "radial-gradient(ellipse 80% 50% at 50% 0%, hsl(84 81% 44% / 0.15), transparent)" }} />
+        <button onClick={() => window.history.back()} className="absolute top-4 left-4 w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90"
+          style={{ background: "hsl(0 0% 10%)", border: "1px solid hsl(0 0% 18%)" }}>
+          <ChevronRight className="w-4 h-4 text-muted-foreground rotate-180" />
+        </button>
+        <div className="text-center relative">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3"
+            style={{ background: "linear-gradient(135deg, hsl(84 81% 44% / 0.2), hsl(84 81% 44% / 0.05))", border: "1px solid hsl(84 81% 44% / 0.3)", boxShadow: "0 0 30px hsl(84 81% 44% / 0.2)" }}>
+            <ShieldAlert className="w-7 h-7" style={{ color: "hsl(84 81% 44%)" }} />
           </div>
+          <h1 className="text-xl font-black tracking-tight text-white">Адмін Панель</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Управління сервером</p>
         </div>
-      )}
+      </div>
 
-      {/* Restrictions panel button */}
-      <RestrictionsButton onOpen={() => setTab("restrictions")} />
+      <div className="px-4 space-y-2">
+        {/* Супер-адмін бейдж */}
+        {superAdmin && (
+          <button onClick={() => setTab("superadmin")} className="w-full mb-2 transition-all active:scale-[0.98]">
+            <div className="relative overflow-hidden rounded-2xl px-4 py-3.5 flex items-center gap-3"
+              style={{ background: "linear-gradient(135deg, hsl(45 100% 55% / 0.12), hsl(45 100% 30% / 0.06))", border: "1px solid hsl(45 100% 55% / 0.3)", boxShadow: "0 0 25px hsl(45 100% 55% / 0.1)" }}>
+              <div className="absolute top-0 right-0 w-32 h-32 opacity-10"
+                style={{ background: "radial-gradient(circle, hsl(45 100% 55%), transparent)", transform: "translate(30%, -30%)" }} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "hsl(45 100% 55% / 0.2)", border: "1px solid hsl(45 100% 55% / 0.4)" }}>
+                <Crown className="w-5 h-5" style={{ color: "hsl(45 100% 55%)" }} />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-bold" style={{ color: "hsl(45 100% 65%)" }}>Супер-адміністратор</p>
+                <p className="text-[10px] text-muted-foreground">Повний доступ · Натисніть для управління правами</p>
+              </div>
+              <ChevronRight className="w-4 h-4" style={{ color: "hsl(45 100% 55%)" }} />
+            </div>
+          </button>
+        )}
 
-      <div className="space-y-4 animate-fade-in">
-        {(() => {
-          const CAT_ICONS: Record<string, any> = {
-            "Виклики":   AlertTriangle,
-            "Заявки":    FileText,
-            "Ліцензії":  FileCheck,
-            "Будинки":   Home,
-            "Документи": ScrollText,
-            "Новини":    Newspaper,
-            "Важливе":   ShieldAlert,
-            "Фінанси":   Coins,
-            "Фракції":   Shield,
-            "Система":   Settings,
-          };
-          const CAT_DANGER: Record<string, boolean> = {
-            "Виклики": true, "Важливе": true,
-          };
-          // Group tabs by category preserving TAB_LIST order
-          const seen = new Set<string>();
-          const catOrder: string[] = [];
-          allowedTabs.forEach(t => {
-            const cat = t.category || "Інше";
-            if (!seen.has(cat)) { seen.add(cat); catOrder.push(cat); }
-          });
-          const groups: Record<string, typeof allowedTabs> = {};
-          allowedTabs.forEach(t => {
-            const cat = t.category || "Інше";
-            if (!groups[cat]) groups[cat] = [];
-            groups[cat].push(t);
-          });
-          return catOrder.map(cat => {
-            const tabs = groups[cat];
-            const CatIcon = CAT_ICONS[cat] || Settings;
-            const isDanger = CAT_DANGER[cat] || false;
-            return (
-              <div key={cat}>
-                <div className={`flex items-center gap-2 mb-2 px-1`}>
-                  <CatIcon className={`w-3.5 h-3.5 ${isDanger ? "text-destructive" : "text-muted-foreground"}`} />
-                  <p className={`text-[10px] font-bold uppercase tracking-widest ${isDanger ? "text-destructive/70" : "text-muted-foreground"}`}>{cat}</p>
+        <RestrictionsButton onOpen={() => setTab("restrictions")} />
+
+        {/* Категорії */}
+        {catOrder2.map((cat, catIdx) => {
+          const tabs = groups2[cat];
+          const meta = CAT_META[cat] || { icon: Settings, color: "hsl(0 0% 60%)", glow: "hsl(0 0% 60% / 0.2)" };
+          const CatIcon = meta.icon;
+          return (
+            <div key={cat} className="animate-fade-in" style={{ animationDelay: `${catIdx * 40}ms` }}>
+              {/* Заголовок категорії */}
+              <div className="flex items-center gap-2 px-1 py-2 mt-1">
+                <CatIcon className="w-3 h-3" style={{ color: meta.color, opacity: 0.7 }} />
+                <span className="text-[9px] font-black uppercase tracking-[0.2em]"
+                  style={{ color: meta.danger ? "hsl(0 70% 55%)" : "hsl(0 0% 40%)" }}>{cat}</span>
+                <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${meta.color}40, transparent)` }} />
+              </div>
+
+              {/* Кнопки у 2 колонки якщо > 2 кнопки, інакше в 1 */}
+              {tabs.length >= 3 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {tabs.map((t, i) => (
+                    <button key={t.id} onClick={() => setTab(t.id)}
+                      className="relative overflow-hidden rounded-2xl p-3.5 text-left transition-all active:scale-[0.96] hover:scale-[1.02]"
+                      style={{
+                        background: t.danger
+                          ? "linear-gradient(135deg, hsl(0 70% 50% / 0.1), hsl(0 0% 5%))"
+                          : "linear-gradient(135deg, hsl(0 0% 9%), hsl(0 0% 6%))",
+                        border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.25)" : "hsl(0 0% 15%)"}`,
+                        animationDelay: `${(catIdx * 5 + i) * 30}ms`,
+                      }}>
+                      <div className="absolute top-0 right-0 w-16 h-16 opacity-20"
+                        style={{ background: `radial-gradient(circle, ${t.danger ? "hsl(0 70% 50%)" : meta.color}, transparent)`, transform: "translate(40%, -40%)" }} />
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-2.5"
+                        style={{
+                          background: t.danger ? "hsl(0 70% 50% / 0.15)" : `${meta.color}18`,
+                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.3)" : `${meta.color}35`}`,
+                        }}>
+                        <t.icon className="w-4 h-4" style={{ color: t.danger ? "hsl(0 70% 60%)" : meta.color }} />
+                      </div>
+                      <p className="text-xs font-semibold leading-tight"
+                        style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 90%)" }}>{t.label}</p>
+                    </button>
+                  ))}
                 </div>
+              ) : (
                 <div className="space-y-1.5">
                   {tabs.map((t, i) => (
-                    <button key={t.id} onClick={() => setTab(t.id)} className="w-full animate-slide-up" style={{ animationDelay: `${i * 25}ms` }}>
-                      <div className={`liquid-glass-card rounded-2xl px-4 py-3 flex items-center justify-between transition-all duration-200 hover:scale-[1.01] active:scale-[0.98] ${t.danger ? "border-destructive/20 hover:border-destructive/30" : "hover:border-primary/20"}`}
-                        style={t.danger ? { boxShadow: "0 0 10px hsl(0 70% 50% / 0.07)" } : {}}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.danger ? "bg-destructive/10 border border-destructive/20" : "bg-primary/10 border border-primary/15"}`}>
-                            <t.icon className={`w-4 h-4 ${t.danger ? "text-destructive" : "text-primary"}`} />
-                          </div>
-                          <span className={`text-sm font-medium ${t.danger ? "text-destructive" : "text-foreground"}`}>{t.label}</span>
+                    <button key={t.id} onClick={() => setTab(t.id)} className="w-full transition-all active:scale-[0.98]">
+                      <div className="relative overflow-hidden rounded-2xl px-4 py-3.5 flex items-center gap-3"
+                        style={{
+                          background: t.danger
+                            ? "linear-gradient(135deg, hsl(0 70% 50% / 0.08), hsl(0 0% 5%))"
+                            : "linear-gradient(135deg, hsl(0 0% 9%), hsl(0 0% 6%))",
+                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.2)" : "hsl(0 0% 14%)"}`,
+                        }}>
+                        <div className="absolute top-0 right-0 w-24 h-24 opacity-10"
+                          style={{ background: `radial-gradient(circle, ${t.danger ? "hsl(0 70% 50%)" : meta.color}, transparent)`, transform: "translate(40%, -40%)" }} />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                          style={{
+                            background: t.danger ? "hsl(0 70% 50% / 0.12)" : `${meta.color}15`,
+                            border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.25)" : `${meta.color}30`}`,
+                            boxShadow: `0 0 12px ${t.danger ? "hsl(0 70% 50% / 0.1)" : `${meta.color}15`}`,
+                          }}>
+                          <t.icon className="w-4 h-4" style={{ color: t.danger ? "hsl(0 70% 60%)" : meta.color }} />
                         </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-semibold flex-1 text-left"
+                          style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 92%)" }}>{t.label}</span>
+                        <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "hsl(0 0% 30%)" }} />
                       </div>
                     </button>
                   ))}
                 </div>
-              </div>
-            );
-          });
-        })()}
+              )}
+            </div>
+          );
+        })}
 
         {allowedTabs.length === 0 && (
-          <div className="text-center py-12 liquid-glass-card rounded-2xl">
-            <Lock className="w-8 h-8 text-muted-foreground opacity-20 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Немає доступних розділів</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">Зверніться до супер-адміна</p>
+          <div className="text-center py-16 rounded-2xl mt-4"
+            style={{ background: "hsl(0 0% 6%)", border: "1px solid hsl(0 0% 12%)" }}>
+            <Lock className="w-10 h-10 mx-auto mb-3 opacity-20" style={{ color: "hsl(84 81% 44%)" }} />
+            <p className="text-sm font-semibold text-muted-foreground">Немає доступних розділів</p>
+            <p className="text-xs text-muted-foreground/50 mt-1">Зверніться до супер-адміністратора</p>
           </div>
         )}
       </div>
