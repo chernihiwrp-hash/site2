@@ -270,7 +270,8 @@ const RegisterModal = ({ onDone }: { onDone: (nick: string) => void }) => {
           values: {
             username: nick.trim(),
             telegram_id: (tgUser && !isSecondAccount) ? String(tgUser.id) : null,
-            avatar_url: (tgUser && !isSecondAccount) ? (tgUser?.photo_url || null) : null,
+            // Аватарка з TG ставиться завжди (в т.ч. для 2-го акаунту)
+            avatar_url: tgUser?.photo_url || null,
             role: "player",
             balance: 0,
             password: password,
@@ -674,6 +675,28 @@ const App = () => {
       const isReg = localStorage.getItem("crp_registered") === "1";
       const savedNickCheck = localStorage.getItem("crp_nick") || "";
       const hasPassword = !!(localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password"));
+
+      // ⚡ Перевіряємо, чи юзер досі існує в БД (могли видалити з адмінки).
+      // Якщо ні — чистимо локалку і виводимо вікно реєстрації заново.
+      if (isReg && savedNickCheck) {
+        try {
+          const { data: dbUser } = await supabase
+            .from("users")
+            .select("id")
+            .ilike("username", savedNickCheck)
+            .maybeSingle();
+          if (!dbUser) {
+            localStorage.removeItem("crp_registered");
+            localStorage.removeItem("crp_password");
+            sessionStorage.removeItem("crp_password");
+            localStorage.removeItem("crp_nick");
+            removeAccount(savedNickCheck);
+            setRegistered(false);
+            return;
+          }
+        } catch { /* мережева помилка — не блокуємо */ }
+      }
+
       setRegistered(isReg && !!savedNickCheck && hasPassword);
     };
     checkBan();
