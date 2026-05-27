@@ -170,10 +170,8 @@ const AdminPanel = () => {
 
   useEffect(() => {
     if (tab === "nft") {
-      supabase.from("nft_gifts")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .then(({ data }) => setNftGifts(data || []));
+      dbSelect("nft_gifts", { order: { col: "created_at", dir: "desc" } })
+        .then(({ data }) => setNftGifts((data || []) as any[]));
     }
   }, [tab]);
 
@@ -1025,11 +1023,8 @@ const PlatesTab = () => {
 
   const fetchPlates = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("car_plates")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (data) setPlates(data);
+    const { data } = await dbSelect("car_plates", { order: { col: "created_at", dir: "desc" } });
+    if (data) setPlates(data as any[]);
     setLoading(false);
   };
 
@@ -1245,7 +1240,7 @@ const RecruitmentTab = () => {
       setLoading(true);
       const [map, { data: dbFactions }] = await Promise.all([
         store.getRecruitmentMap(),
-        supabase.from("factions").select("name"),
+        dbSelect("factions", { columns: "name" }),
       ]);
       setRecruitMap(map);
       const dbNames = (dbFactions || []).map((f: any) => f.name);
@@ -1632,11 +1627,10 @@ const FactionAppsTab = () => {
   const load = async () => {
     setLoading(true);
     try {
-      // Завантажуємо заявки напряму з supabase — без обмежень
-      const { data, error } = await supabase
-        .from("faction_applications")
-        .select("*")
-        .order("created_at", { ascending: false });
+      // Завантажуємо заявки через авторизований dbSelect
+      const { data, error } = await dbSelect("faction_applications", {
+        order: { col: "created_at", dir: "desc" },
+      });
       if (error) { console.error("faction_applications load error:", error); }
       const mapped: FactionApplication[] = (data || []).map((r: Record<string, unknown>) => {
         const fd = (r.form_data as Record<string, unknown>) || {};
@@ -1658,7 +1652,7 @@ const FactionAppsTab = () => {
       setApps(mapped);
 
       // Завантажуємо список всіх фракцій
-      const { data: fData } = await supabase.from("factions").select("id, name, image_url, color").order("name");
+      const { data: fData } = await dbSelect("factions", { columns: "id, name, image_url, color", order: { col: "name", dir: "asc" } });
       setFactions(fData || []);
     } catch(e) { console.error(e); }
     setLoading(false);
@@ -2679,10 +2673,10 @@ const LeaderAssignmentBlock = ({ factionId, factionName, onAssigned }: { faction
 
   useEffect(() => {
     const load = async () => {
-      const { data: apps } = await supabase
-        .from("faction_applications")
-        .select("username, form_data, faction_id, faction_name")
-        .eq("status", "approved");
+      const { data: apps } = await dbSelect("faction_applications", {
+        columns: "username, form_data, faction_id, faction_name",
+        filters: [{ col: "status", op: "eq", value: "approved" }],
+      });
 
       const matched = (apps || []).filter((a: Record<string, unknown>) => {
         const fid = String(a.faction_id || "");
@@ -2695,14 +2689,17 @@ const LeaderAssignmentBlock = ({ factionId, factionName, onAssigned }: { faction
         return (fd.nick as string) || (a.username as string) || "";
       }).filter(Boolean);
 
-      const { data: usersData } = await supabase.from("users").select("username, avatar_url").in("username", usernames);
+      const { data: usersData } = await dbSelect("users", {
+        columns: "username, avatar_url",
+        filters: [{ col: "username", op: "in", value: usernames }],
+      });
       const avatarMap: Record<string, string | null> = {};
       (usersData || []).forEach((u: Record<string, unknown>) => {
         avatarMap[(u.username as string).toLowerCase()] = (u.avatar_url as string) || null;
       });
       setMembers(usernames.map(n => ({ name: n, avatar: avatarMap[n.toLowerCase()] || null })));
 
-      const { data: leaderData } = await supabase
+      const { data: leaderData } = await dbSelect("faction_leaders", { columns: "leader_username, deputy_username", filters: [{ col: "faction_name", op: "ilike", value: factionName }], limit: 1 }).then(r => ({ data: r.data })); const _skip = supabase
         .from("faction_leaders")
         .select("leader_username, deputy_username")
         .eq("faction_name", factionName.toLowerCase())
@@ -2856,11 +2853,10 @@ const ManageFactionsTab = () => {
   const [editActiveTab, setEditActiveTab] = useState<"basic" | "design" | "form" | "leader">("basic");
 
 const fetchPlayers = async () => {
-  // 1. Отримуємо тільки дані з faction_applications (БЕЗ JOIN)
-  const { data: apps, error } = await supabase
-    .from("faction_applications")
-    .select("id, username, faction_name, status")
-    .eq("status", "approved");
+  const { data: apps, error } = await dbSelect("faction_applications", {
+    columns: "id, username, faction_name, status",
+    filters: [{ col: "status", op: "eq", value: "approved" }],
+  });
 
   if (error) {
     console.error("Помилка:", error);
@@ -2868,14 +2864,12 @@ const fetchPlayers = async () => {
   }
 
   if (apps && apps.length > 0) {
-    // 2. Збираємо всі нікнейми
-    const usernames = apps.map(a => a.username).filter(Boolean);
+    const usernames = (apps as any[]).map((a: any) => a.username).filter(Boolean);
 
-    // 3. Отримуємо аватарки з таблиці users
-    const { data: usersData } = await supabase
-      .from("users")
-      .select("username, avatar_url")
-      .in("username", usernames);
+    const { data: usersData } = await dbSelect("users", {
+      columns: "username, avatar_url",
+      filters: [{ col: "username", op: "in", value: usernames }],
+    });
 
     // Створюємо карту аватарок
     const avatarMap: Record<string, string | null> = {};
@@ -2917,7 +2911,7 @@ useEffect(() => {
     setLoading(true);
     
     // 1. Завантажуємо кастомні фракції (твій код залишається)
-    const { data: f } = await supabase.from("factions").select("*").order("sort_order", { ascending: true, nullsFirst: false }).order("created_at");
+    const { data: f } = await dbSelect("factions", { order: { col: "created_at", dir: "asc" } });
     
     if (f) {
       setFactions([...STATIC_FACTION_LIST, ...f]);
@@ -2951,7 +2945,8 @@ useEffect(() => {
     
     // Load from Supabase if DB faction
     if (f.id > 0) {
-      const { data: fd } = await supabase.from("factions").select("*").eq("id", f.id).maybeSingle();
+      const { data: fdArr } = await dbSelect("factions", { filters: [{ col: "id", op: "eq", value: (f as any).id }], limit: 1 });
+      const fd = fdArr?.[0];
       if (fd) {
         setEditDesc((fd.description as string) || "");
         setEditIcon((fd.icon_name as string) || "Shield");
@@ -2967,7 +2962,8 @@ useEffect(() => {
     
     // Static faction — load from Supabase faction_overrides
     const slug = f.name.toLowerCase().replace(/\s+/g, "_");
-    const { data: ov } = await supabase.from("faction_overrides").select("*").eq("faction_slug", slug).maybeSingle();
+    const { data: ovArr } = await dbSelect("faction_overrides", { filters: [{ col: "faction_slug", op: "eq", value: slug }], limit: 1 });
+    const ov = ovArr?.[0] || null;
     if (ov) {
       setEditDesc((ov.description as string) || "");
       setEditIcon((ov.icon_name as string) || "Shield");
