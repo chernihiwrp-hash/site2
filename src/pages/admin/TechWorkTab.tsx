@@ -4,9 +4,24 @@ import { dbUpsert, dbSelect } from "../../lib/db";
 import NeonCard from "../../components/NeonCard";
 import GradientButton from "../../components/GradientButton";
 import { toast } from "sonner";
-import { Wrench, Power, PowerOff, RefreshCw } from "lucide-react";
+import {
+  Wrench, Power, PowerOff, RefreshCw,
+  Settings, HardHat, Construction, Hammer, Laptop, Monitor,
+  Zap, Plug, Globe, Gamepad2, Building2, Lock, Shield, Target,
+  Server, Cpu, Database, WifiOff, AlertTriangle, Tool
+} from "lucide-react";
 
-const PRESET_ICONS = ["fix","⚙️","🛠️","🚧","🔨","💻","🖥️","⚡","🔌","🌐","🎮","🏗️","🔒","🛡️","🎯"];
+// Icon map for rendering
+const ICON_MAP: Record<string, React.ElementType> = {
+  Wrench, Settings, HardHat: Construction, Construction, Hammer,
+  Laptop, Monitor, Zap, Plug, Globe, Gamepad2, Building2, Lock,
+  Shield, Target, Server, Cpu, Database, WifiOff, AlertTriangle, Power,
+};
+
+const PRESET_ICON_KEYS = [
+  "Wrench","Settings","Construction","Hammer","Laptop","Monitor",
+  "Zap","Plug","Globe","Gamepad2","Building2","Lock","Shield","Target","Server","Cpu","Database","WifiOff","AlertTriangle","Power"
+];
 const PRESET_COLORS = ["#f59e0b","#ef4444","#8b5cf6","#06b6d4","#10b981","#f97316","#ec4899","#6366f1","#84cc16","#14b8a6"];
 
 export type MaintenanceConfig = {
@@ -22,7 +37,7 @@ const DEFAULT: MaintenanceConfig = {
   enabled: false,
   title: "Технічні роботи",
   description: "Зараз проводяться технічні роботи. Зачекайте трохи — ми скоро повернемося!",
-  icon: "🔧",
+  icon: "Wrench",
   color: "#f59e0b",
 };
 
@@ -52,7 +67,7 @@ export function MaintenanceScreen({ cfg, isPreview = false }: { cfg: Maintenance
       size: number; opacity: number; char: string; rotation: number; vr: number;
     };
 
-    const chars = [cfg.icon, "⚙", "✦", "◈", "▸", "◉", "⟳", "✕", "◌", "⬡", cfg.icon, "✦"];
+    const chars = ["⚙", "✦", "◈", "▸", "◉", "⟳", "✕", "◌", "⬡", "✦"];
 
     const make = (): Particle => ({
       x:        Math.random() * canvas.width,
@@ -225,7 +240,12 @@ export function MaintenanceScreen({ cfg, isPreview = false }: { cfg: Maintenance
             boxShadow: `0 0 32px ${cfg.color}35, 0 0 64px ${cfg.color}15`,
             animation: "maint-pulse 2.5s ease-in-out infinite",
           }}>
-            {cfg.icon}
+            {(() => {
+              const IconComp = ICON_MAP[cfg.icon];
+              return IconComp
+                ? <IconComp style={{ width: 38, height: 38, color: cfg.color }} />
+                : <span style={{ fontSize: 38 }}>{cfg.icon}</span>;
+            })()}
           </div>
         </div>
 
@@ -390,16 +410,17 @@ export default function TechWorkTab() {
 
           <div className="space-y-1.5">
             <label className="text-[9px] font-black uppercase tracking-[0.15em]" style={{ color: "hsl(0 0% 40%)" }}>Іконка</label>
-            <div className="flex flex-wrap gap-2">
-              {PRESET_ICONS.map(icon => (
-                <button key={icon} onClick={() => setCfg(c => ({ ...c, icon }))}
-                  className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all active:scale-90 ${cfg.icon === icon ? "border-2 scale-110" : "liquid-glass border border-border hover:border-primary/30"}`}
-                  style={cfg.icon === icon ? { borderColor: cfg.color, background: cfg.color + "22" } : {}}>
-                  {icon}
-                </button>
-              ))}
-              <input className="w-10 h-10 rounded-xl liquid-glass border border-border text-center text-lg bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/40"
-                value={cfg.icon} onChange={e => setCfg(c => ({ ...c, icon: e.target.value }))} maxLength={2} title="Свій emoji" />
+            <div className="grid grid-cols-5 gap-2">
+              {PRESET_ICON_KEYS.map(key => {
+                const IconComp = ICON_MAP[key];
+                return (
+                  <button key={key} onClick={() => setCfg(c => ({ ...c, icon: key }))}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 ${cfg.icon === key ? "border-2 scale-110" : "liquid-glass border border-border hover:border-primary/30"}`}
+                    style={cfg.icon === key ? { borderColor: cfg.color, background: cfg.color + "22" } : {}}>
+                    {IconComp ? <IconComp className="w-5 h-5" style={{ color: cfg.icon === key ? cfg.color : undefined }} /> : key}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
