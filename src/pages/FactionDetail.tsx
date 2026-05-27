@@ -70,6 +70,8 @@ const FactionDetail = () => {
   const [resignLoading, setResignLoading] = useState(false);
   const [recruitClosed, setRecruitClosed] = useState(false);
   const [recruitOpen, setRecruitOpen] = useState<boolean | null>(null);
+  const [resolvedLeader, setResolvedLeader] = useState("");
+  const [resolvedDeputy, setResolvedDeputy] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -269,6 +271,8 @@ const FactionDetail = () => {
 
       mems.sort((a, b) => (b.isLeader ? 2 : b.isDeputy ? 1 : 0) - (a.isLeader ? 2 : a.isDeputy ? 1 : 0));
 
+      setResolvedLeader(leaderUsername);
+      setResolvedDeputy(deputyUsername);
       setMembers(mems);
       if (nick) setIsMember(mems.some(m => m.name.toLowerCase() === nick.toLowerCase()));
       setMembersLoading(false);
@@ -399,9 +403,14 @@ const handleResign = async () => {
                 <p className="text-xs text-muted-foreground mt-1">{faction.desc}</p>
                 <p className="text-xs text-muted-foreground">
                   Учасників: {membersLoading ? "..." : members.length}
-                  {faction.leaderUsername && (
+                  {resolvedLeader && (
                     <span className="ml-2 text-yellow-400">
-                      · Лідер: {faction.leaderUsername}
+                      · Лідер: {resolvedLeader}
+                    </span>
+                  )}
+                  {resolvedDeputy && (
+                    <span className="ml-2" style={{ color: "hsl(200 80% 65%)" }}>
+                      · Зам: {resolvedDeputy}
                     </span>
                   )}
                 </p>
