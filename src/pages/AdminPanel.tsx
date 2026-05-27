@@ -257,111 +257,149 @@ const AdminPanel = () => {
     if (!current) return null;
 
     return (
-      <div className="min-h-screen pb-20 px-4 pt-4">
-        <div className="flex items-center gap-3 mb-5">
-          <button onClick={() => setTab(null)} className="w-9 h-9 rounded-xl liquid-glass flex items-center justify-center active:scale-95">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${current.danger ? "bg-destructive/10 border border-destructive/20" : "bg-primary/10 border border-primary/15"}`}>
-            <current.icon className={`w-4 h-4 ${current.danger ? "text-destructive" : "text-primary"}`} />
+      <div className="min-h-screen pb-24" style={{ background: "hsl(0 0% 3%)" }}>
+        {/* Sticky breadcrumb bar */}
+        <div className="sticky top-0 z-30 backdrop-blur-xl"
+          style={{ background: "hsl(0 0% 4% / 0.85)", borderBottom: "1px solid hsl(0 0% 10%)" }}>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <button onClick={() => setTab(null)}
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90"
+              style={{ background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 14%)" }}>
+              <ChevronLeft className="w-4 h-4 text-white/70" />
+            </button>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-[10px] uppercase tracking-[0.18em] text-white/30 font-bold shrink-0">Admin</span>
+              <ChevronRight className="w-3 h-3 text-white/20 shrink-0" />
+              <span className="text-xs font-semibold text-white/50 truncate">{current.sub}</span>
+            </div>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${current.danger ? "bg-destructive/10 border border-destructive/25" : ""}`}
+              style={current.danger ? {} : { background: "hsl(84 81% 44% / 0.1)", border: "1px solid hsl(84 81% 44% / 0.2)" }}>
+              <current.icon className={`w-4 h-4 ${current.danger ? "text-destructive" : ""}`}
+                style={current.danger ? {} : { color: "hsl(84 81% 44%)" }} />
+            </div>
           </div>
-          <div>
-            <h1 className={`font-display text-sm font-bold tracking-wider ${current.danger ? "text-destructive" : "text-primary"}`}>
-              {current.label.toUpperCase()}
+          <div className="px-4 pb-3">
+            <h1 className={`text-base font-black tracking-tight ${current.danger ? "text-destructive" : "text-white"}`}>
+              {current.label}
             </h1>
-            <p className="text-[10px] text-muted-foreground">Адмін панель</p>
           </div>
         </div>
 
-        {/* ── Вкладки ── */}
-        {tab === "sos"             && <SosTab />}
-        {tab === "news"            && <NewsTab />}
-        {tab === "houses"          && <HousesTab />}
-        {tab === "wanted"          && <WantedTab />}
-        {tab === "election"        && <ElectionTab />}
-        {tab === "documents"       && <DocumentsTab />}
-        {tab === "factions"        && <FactionAppsTab />}
-        {tab === "applications"    && <AdminAppsTab />}
-        {tab === "tokens"          && <TokensTab />}
-        {tab === "voice"           && <VoiceTab />}
-        {tab === "licenses"        && <LicensesTab />}
-        {tab === "plates"          && <PlatesTab />} 
-        {tab === "house_requests"  && <HouseRequestsTab />}
-        {tab === "add_faction"     && <AddFactionTab />}
-        {tab === "manage_factions" && <ManageFactionsTab />}
-        {tab === "recruitment"     && <RecruitmentTab />}
-        {tab === "confiscation"    && <ConfiscationTab />}
-        {tab === "mayor_apps"      && <MayorAppsTab />}
-        {tab === "bans"            && <BansTab />}
-        {tab === "debug"           && <DebugTab />}
-        {tab === "db_logs"         && <DbLogsTab />}
-        {tab === "tech_work"        && <TechWorkTab />}
-        {/* ─── ВСТАВЛЯЙ СЮДА ─── */}
-        {tab === "nft" && (
-          <NftGiftsTab nftGifts={nftGifts} setNftGifts={setNftGifts} />
-        )}
- </div> // 1. Закриваємо внутрішній div вкладок
-    ); // 2. Закриваємо return і ставимо крапку з комою
-  } // 3. Закриваємо фігурну дужку блоку if (tab)
+        <div className="px-4 pt-4">
+          {tab === "sos"             && <SosTab />}
+          {tab === "news"            && <NewsTab />}
+          {tab === "houses"          && <HousesTab />}
+          {tab === "wanted"          && <WantedTab />}
+          {tab === "election"        && <ElectionTab />}
+          {tab === "documents"       && <DocumentsTab />}
+          {tab === "factions"        && <FactionAppsTab />}
+          {tab === "applications"    && <AdminAppsTab />}
+          {tab === "tokens"          && <TokensTab />}
+          {tab === "voice"           && <VoiceTab />}
+          {tab === "licenses"        && <LicensesTab />}
+          {tab === "plates"          && <PlatesTab />}
+          {tab === "house_requests"  && <HouseRequestsTab />}
+          {tab === "add_faction"     && <AddFactionTab />}
+          {tab === "manage_factions" && <ManageFactionsTab />}
+          {tab === "recruitment"     && <RecruitmentTab />}
+          {tab === "confiscation"    && <ConfiscationTab />}
+          {tab === "mayor_apps"      && <MayorAppsTab />}
+          {tab === "bans"            && <BansTab />}
+          {tab === "debug"           && <DebugTab />}
+          {tab === "db_logs"         && <DbLogsTab />}
+          {tab === "tech_work"       && <TechWorkTab />}
+          {tab === "nft" && (
+            <NftGiftsTab nftGifts={nftGifts} setNftGifts={setNftGifts} />
+          )}
+        </div>
+      </div>
+    );
+  }
 
-  // ── MENU ──
-  const CAT_META: Record<string, { icon: any; color: string; glow: string; danger?: boolean }> = {
-    "Виклики":   { icon: AlertTriangle, color: "hsl(0 80% 60%)",    glow: "hsl(0 80% 60% / 0.3)",   danger: true },
-    "Заявки":    { icon: FileText,      color: "hsl(210 80% 60%)",  glow: "hsl(210 80% 60% / 0.25)" },
-    "Ліцензії":  { icon: FileCheck,     color: "hsl(170 70% 50%)",  glow: "hsl(170 70% 50% / 0.25)" },
-    "Будинки":   { icon: Home,          color: "hsl(142 70% 50%)",  glow: "hsl(142 70% 50% / 0.25)" },
-    "Документи": { icon: ScrollText,    color: "hsl(45 90% 55%)",   glow: "hsl(45 90% 55% / 0.25)"  },
-    "Новини":    { icon: Newspaper,     color: "hsl(280 70% 65%)",  glow: "hsl(280 70% 65% / 0.25)" },
-    "Важливе":   { icon: ShieldAlert,   color: "hsl(0 80% 60%)",    glow: "hsl(0 80% 60% / 0.3)",   danger: true },
-    "Фінанси":   { icon: Coins,         color: "hsl(45 100% 55%)",  glow: "hsl(45 100% 55% / 0.3)"  },
-    "Фракції":   { icon: Shield,        color: "hsl(200 80% 60%)",  glow: "hsl(200 80% 60% / 0.25)" },
-    "Система":   { icon: Settings,      color: "hsl(0 0% 60%)",     glow: "hsl(0 0% 60% / 0.2)"     },
-  };
+  // ── MENU (REDESIGNED) ──
+  // Монохромний дизайн з єдиним лаймовим акцентом. Категорії — як секції
+  // з тонким хедером, табы — у вигляді 2-кол. карток. Danger = червоний.
+  const ACCENT = "hsl(84 81% 44%)";
+  const DANGER = "hsl(0 75% 60%)";
 
   const seen2 = new Set<string>();
   const catOrder2: string[] = [];
-  allowedTabs.forEach(t => { const c = t.category || "Інше"; if (!seen2.has(c)) { seen2.add(c); catOrder2.push(c); } });
+  allowedTabs.forEach(t => {
+    const c = t.category || "Інше";
+    if (!seen2.has(c)) { seen2.add(c); catOrder2.push(c); }
+  });
   const groups2: Record<string, typeof allowedTabs> = {};
-  allowedTabs.forEach(t => { const c = t.category || "Інше"; if (!groups2[c]) groups2[c] = []; groups2[c].push(t); });
+  allowedTabs.forEach(t => {
+    const c = t.category || "Інше";
+    if (!groups2[c]) groups2[c] = [];
+    groups2[c].push(t);
+  });
+
+  const totalCount = allowedTabs.length;
 
   return (
-    <div className="min-h-screen pb-24 pt-0">
+    <div className="min-h-screen pb-24" style={{ background: "hsl(0 0% 3%)" }}>
+      <style>{`
+        @keyframes ap-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .ap-fade-in { animation: ap-fade-in 0.4s cubic-bezier(.22,1,.36,1) both; }
+        .ap-tile { transition: transform .15s ease, background .2s ease, border-color .2s ease; }
+        .ap-tile:active { transform: scale(0.97); }
+      `}</style>
+
       {/* HEADER */}
-      <div className="relative overflow-hidden px-4 pt-12 pb-6 mb-2"
-        style={{ background: "linear-gradient(180deg, hsl(0 0% 6%) 0%, hsl(0 0% 3%) 100%)" }}>
-        <div className="absolute inset-0 opacity-30"
-          style={{ background: "radial-gradient(ellipse 80% 50% at 50% 0%, hsl(84 81% 44% / 0.15), transparent)" }} />
-        <button onClick={() => window.history.back()} className="absolute top-4 left-4 w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90"
-          style={{ background: "hsl(0 0% 10%)", border: "1px solid hsl(0 0% 18%)" }}>
-          <ChevronRight className="w-4 h-4 text-muted-foreground rotate-180" />
+      <div className="relative px-4 pt-10 pb-5">
+        <button onClick={() => window.history.back()}
+          className="absolute top-4 left-4 w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90"
+          style={{ background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 14%)" }}>
+          <ChevronLeft className="w-4 h-4 text-white/70" />
         </button>
-        <div className="text-center relative">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3"
-            style={{ background: "linear-gradient(135deg, hsl(84 81% 44% / 0.2), hsl(84 81% 44% / 0.05))", border: "1px solid hsl(84 81% 44% / 0.3)", boxShadow: "0 0 30px hsl(84 81% 44% / 0.2)" }}>
-            <ShieldAlert className="w-7 h-7" style={{ color: "hsl(84 81% 44%)" }} />
+
+        <div className="flex flex-col items-center text-center pt-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-3"
+            style={{ background: `${ACCENT.replace(')', ' / 0.08)')}`, border: `1px solid ${ACCENT.replace(')', ' / 0.18)')}` }}>
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 6px ${ACCENT}` }} />
+            <span className="text-[9px] font-black uppercase tracking-[0.18em]" style={{ color: ACCENT }}>Control Center</span>
           </div>
-          <h1 className="text-xl font-black tracking-tight text-white">Адмін Панель</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Управління сервером</p>
+          <h1 className="text-[26px] leading-none font-black tracking-tight text-white">Адмін Панель</h1>
+          <p className="text-[11px] text-white/35 mt-1.5">
+            {nick ? <>Увійшли як <span className="text-white/60 font-semibold">{nick}</span></> : "Управління сервером"}
+          </p>
+        </div>
+
+        {/* Stat strip */}
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <div className="rounded-xl px-3 py-2.5" style={{ background: "hsl(0 0% 6%)", border: "1px solid hsl(0 0% 11%)" }}>
+            <p className="text-[9px] uppercase tracking-wider text-white/35 font-bold">Розділів</p>
+            <p className="text-lg font-black text-white leading-tight mt-0.5">{totalCount}</p>
+          </div>
+          <div className="rounded-xl px-3 py-2.5" style={{ background: "hsl(0 0% 6%)", border: "1px solid hsl(0 0% 11%)" }}>
+            <p className="text-[9px] uppercase tracking-wider text-white/35 font-bold">Категорій</p>
+            <p className="text-lg font-black text-white leading-tight mt-0.5">{catOrder2.length}</p>
+          </div>
+          <div className="rounded-xl px-3 py-2.5" style={{ background: superAdmin ? "hsl(45 100% 55% / 0.08)" : "hsl(0 0% 6%)", border: `1px solid ${superAdmin ? "hsl(45 100% 55% / 0.25)" : "hsl(0 0% 11%)"}` }}>
+            <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: superAdmin ? "hsl(45 100% 60%)" : "hsl(0 0% 35%)" }}>Роль</p>
+            <p className="text-[11px] font-black leading-tight mt-1 truncate" style={{ color: superAdmin ? "hsl(45 100% 70%)" : "white" }}>
+              {superAdmin ? "Супер" : "Адмін"}
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="px-4 space-y-2">
-        {/* Супер-адмін бейдж */}
+      <div className="px-4 space-y-4">
+        {/* Супер-адмін action */}
         {superAdmin && (
-          <button onClick={() => setTab("superadmin")} className="w-full mb-2 transition-all active:scale-[0.98]">
-            <div className="relative overflow-hidden rounded-2xl px-4 py-3.5 flex items-center gap-3"
-              style={{ background: "linear-gradient(135deg, hsl(45 100% 55% / 0.12), hsl(45 100% 30% / 0.06))", border: "1px solid hsl(45 100% 55% / 0.3)", boxShadow: "0 0 25px hsl(45 100% 55% / 0.1)" }}>
-              <div className="absolute top-0 right-0 w-32 h-32 opacity-10"
-                style={{ background: "radial-gradient(circle, hsl(45 100% 55%), transparent)", transform: "translate(30%, -30%)" }} />
+          <button onClick={() => setTab("superadmin")} className="w-full ap-tile">
+            <div className="rounded-2xl px-4 py-3.5 flex items-center gap-3"
+              style={{ background: "linear-gradient(135deg, hsl(45 100% 55% / 0.1), hsl(0 0% 6%))", border: "1px solid hsl(45 100% 55% / 0.22)" }}>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "hsl(45 100% 55% / 0.2)", border: "1px solid hsl(45 100% 55% / 0.4)" }}>
-                <Crown className="w-5 h-5" style={{ color: "hsl(45 100% 55%)" }} />
+                style={{ background: "hsl(45 100% 55% / 0.15)", border: "1px solid hsl(45 100% 55% / 0.3)" }}>
+                <Crown className="w-5 h-5" style={{ color: "hsl(45 100% 60%)" }} />
               </div>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-bold" style={{ color: "hsl(45 100% 65%)" }}>Супер-адміністратор</p>
-                <p className="text-[10px] text-muted-foreground">Повний доступ · Натисніть для управління правами</p>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-bold text-white">Управління правами</p>
+                <p className="text-[10px] text-white/40 mt-0.5">Видавати доступ модераторам</p>
               </div>
-              <ChevronRight className="w-4 h-4" style={{ color: "hsl(45 100% 55%)" }} />
+              <ChevronRight className="w-4 h-4 text-white/30" />
             </div>
           </button>
         )}
@@ -371,108 +409,54 @@ const AdminPanel = () => {
         {/* Категорії */}
         {catOrder2.map((cat, catIdx) => {
           const tabs = groups2[cat];
-          const meta = CAT_META[cat] || { icon: Settings, color: "hsl(0 0% 60%)", glow: "hsl(0 0% 60% / 0.2)" };
-          const CatIcon = meta.icon;
           return (
-            <div key={cat} className="animate-fade-in" style={{ animationDelay: `${catIdx * 40}ms` }}>
-              {/* Заголовок категорії */}
-              <div className="flex items-center gap-2 px-1 py-2 mt-1">
-                <CatIcon className="w-3 h-3" style={{ color: meta.color, opacity: 0.7 }} />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em]"
-                  style={{ color: meta.danger ? "hsl(0 70% 55%)" : "hsl(0 0% 40%)" }}>{cat}</span>
-                <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${meta.color}40, transparent)` }} />
+            <div key={cat} className="ap-fade-in" style={{ animationDelay: `${catIdx * 30}ms` }}>
+              {/* Category header */}
+              <div className="flex items-center gap-2.5 mb-2 px-0.5">
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/45">{cat}</span>
+                <div className="flex-1 h-px" style={{ background: "linear-gradient(90deg, hsl(0 0% 18%), transparent)" }} />
+                <span className="text-[10px] text-white/25 font-mono tabular-nums">{tabs.length.toString().padStart(2, "0")}</span>
               </div>
 
-              {/* 3 кнопки — у ряд (cols-3), >3 — 2 колонки, інакше 1 */}
-              {tabs.length === 3 ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {tabs.map((t) => (
-                    <button key={t.id} onClick={() => setTab(t.id)}
-                      className="relative overflow-hidden rounded-2xl p-3 text-left transition-all active:scale-[0.96]"
-                      style={{
-                        background: t.danger
-                          ? `linear-gradient(135deg, hsl(0 70% 50% / 0.18), hsl(0 70% 50% / 0.04))`
-                          : `linear-gradient(135deg, ${meta.color}22, ${meta.color}06)`,
-                        border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.28)" : `${meta.color}30`}`,
-                        boxShadow: `0 0 20px ${t.danger ? "hsl(0 70% 50% / 0.08)" : `${meta.color}10`}`,
-                      }}>
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 mx-auto"
-                        style={{
-                          background: t.danger
-                            ? "linear-gradient(135deg, hsl(0 70% 50% / 0.22), hsl(0 70% 50% / 0.08))"
-                            : `linear-gradient(135deg, ${meta.color}30, ${meta.color}10)`,
-                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.3)" : `${meta.color}40`}`,
-                        }}>
-                        <t.icon className="w-4 h-4" style={{ color: t.danger ? "hsl(0 70% 60%)" : meta.color }} />
-                      </div>
-                      <p className="text-[11px] font-semibold leading-tight text-center"
-                        style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 92%)" }}>{t.label}</p>
-                    </button>
-                  ))}
-                </div>
-              ) : tabs.length > 3 ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {tabs.map((t) => (
-                    <button key={t.id} onClick={() => setTab(t.id)}
-                      className="relative overflow-hidden rounded-2xl p-4 text-left transition-all active:scale-[0.96]"
-                      style={{
-                        background: t.danger
-                          ? `linear-gradient(135deg, hsl(0 70% 50% / 0.15), hsl(0 70% 50% / 0.03))`
-                          : `linear-gradient(135deg, ${meta.color}1c, ${meta.color}05)`,
-                        border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.25)" : `${meta.color}28`}`,
-                        boxShadow: `0 0 18px ${t.danger ? "hsl(0 70% 50% / 0.06)" : `${meta.color}0c`}`,
-                      }}>
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3"
-                        style={{
-                          background: t.danger
-                            ? "linear-gradient(135deg, hsl(0 70% 50% / 0.22), hsl(0 70% 50% / 0.08))"
-                            : `linear-gradient(135deg, ${meta.color}30, ${meta.color}10)`,
-                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.3)" : `${meta.color}40`}`,
-                        }}>
-                        <t.icon className="w-4 h-4" style={{ color: t.danger ? "hsl(0 70% 60%)" : meta.color }} />
-                      </div>
-                      <p className="text-xs font-semibold leading-tight"
-                        style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 90%)" }}>{t.label}</p>
-                    </button>
-                  ))}
-                </div>
-
-              ) : (
-                <div className="space-y-1.5">
-                  {tabs.map((t, i) => (
-                    <button key={t.id} onClick={() => setTab(t.id)} className="w-full transition-all active:scale-[0.98]">
-                      <div className="relative overflow-hidden rounded-2xl px-4 py-3.5 flex items-center gap-3"
-                        style={{
-                          background: t.danger
-                            ? "hsl(0 70% 50% / 0.06)"
-                            : "hsl(0 0% 100% / 0.04)",
-                          border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.18)" : "hsl(0 0% 100% / 0.07)"}`,
-                        }}>
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                          style={{
-                            background: t.danger ? "hsl(0 70% 50% / 0.1)" : `${meta.color}12`,
-                            border: `1px solid ${t.danger ? "hsl(0 70% 50% / 0.22)" : `${meta.color}28`}`,
-                          }}>
-                          <t.icon className="w-4 h-4" style={{ color: t.danger ? "hsl(0 70% 60%)" : meta.color }} />
+              {/* Uniform 2-col grid */}
+              <div className="grid grid-cols-2 gap-2">
+                {tabs.map((t) => {
+                  const isDanger = !!t.danger;
+                  const tintBorder = isDanger ? "hsl(0 75% 60% / 0.22)" : "hsl(0 0% 13%)";
+                  const iconBg     = isDanger ? "hsl(0 75% 60% / 0.1)"  : "hsl(84 81% 44% / 0.08)";
+                  const iconBorder = isDanger ? "hsl(0 75% 60% / 0.25)" : "hsl(84 81% 44% / 0.18)";
+                  const iconColor  = isDanger ? DANGER                  : ACCENT;
+                  return (
+                    <button key={t.id} onClick={() => setTab(t.id)} className="ap-tile rounded-2xl text-left">
+                      <div className="rounded-2xl p-3 h-full flex flex-col"
+                        style={{ background: "hsl(0 0% 5.5%)", border: `1px solid ${tintBorder}`, minHeight: 96 }}>
+                        <div className="flex items-start justify-between mb-2.5">
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                            style={{ background: iconBg, border: `1px solid ${iconBorder}` }}>
+                            <t.icon className="w-[18px] h-[18px]" style={{ color: iconColor }} />
+                          </div>
+                          {isDanger && (
+                            <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded"
+                              style={{ background: "hsl(0 75% 60% / 0.12)", color: DANGER }}>!</span>
+                          )}
                         </div>
-                        <span className="text-sm font-semibold flex-1 text-left"
-                          style={{ color: t.danger ? "hsl(0 70% 65%)" : "hsl(0 0% 90%)" }}>{t.label}</span>
-                        <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "hsl(0 0% 28%)" }} />
+                        <p className="text-[12px] font-bold leading-tight text-white/90">{t.label}</p>
+                        <p className="text-[10px] text-white/35 mt-0.5">{t.sub}</p>
                       </div>
                     </button>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
             </div>
           );
         })}
 
         {allowedTabs.length === 0 && (
           <div className="text-center py-16 rounded-2xl mt-4"
-            style={{ background: "hsl(0 0% 6%)", border: "1px solid hsl(0 0% 12%)" }}>
-            <Lock className="w-10 h-10 mx-auto mb-3 opacity-20" style={{ color: "hsl(84 81% 44%)" }} />
-            <p className="text-sm font-semibold text-muted-foreground">Немає доступних розділів</p>
-            <p className="text-xs text-muted-foreground/50 mt-1">Зверніться до супер-адміністратора</p>
+            style={{ background: "hsl(0 0% 5%)", border: "1px solid hsl(0 0% 11%)" }}>
+            <Lock className="w-10 h-10 mx-auto mb-3 opacity-20" style={{ color: ACCENT }} />
+            <p className="text-sm font-semibold text-white/60">Немає доступних розділів</p>
+            <p className="text-xs text-white/30 mt-1">Зверніться до супер-адміністратора</p>
           </div>
         )}
       </div>
