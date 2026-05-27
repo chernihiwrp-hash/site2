@@ -5,6 +5,7 @@ import GradientButton from "../components/GradientButton";
 import { Users, User, Send, CheckCircle, Clock, Shield, Crown, LogOut, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { store, supabase } from "../lib/store";
+import { dbSelect } from "../lib/db";
 
 const factionsData: Record<string, { name: string; color: string; gradient: string; desc: string; dangerous?: boolean }> = {
   sbu:        { name: "СБУ",         color: "hsl(220, 70%, 55%)", gradient: "linear-gradient(135deg, hsl(220,70%,35%,0.2), hsl(220,70%,15%,0.08))", desc: "Служба безпеки України" },
@@ -74,7 +75,7 @@ const FactionDetail = () => {
     if (!id) return;
 
     const loadFaction = async () => {
-      const { data } = await supabase.from("factions").select("*").order("created_at", { ascending: true });
+      const { data } = await dbSelect("factions", { order: { col: "created_at", dir: "asc" } });
       let found = null;
 
       if (data && data.length > 0) {
@@ -105,11 +106,10 @@ const FactionDetail = () => {
       if (factionsData[id || ""]) {
         const staticF = factionsData[id || ""];
         const slug = staticF.name.toLowerCase().replace(/\s+/g, "_");
-        const { data: ov } = await supabase
-          .from("faction_overrides")
-          .select("*")
-          .eq("faction_slug", slug)
-          .maybeSingle();
+        const { data: ovArr } = await dbSelect("faction_overrides", {
+          filters: [{ col: "faction_slug", op: "eq", value: slug }], limit: 1,
+        });
+        const ov = ovArr?.[0] || null;
         if (ov) {
           const qs = (ov.questions as string[]) || [];
           if (qs.length) setQuestions(qs);
@@ -142,16 +142,17 @@ const FactionDetail = () => {
       let numericId: number | null = null;
       if (id && !isNaN(Number(id))) {
         numericId = Number(id);
-        const { data: fData } = await supabase
-          .from("factions").select("name").eq("id", numericId).maybeSingle();
-        if (fData?.name) dbFactionName = fData.name as string;
+        const { data: fDataArr } = await dbSelect("factions", {
+          columns: "name", filters: [{ col: "id", op: "eq", value: numericId }], limit: 1,
+        });
+        if (fDataArr?.[0]?.name) dbFactionName = fDataArr[0].name as string;
       }
 
       // 2. Завантажуємо ВСІ approved заявки одним запитом
-      const { data: allApps, error } = await supabase
-        .from("faction_applications")
-        .select("username, form_data, faction_id, faction_name")
-        .eq("status", "approved");
+      const { data: allApps, error } = await dbSelect("faction_applications", {
+        columns: "username, form_data, faction_id, faction_name",
+        filters: [{ col: "status", op: "eq", value: "approved" }],
+      });
 
       if (error) { console.error("loadMembers error:", error); setMembersLoading(false); return; }
       if (!allApps || allApps.length === 0) { setMembers([]); setMembersLoading(false); return; }
@@ -187,8 +188,10 @@ const FactionDetail = () => {
 
       const avatarMap: Record<string, string | null> = {};
       if (usernames.length > 0) {
-        const { data: usersData } = await supabase
-          .from("users").select("username, avatar_url").in("username", usernames);
+        const { data: usersData } = await dbSelect("users", {
+          columns: "username, avatar_url",
+          filters: [{ col: "username", op: "in", value: usernames }],
+        });
         (usersData || []).forEach((u: Record<string, unknown>) => {
           avatarMap[(u.username as string).toLowerCase()] = (u.avatar_url as string) || null;
         });
