@@ -344,23 +344,39 @@ const Index = () => {
                         onClick={() => setActiveServer(srv)}
                         className="w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all active:scale-95 hover:scale-[1.01]"
                         style={{
-                          background: "linear-gradient(135deg, hsl(0 0% 100% / 0.07), hsl(0 0% 100% / 0.02))",
-                          border: "1px solid hsl(0 0% 100% / 0.1)",
-                          boxShadow: "inset 0 1px 0 hsl(0 0% 100% / 0.08)",
+                          background: "linear-gradient(135deg, hsl(0 0% 18%), hsl(0 0% 13%))",
+                          border: "1px solid hsl(0 0% 100% / 0.18)",
+                          boxShadow: "0 2px 12px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.12)",
                         }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.border = "1px solid hsl(var(--primary) / 0.35)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 16px hsl(var(--primary) / 0.15), inset 0 1px 0 hsl(0 0% 100% / 0.1)"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.border = "1px solid hsl(0 0% 100% / 0.1)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 1px 0 hsl(0 0% 100% / 0.08)"; }}
+                        onMouseEnter={e => {
+                          (e.currentTarget as HTMLButtonElement).style.border = "1px solid hsl(var(--primary) / 0.5)";
+                          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 20px hsl(var(--primary) / 0.18), 0 2px 12px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.12)";
+                        }}
+                        onMouseLeave={e => {
+                          (e.currentTarget as HTMLButtonElement).style.border = "1px solid hsl(0 0% 100% / 0.18)";
+                          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 2px 12px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.12)";
+                        }}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "hsl(var(--primary) / 0.1)", border: "1px solid hsl(var(--primary) / 0.2)" }}>
+                          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style={{ background: "hsl(var(--primary) / 0.15)", border: "1px solid hsl(var(--primary) / 0.3)" }}>
                             <span className="font-display font-black text-base" style={{ color: "hsl(var(--primary))" }}>{srv.id}</span>
                           </div>
                           <div className="text-left">
-                            <p className="text-sm font-bold text-foreground">{srv.label}</p>
-                            <p className="text-[10px] mt-0.5" style={{ color: "hsl(var(--secondary))" }}>{srv.players}</p>
+                            <p className="text-sm font-bold" style={{ color: "hsl(0 0% 95%)" }}>{srv.label}</p>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              {/* Пульсуючий зелений кружечок */}
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                                  style={{ background: "hsl(var(--secondary))" }} />
+                                <span className="relative inline-flex rounded-full h-2 w-2"
+                                  style={{ background: "hsl(var(--secondary))" }} />
+                              </span>
+                              <span className="text-[10px] font-medium" style={{ color: "hsl(var(--secondary))" }}>Онлайн</span>
+                            </div>
                           </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        <ChevronRight className="w-4 h-4" style={{ color: "hsl(0 0% 50%)" }} />
                       </button>
                     ))}
                   </div>
