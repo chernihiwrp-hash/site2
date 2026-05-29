@@ -4,7 +4,8 @@ import {
   Search, UserPlus, Car,
   AlertTriangle, X, Gamepad2, Copy, Check,
   Swords, Bug, UserX, HelpCircle,
-  Star, Landmark, Scale, ShieldAlert
+  Star, Landmark, Scale, ShieldAlert,
+  Server, ChevronRight, ArrowLeft, KeyRound
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -13,8 +14,25 @@ import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
 import { store } from "../lib/store";
 
-const ROBLOX_URL = "https://www.roblox.com/games/start?placeId=7711635737&launchData=joinCode%3D5319vick";
-const SERVER_CODE = "5319vick";
+const SERVERS = [
+  {
+    id: 1,
+    label: "Сервер 1",
+    code: "5319vick",
+    url: "https://www.roblox.com/games/start?placeId=7711635737&launchData=joinCode%3D5319vick",
+    status: "online" as const,
+    players: "🟢 Онлайн",
+  },
+  {
+    id: 2,
+    label: "Сервер 2",
+    code: "daaarnte",
+    url: "https://www.roblox.com/games/start?placeId=7711635737&launchData=joinCode=daaarnte",
+    status: "online" as const,
+    players: "🟢 Онлайн",
+  },
+];
+
 const BG_GIF = "https://s13.gifyu.com/images/b7rM8.gif";
 
 const menuSections = [
@@ -80,6 +98,9 @@ const Index = () => {
   const [copied, setCopied]           = useState(false);
   const [sosSending, setSosSending]   = useState(false);
   const [badges, setBadges]           = useState<Record<string, boolean>>({});
+  const [showServers, setShowServers] = useState(false);
+  const [activeServer, setActiveServer] = useState<typeof SERVERS[0] | null>(null);
+  const [copiedCode, setCopiedCode]   = useState(false);
 
   const checkBadges = async () => {
     const { supabase } = await import("../lib/store");
@@ -127,11 +148,11 @@ const Index = () => {
     toast.success("Виклик відправлено адміністрації!");
   };
 
-  const copyCode = () => {
-    navigator.clipboard.writeText(SERVER_CODE);
-    setCopied(true);
+  const copyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(true);
     toast.success("Код скопійовано!");
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopiedCode(false), 2000);
   };
 
   const stickerIcons = [
@@ -193,24 +214,28 @@ const Index = () => {
           </button>
         </div>
 
-        {/* Play + code */}
-        <div className="flex items-center gap-3 mb-5">
-          <a
-            href={ROBLOX_URL} target="_blank" rel="noopener noreferrer"
-            className="theme-play-btn flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm text-white transition-all active:scale-95"
-            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)))", boxShadow: "0 0 20px hsl(var(--primary) / 0.5)" }}
+        {/* Servers button */}
+        <div className="mb-5">
+          <button
+            onClick={() => { setShowServers(true); setActiveServer(null); }}
+            className="w-full flex items-center justify-between px-5 py-4 rounded-2xl font-bold text-sm text-white transition-all active:scale-95 hover:scale-[1.01]"
+            style={{
+              background: "linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--secondary) / 0.12))",
+              border: "1px solid hsl(var(--primary) / 0.35)",
+              boxShadow: "0 0 24px hsl(var(--primary) / 0.2), inset 0 1px 0 hsl(0 0% 100% / 0.12)",
+            }}
           >
-            <Gamepad2 className="w-5 h-5" /> ГРАТИ
-          </a>
-          <div className="flex-1 liquid-glass rounded-2xl px-4 py-3 flex items-center justify-between">
-            <div>
-              <p className="text-[9px] text-muted-foreground">КОД СЕРВЕРУ</p>
-              <p className="text-sm font-mono font-bold text-primary">{SERVER_CODE}</p>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "hsl(var(--primary) / 0.15)", border: "1px solid hsl(var(--primary) / 0.3)" }}>
+                <Server className="w-5 h-5" style={{ color: "hsl(var(--primary))" }} />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold" style={{ color: "hsl(var(--primary))" }}>СЕРВЕРИ</p>
+                <p className="text-[10px] text-muted-foreground font-normal">Обери сервер та підключись</p>
+              </div>
             </div>
-            <button onClick={copyCode} className="p-1.5 rounded-lg liquid-glass active:scale-95 transition-all">
-              {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
-            </button>
-          </div>
+            <ChevronRight className="w-5 h-5" style={{ color: "hsl(var(--primary) / 0.7)" }} />
+          </button>
         </div>
 
         {/* SOS Modal */}
@@ -276,6 +301,148 @@ const Index = () => {
         )}
 
         <div className="mb-5 animate-fade-in"><PulseCity /></div>
+
+        {/* Servers Modal */}
+        {showServers && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowServers(false)}>
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+            <div
+              className="relative w-full max-w-sm rounded-t-3xl p-5 animate-fade-in"
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: "linear-gradient(160deg, hsl(0 0% 8% / 0.98), hsl(0 0% 4% / 0.99))",
+                border: "1px solid hsl(0 0% 100% / 0.1)",
+                borderBottom: "none",
+                boxShadow: "0 -8px 40px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.1)",
+              }}
+            >
+              {/* Handle bar */}
+              <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: "hsl(0 0% 100% / 0.15)" }} />
+
+              {/* Server list view */}
+              {!activeServer && (
+                <>
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.25)" }}>
+                        <Server className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
+                      </div>
+                      <div>
+                        <h3 className="font-display text-sm font-bold" style={{ color: "hsl(var(--primary))" }}>СЕРВЕРИ</h3>
+                        <p className="text-[10px] text-muted-foreground">Оберіть сервер для входу</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setShowServers(false)} className="w-7 h-7 rounded-full flex items-center justify-center liquid-glass active:scale-90 transition-all">
+                      <X className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 mb-4">
+                    {SERVERS.map((srv) => (
+                      <button
+                        key={srv.id}
+                        onClick={() => setActiveServer(srv)}
+                        className="w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all active:scale-95 hover:scale-[1.01]"
+                        style={{
+                          background: "linear-gradient(135deg, hsl(0 0% 100% / 0.07), hsl(0 0% 100% / 0.02))",
+                          border: "1px solid hsl(0 0% 100% / 0.1)",
+                          boxShadow: "inset 0 1px 0 hsl(0 0% 100% / 0.08)",
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.border = "1px solid hsl(var(--primary) / 0.35)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 16px hsl(var(--primary) / 0.15), inset 0 1px 0 hsl(0 0% 100% / 0.1)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.border = "1px solid hsl(0 0% 100% / 0.1)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 1px 0 hsl(0 0% 100% / 0.08)"; }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "hsl(var(--primary) / 0.1)", border: "1px solid hsl(var(--primary) / 0.2)" }}>
+                            <span className="font-display font-black text-base" style={{ color: "hsl(var(--primary))" }}>{srv.id}</span>
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm font-bold text-foreground">{srv.label}</p>
+                            <p className="text-[10px] mt-0.5" style={{ color: "hsl(var(--secondary))" }}>{srv.players}</p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Server detail view */}
+              {activeServer && (
+                <>
+                  <div className="flex items-center gap-3 mb-5">
+                    <button
+                      onClick={() => setActiveServer(null)}
+                      className="w-8 h-8 rounded-xl flex items-center justify-center liquid-glass active:scale-90 transition-all"
+                    >
+                      <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.25)" }}>
+                        <span className="font-display font-black text-sm" style={{ color: "hsl(var(--primary))" }}>{activeServer.id}</span>
+                      </div>
+                      <div>
+                        <h3 className="font-display text-sm font-bold" style={{ color: "hsl(var(--primary))" }}>{activeServer.label.toUpperCase()}</h3>
+                        <p className="text-[10px]" style={{ color: "hsl(var(--secondary))" }}>{activeServer.players}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Code display */}
+                  <div className="rounded-2xl px-4 py-3.5 mb-4 flex items-center justify-between"
+                    style={{ background: "hsl(var(--primary) / 0.06)", border: "1px solid hsl(var(--primary) / 0.18)" }}>
+                    <div>
+                      <p className="text-[9px] text-muted-foreground mb-0.5">КОД СЕРВЕРУ</p>
+                      <p className="text-base font-mono font-black" style={{ color: "hsl(var(--primary))", letterSpacing: "0.05em" }}>{activeServer.code}</p>
+                    </div>
+                    <KeyRound className="w-5 h-5 opacity-30" style={{ color: "hsl(var(--primary))" }} />
+                  </div>
+
+                  <div className="space-y-2.5 pb-2">
+                    {/* Play button */}
+                    <a
+                      href={activeServer.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl font-bold text-sm text-white transition-all active:scale-95 hover:scale-[1.01]"
+                      style={{
+                        background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)))",
+                        boxShadow: "0 0 24px hsl(var(--primary) / 0.4), inset 0 1px 0 hsl(0 0% 100% / 0.2)",
+                      }}
+                    >
+                      <Gamepad2 className="w-5 h-5" />
+                      ГРАТИ
+                    </a>
+
+                    {/* Copy code button */}
+                    <button
+                      onClick={() => copyCode(activeServer.code)}
+                      className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 hover:scale-[1.01]"
+                      style={{
+                        background: "hsl(var(--primary) / 0.1)",
+                        border: "1px solid hsl(var(--primary) / 0.25)",
+                        color: "hsl(var(--primary))",
+                        boxShadow: "inset 0 1px 0 hsl(0 0% 100% / 0.06)",
+                      }}
+                    >
+                      {copiedCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {copiedCode ? "СКОПІЙОВАНО!" : "КОД СЕРВЕРУ"}
+                    </button>
+
+                    {/* Back button */}
+                    <button
+                      onClick={() => setActiveServer(null)}
+                      className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm text-muted-foreground transition-all active:scale-95 liquid-glass"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      НАЗАД
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-5">
           {menuSections.map((section, si) => (
