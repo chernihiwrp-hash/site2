@@ -304,159 +304,155 @@ const Index = () => {
 
         {/* Servers Modal */}
         {showServers && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowServers(false)}>
+          <div
+            className="fixed inset-0 z-50 flex flex-col justify-end"
+            style={{ bottom: 0 }}
+            onClick={() => setShowServers(false)}
+          >
             <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
-            <div
-              className="relative w-full max-w-sm rounded-t-3xl animate-fade-in"
-              onClick={e => e.stopPropagation()}
-              style={{
-                background: "linear-gradient(160deg, hsl(0 0% 8% / 0.98), hsl(0 0% 4% / 0.99))",
-                border: "1px solid hsl(0 0% 100% / 0.1)",
-                borderBottom: "none",
-                boxShadow: "0 -8px 40px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.1)",
-                padding: "20px 20px calc(20px + env(safe-area-inset-bottom, 20px)) 20px",
-              }}
-            >
-              {/* Handle bar */}
-              <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: "hsl(0 0% 100% / 0.15)" }} />
+            {/* Wrapper що враховує висоту нижньої навбари через mb */}
+            <div className="relative w-full" style={{ marginBottom: "64px" }} onClick={e => e.stopPropagation()}>
+              <div
+                className="rounded-t-3xl animate-fade-in"
+                style={{
+                  background: "linear-gradient(160deg, #141414, #0a0a0a)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderBottom: "none",
+                  boxShadow: "0 -8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)",
+                  padding: "20px",
+                }}
+              >
+                {/* Handle bar */}
+                <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: "rgba(255,255,255,0.15)" }} />
 
-              {/* Server list view */}
-              {!activeServer && (
-                <>
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.25)" }}>
-                        <Server className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
+                {/* ── Server list view ── */}
+                {!activeServer && (
+                  <>
+                    <div className="flex items-center justify-between mb-5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.25)" }}>
+                          <Server className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
+                        </div>
+                        <div>
+                          <h3 className="font-display text-sm font-bold" style={{ color: "hsl(var(--primary))" }}>СЕРВЕРИ</h3>
+                          <p className="text-[10px] text-muted-foreground">Оберіть сервер для входу</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-display text-sm font-bold" style={{ color: "hsl(var(--primary))" }}>СЕРВЕРИ</h3>
-                        <p className="text-[10px] text-muted-foreground">Оберіть сервер для входу</p>
-                      </div>
+                      <button onClick={() => setShowServers(false)} className="w-7 h-7 rounded-full flex items-center justify-center liquid-glass active:scale-90 transition-all">
+                        <X className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
                     </div>
-                    <button onClick={() => setShowServers(false)} className="w-7 h-7 rounded-full flex items-center justify-center liquid-glass active:scale-90 transition-all">
-                      <X className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                  </div>
 
-                  <div className="space-y-3 mb-4">
-                    {SERVERS.map((srv) => (
-                      <button
-                        key={srv.id}
-                        onClick={() => setActiveServer(srv)}
-                        className="w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all active:scale-95 hover:scale-[1.01]"
-                        style={{
-                          background: "linear-gradient(135deg, hsl(0 0% 18%), hsl(0 0% 13%))",
-                          border: "1px solid hsl(0 0% 100% / 0.18)",
-                          boxShadow: "0 2px 12px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.12)",
-                        }}
-                        onMouseEnter={e => {
-                          (e.currentTarget as HTMLButtonElement).style.border = "1px solid hsl(var(--primary) / 0.5)";
-                          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 20px hsl(var(--primary) / 0.18), 0 2px 12px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.12)";
-                        }}
-                        onMouseLeave={e => {
-                          (e.currentTarget as HTMLButtonElement).style.border = "1px solid hsl(0 0% 100% / 0.18)";
-                          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 2px 12px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.12)";
-                        }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                            style={{ background: "hsl(var(--primary) / 0.15)", border: "1px solid hsl(var(--primary) / 0.3)" }}>
-                            <span className="font-display font-black text-base" style={{ color: "hsl(var(--primary))" }}>{srv.id}</span>
-                          </div>
-                          <div className="text-left">
-                            <p className="text-sm font-bold" style={{ color: "hsl(0 0% 95%)" }}>{srv.label}</p>
-                            <div className="flex items-center gap-1.5 mt-1">
-                              {/* Пульсуючий зелений кружечок */}
-                              <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                                  style={{ background: "#22c55e" }} />
-                                <span className="relative inline-flex rounded-full h-2 w-2"
-                                  style={{ background: "#22c55e" }} />
-                              </span>
-                              <span className="text-[10px] font-medium" style={{ color: "#22c55e" }}>Онлайн</span>
+                    <div className="space-y-3">
+                      {SERVERS.map((srv) => (
+                        <button
+                          key={srv.id}
+                          onClick={() => setActiveServer(srv)}
+                          className="w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all active:scale-95"
+                          style={{
+                            background: "linear-gradient(135deg, #2a2a2a, #1f1f1f)",
+                            border: "1px solid rgba(255,255,255,0.18)",
+                            boxShadow: "0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                              style={{ background: "hsl(var(--primary) / 0.15)", border: "1px solid hsl(var(--primary) / 0.3)" }}>
+                              <span className="font-display font-black text-base" style={{ color: "hsl(var(--primary))" }}>{srv.id}</span>
+                            </div>
+                            <div className="text-left">
+                              <p className="text-sm font-bold" style={{ color: "#f0f0f0" }}>{srv.label}</p>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className="relative flex h-2 w-2 flex-shrink-0">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: "#22c55e" }} />
+                                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: "#22c55e" }} />
+                                </span>
+                                <span className="text-[10px] font-medium" style={{ color: "#22c55e" }}>Онлайн</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4" style={{ color: "hsl(0 0% 50%)" }} />
+                          <ChevronRight className="w-4 h-4" style={{ color: "rgba(255,255,255,0.3)" }} />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* ── Server detail view ── */}
+                {activeServer && (
+                  <>
+                    <div className="flex items-center gap-3 mb-5">
+                      <button
+                        onClick={() => setActiveServer(null)}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center liquid-glass active:scale-90 transition-all"
+                      >
+                        <ArrowLeft className="w-4 h-4 text-muted-foreground" />
                       </button>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Server detail view */}
-              {activeServer && (
-                <>
-                  <div className="flex items-center gap-3 mb-5">
-                    <button
-                      onClick={() => setActiveServer(null)}
-                      className="w-8 h-8 rounded-xl flex items-center justify-center liquid-glass active:scale-90 transition-all"
-                    >
-                      <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.25)" }}>
-                        <span className="font-display font-black text-sm" style={{ color: "hsl(var(--primary))" }}>{activeServer.id}</span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.25)" }}>
+                          <span className="font-display font-black text-sm" style={{ color: "hsl(var(--primary))" }}>{activeServer.id}</span>
+                        </div>
+                        <div>
+                          <h3 className="font-display text-sm font-bold" style={{ color: "hsl(var(--primary))" }}>{activeServer.label.toUpperCase()}</h3>
+                          {/* Пульсуючий кружечок у деталях — так само як у списку */}
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="relative flex h-2 w-2 flex-shrink-0">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: "#22c55e" }} />
+                              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: "#22c55e" }} />
+                            </span>
+                            <span className="text-[10px] font-medium" style={{ color: "#22c55e" }}>Онлайн</span>
+                          </div>
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Code display */}
+                    <div className="rounded-2xl px-4 py-3.5 mb-4 flex items-center justify-between"
+                      style={{ background: "hsl(var(--primary) / 0.06)", border: "1px solid hsl(var(--primary) / 0.18)" }}>
                       <div>
-                        <h3 className="font-display text-sm font-bold" style={{ color: "hsl(var(--primary))" }}>{activeServer.label.toUpperCase()}</h3>
-                        <p className="text-[10px]" style={{ color: "#22c55e" }}>{activeServer.players}</p>
+                        <p className="text-[9px] text-muted-foreground mb-0.5">КОД СЕРВЕРУ</p>
+                        <p className="text-base font-mono font-black" style={{ color: "hsl(var(--primary))", letterSpacing: "0.05em" }}>{activeServer.code}</p>
                       </div>
+                      <KeyRound className="w-5 h-5 opacity-30" style={{ color: "hsl(var(--primary))" }} />
                     </div>
-                  </div>
 
-                  {/* Code display */}
-                  <div className="rounded-2xl px-4 py-3.5 mb-4 flex items-center justify-between"
-                    style={{ background: "hsl(var(--primary) / 0.06)", border: "1px solid hsl(var(--primary) / 0.18)" }}>
-                    <div>
-                      <p className="text-[9px] text-muted-foreground mb-0.5">КОД СЕРВЕРУ</p>
-                      <p className="text-base font-mono font-black" style={{ color: "hsl(var(--primary))", letterSpacing: "0.05em" }}>{activeServer.code}</p>
+                    <div className="space-y-2.5">
+                      <a
+                        href={activeServer.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl font-bold text-sm text-white transition-all active:scale-95"
+                        style={{
+                          background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)))",
+                          boxShadow: "0 0 24px hsl(var(--primary) / 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+                        }}
+                      >
+                        <Gamepad2 className="w-5 h-5" />
+                        ГРАТИ
+                      </a>
+                      <button
+                        onClick={() => copyCode(activeServer.code)}
+                        className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95"
+                        style={{
+                          background: "hsl(var(--primary) / 0.1)",
+                          border: "1px solid hsl(var(--primary) / 0.25)",
+                          color: "hsl(var(--primary))",
+                        }}
+                      >
+                        {copiedCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        {copiedCode ? "СКОПІЙОВАНО!" : "КОД СЕРВЕРУ"}
+                      </button>
+                      <button
+                        onClick={() => setActiveServer(null)}
+                        className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm text-muted-foreground transition-all active:scale-95 liquid-glass"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        НАЗАД
+                      </button>
                     </div>
-                    <KeyRound className="w-5 h-5 opacity-30" style={{ color: "hsl(var(--primary))" }} />
-                  </div>
-
-                  <div className="space-y-2.5 pb-2">
-                    {/* Play button */}
-                    <a
-                      href={activeServer.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl font-bold text-sm text-white transition-all active:scale-95 hover:scale-[1.01]"
-                      style={{
-                        background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)))",
-                        boxShadow: "0 0 24px hsl(var(--primary) / 0.4), inset 0 1px 0 hsl(0 0% 100% / 0.2)",
-                      }}
-                    >
-                      <Gamepad2 className="w-5 h-5" />
-                      ГРАТИ
-                    </a>
-
-                    {/* Copy code button */}
-                    <button
-                      onClick={() => copyCode(activeServer.code)}
-                      className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 hover:scale-[1.01]"
-                      style={{
-                        background: "hsl(var(--primary) / 0.1)",
-                        border: "1px solid hsl(var(--primary) / 0.25)",
-                        color: "hsl(var(--primary))",
-                        boxShadow: "inset 0 1px 0 hsl(0 0% 100% / 0.06)",
-                      }}
-                    >
-                      {copiedCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      {copiedCode ? "СКОПІЙОВАНО!" : "КОД СЕРВЕРУ"}
-                    </button>
-
-                    {/* Back button */}
-                    <button
-                      onClick={() => setActiveServer(null)}
-                      className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm text-muted-foreground transition-all active:scale-95 liquid-glass"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      НАЗАД
-                    </button>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}
