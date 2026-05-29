@@ -307,13 +307,14 @@ const Index = () => {
           <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowServers(false)}>
             <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
             <div
-              className="relative w-full max-w-sm rounded-t-3xl p-5 animate-fade-in"
+              className="relative w-full max-w-sm rounded-t-3xl animate-fade-in"
               onClick={e => e.stopPropagation()}
               style={{
                 background: "linear-gradient(160deg, hsl(0 0% 8% / 0.98), hsl(0 0% 4% / 0.99))",
                 border: "1px solid hsl(0 0% 100% / 0.1)",
                 borderBottom: "none",
                 boxShadow: "0 -8px 40px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.1)",
+                padding: "20px 20px calc(20px + env(safe-area-inset-bottom, 20px)) 20px",
               }}
             >
               {/* Handle bar */}
@@ -368,11 +369,11 @@ const Index = () => {
                               {/* Пульсуючий зелений кружечок */}
                               <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                                  style={{ background: "hsl(var(--secondary))" }} />
+                                  style={{ background: "#22c55e" }} />
                                 <span className="relative inline-flex rounded-full h-2 w-2"
-                                  style={{ background: "hsl(var(--secondary))" }} />
+                                  style={{ background: "#22c55e" }} />
                               </span>
-                              <span className="text-[10px] font-medium" style={{ color: "hsl(var(--secondary))" }}>Онлайн</span>
+                              <span className="text-[10px] font-medium" style={{ color: "#22c55e" }}>Онлайн</span>
                             </div>
                           </div>
                         </div>
@@ -399,7 +400,7 @@ const Index = () => {
                       </div>
                       <div>
                         <h3 className="font-display text-sm font-bold" style={{ color: "hsl(var(--primary))" }}>{activeServer.label.toUpperCase()}</h3>
-                        <p className="text-[10px]" style={{ color: "hsl(var(--secondary))" }}>{activeServer.players}</p>
+                        <p className="text-[10px]" style={{ color: "#22c55e" }}>{activeServer.players}</p>
                       </div>
                     </div>
                   </div>
