@@ -216,7 +216,8 @@ export default async function handler(req: any, res: any) {
       // Перевіряємо що match вказує на власний рядок
       const ownFields = ["username", "nick", "author"];
       const isOwn = match && Object.entries(match).some(([k, c]) =>
-        ownFields.includes(k) && !hasWildcard(c.value) &&
+        ownFields.includes(k) &&
+        (c.op === "eq" || !hasWildcard(c.value)) &&
         String(c.value).toLowerCase().trim() === normalizedNick
       );
       if (!isOwn) return deny(403, "Forbidden: can only modify your own records");
@@ -230,7 +231,8 @@ export default async function handler(req: any, res: any) {
       // Тільки своя заявка
       const ownFields = ["username", "nick", "author"];
       const isOwn = match && Object.entries(match).some(([k, c]) =>
-        ownFields.includes(k) && !hasWildcard(c.value) &&
+        ownFields.includes(k) && 
+        (c.op === "eq" || !hasWildcard(c.value)) &&
         String(c.value).toLowerCase().trim() === normalizedNick
       );
       if (!isOwn) return deny(403, "Forbidden: can only modify your own application");
