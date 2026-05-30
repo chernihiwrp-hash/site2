@@ -231,7 +231,8 @@ const Index = () => {
       {/* inject keyframes once */}
       <style>{MODAL_STYLES}</style>
 
-      <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, backgroundColor: "#0a0a0a", backgroundImage: `url('${BG_GIF}')`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat", willChange: "contents", transform: "translate3d(0,0,0)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" as any, imageRendering: "crisp-edges" as any }} />
+      <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, backgroundColor: "#0a0a0a" }} />
+      <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, backgroundImage: `url('${BG_GIF}')`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat", transform: "translate3d(0,0,0)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" as any }} />
       <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, background: "rgba(0,0,0,0.65)" }} />
 
       <div className="relative" style={{ zIndex: 1 }}>
@@ -283,16 +284,17 @@ const Index = () => {
 
         {/* ── SOS Modal ── */}
         {showSos && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 modal-fade-in" onClick={() => setShowSos(false)}>
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-0 modal-fade-in" onClick={() => setShowSos(false)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
             <div
-              className="relative w-full max-w-sm rounded-2xl p-5 liquid-glass-strong"
+              className="relative w-full max-w-sm rounded-2xl p-5 liquid-glass-strong overflow-y-auto"
               onClick={e => e.stopPropagation()}
               style={{
                 border: "1px solid hsl(0 70% 50% / 0.25)",
                 boxShadow: "0 0 40px hsl(0 70% 50% / 0.15)",
                 animation: "scaleIn 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards",
-                transformOrigin: "center",
+                transformOrigin: "bottom center",
+                maxHeight: "90vh",
               }}
             >
               <button onClick={() => setShowSos(false)} className="absolute top-3 right-3 text-muted-foreground transition-all duration-150 hover:scale-110 hover:text-foreground active:scale-90">
