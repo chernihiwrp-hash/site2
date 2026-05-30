@@ -1,4 +1,4 @@
-// /api/auth.ts — verify, checkUser, checkTelegram, register, upsert.
+// /api/auth.ts  [ПРОЕКТ: site2-main] — verify, checkUser, checkTelegram, register, upsert.
 // v3: фикс регистрации — разрешаем дефолтные безопасные поля (role='player',
 // balance=0, telegram_id, avatar_url). Любые попытки протащить admin-роль
 // или произвольный баланс блокируются строгим whitelist.
@@ -22,7 +22,6 @@ const SAFE_USER_COLUMNS =
 const UPSERT_FORBIDDEN_FIELDS = new Set([
   "role","is_banned","balance","rare_balance",
   "vip_expires_at","vip_duration","telegram_id",
-  "password_hash",
 ]);
 
 // Безопасные поля при REGISTER. Всё остальное — отбрасываем.
@@ -150,9 +149,7 @@ export default async function handler(req: any, res: any) {
       await log(400, false, "bad password");
       return res.status(400).json({ error: "Password length must be 4..256" });
     }
-    delete filtered["password"];
-    filtered["password_hash"] = await hashPassword(pwd);
-    // На случай если в схеме всё ещё есть поле password — оставим plaintext запрещённым.
+    // Пароль хранится plaintext в колонке password (совместимость с casino проектом)
 
     const { data, error } = await supabase.from("users").insert(filtered as any).select(SAFE_USER_COLUMNS);
     if (error) { await log(400, false, error.message); return res.status(400).json({ error: "Registration failed" }); }
@@ -181,7 +178,7 @@ export default async function handler(req: any, res: any) {
       const newPwd = upsertValues["password"] as string;
       delete upsertValues["password"];
       if (newPwd.length >= 4 && newPwd.length <= 256) {
-        upsertValues["password_hash"] = await hashPassword(newPwd);
+        upsertValues["password"] = newPwd;
       }
     }
 
