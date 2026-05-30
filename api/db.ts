@@ -250,7 +250,7 @@ export default async function handler(req: any, res: any) {
 
   // 5.4 users — особлива таблиця
   if (table === "users") {
-    const ADMIN_ONLY_FIELDS = ["role","is_banned","balance","rare_balance","vip_expires_at","vip_duration","password_hash"];
+    const ADMIN_ONLY_FIELDS = ["role","is_banned","balance","rare_balance","vip_expires_at","vip_duration","password"];
     if (!hasAnyPerm) {
       // Звичайний гравець
       if (values && typeof values === "object") {
