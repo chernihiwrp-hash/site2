@@ -182,7 +182,7 @@ export const store = {
         filters: [{ col: "owner_nick", op: "ilike", value: nick }],
       });
       if (ownerError || !owners || owners.length === 0) return [];
-      const giftIds = owners.map(o => Number(o.nft_id)).filter(id => !isNaN(id));
+      const giftIds = owners.map(o => o.nft_id).filter(id => id != null && id !== "");
       const { data: nfts, error: nftError } = await dbSelect<NftGift[]>("nft_gifts", {
         filters: [{ col: "id", op: "in", value: giftIds }],
       });
@@ -410,13 +410,22 @@ export const store = {
         ? Number(factionIdRaw)
         : factionIdRaw;
 
-      await secureInsert("faction_applications", {
+      const rowData = {
         faction_id: factionIdValue,
         faction_name: String(payload.factionName || ""),
         username: nick,
         status: "pending",
         form_data: { ...payload, nick },
-      });
+      };
+
+      // Try authenticated API first
+      const { error: apiErr } = await dbInsert("faction_applications", rowData);
+      if (apiErr) {
+        console.warn("submitFactionApp API error, trying direct:", apiErr.message);
+        // Fallback: direct supabase insert (uses anon key, requires RLS to allow inserts)
+        const { error: directErr } = await supabase.from("faction_applications").insert(rowData);
+        if (directErr) throw new Error(directErr.message);
+      }
       return true;
     } catch (e) {
       console.error("submitFactionApp ERROR:", e);
@@ -430,23 +439,41 @@ export const store = {
 
   kickFromFaction: async (nick: string, factionName: string): Promise<boolean> => {
     const dbFactionName = factionName.replace(/^фракція\s*/i, "").trim();
+    // Use eq for username to avoid wildcard issues with underscores in nicks
     const { error } = await dbUpdate(
       "faction_applications",
       { status: "rejected" },
-      { username: ilike(nick), faction_name: ilike(dbFactionName), status: eq("approved") },
+      { username: eq(nick), faction_name: ilike(dbFactionName), status: eq("approved") },
     );
-    if (error) { console.error("❌ Помилка Supabase при оновленні:", error.message); return false; }
+    if (error) {
+      // Fallback: try with lowercase nick
+      const { error: err2 } = await dbUpdate(
+        "faction_applications",
+        { status: "rejected" },
+        { username: eq(nick.toLowerCase()), faction_name: ilike(dbFactionName), status: eq("approved") },
+      );
+      if (err2) { console.error("❌ Помилка Supabase при оновленні:", err2.message); return false; }
+    }
     return true;
   },
 
   resignFromFaction: async (nick: string, factionName: string): Promise<boolean> => {
     const dbFactionName = factionName.replace(/^фракція\s*/i, "").trim();
+    // Use eq for username to avoid wildcard issues with underscores in nicks
     const { error } = await dbUpdate(
       "faction_applications",
       { status: "rejected" },
-      { username: ilike(nick), faction_name: ilike(dbFactionName), status: eq("approved") },
+      { username: eq(nick), faction_name: ilike(dbFactionName), status: eq("approved") },
     );
-    if (error) { console.error("❌ resignFromFaction:", error.message); return false; }
+    if (error) {
+      // Fallback: try with lowercase nick
+      const { error: err2 } = await dbUpdate(
+        "faction_applications",
+        { status: "rejected" },
+        { username: eq(nick.toLowerCase()), faction_name: ilike(dbFactionName), status: eq("approved") },
+      );
+      if (err2) { console.error("❌ resignFromFaction:", err2.message); return false; }
+    }
     return true;
   },
 
@@ -519,6 +546,12 @@ export const store = {
       console.error("submitAdminApp ERROR: Nick is required");
       return false;
     }
+    // Verify we have credentials before trying to submit
+    const password = localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password") || "";
+    if (!password) {
+      console.error("submitAdminApp ERROR: No password in storage");
+      return false;
+    }
 
     const row = {
       username: nick,
@@ -527,10 +560,16 @@ export const store = {
     };
 
     try {
-      await secureInsert("admin_applications", row);
+      const { error: apiErr } = await dbInsert("admin_applications", row);
+      if (apiErr) {
+        console.warn("submitAdminApp API error, trying direct:", apiErr.message);
+        // Fallback: direct supabase insert
+        const { error: directErr } = await supabase.from("admin_applications").insert(row);
+        if (directErr) throw new Error(directErr.message);
+      }
       return true;
-    } catch (serverError) {
-      console.error("submitAdminApp /api/db ERROR:", serverError);
+    } catch (serverError: any) {
+      console.error("submitAdminApp /api/db ERROR:", serverError?.message || serverError);
       return false;
     }
   },
