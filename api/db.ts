@@ -159,7 +159,7 @@ export default async function handler(req: any, res: any) {
 
   const { normalizedNick } = user;
   const isSuperAdmin = normalizedNick === SUPER_ADMIN_NICK.toLowerCase();
-  const isAdmin      = isSuperAdmin || user.role === "admin";
+  const isAdmin      = isSuperAdmin || user.role === "admin" || user.role === "superadmin" || user.role === "moderator";
   const role         = isSuperAdmin ? "superadmin" : (user.role || "player");
 
   // ── 3. Завантажуємо перміссіони (тільки для не-повних адмінів) ───────────
@@ -309,10 +309,22 @@ export default async function handler(req: any, res: any) {
   }
 
   // 5.6 nft — тільки відповідний insert без підміни полів
-  if ((table === "nft_owners" || table === "nft_gifts") && !hasPerm("nft")) {
-    // Доступно тільки адмінам з perm="nft". Звичайний гравець — заборонено.
-    // (Купівля NFT йде через /api/balance, не через цей endpoint)
+  if (table === "nft_gifts" && !hasPerm("nft")) {
+    // nft_gifts can only be managed by admins with nft perm
     return deny(403, "Forbidden: NFT management requires nft permission");
+  }
+  if (table === "nft_owners" && !hasPerm("nft")) {
+    // Players can only insert their own NFT claim (owner_nick must match their nick)
+    if (op !== "insert") {
+      return deny(403, "Forbidden: can only insert your own NFT claim");
+    }
+    if (!values || typeof values !== "object") {
+      return deny(400, "Invalid values for nft_owners insert");
+    }
+    const ownerNick = String((values as any)["owner_nick"] || "").toLowerCase().trim();
+    if (ownerNick !== normalizedNick) {
+      return deny(403, "Forbidden: owner_nick must match your nick");
+    }
   }
 
   // ── 6. Виконання ─────────────────────────────────────────────────────────
