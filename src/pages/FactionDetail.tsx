@@ -102,7 +102,9 @@ const FactionDetail = () => {
             bgImage: (dbFaction.background_image as string) || undefined,
             bannerImage: (dbFaction.banner_image as string) || undefined,
           };
-          return setFaction(found);
+          setFaction(found);
+          setFactionLoading(false);
+          return;
         }
       }
 
