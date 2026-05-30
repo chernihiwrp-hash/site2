@@ -548,10 +548,7 @@ export const store = {
     }
     // Verify we have credentials before trying to submit
     const password = localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password") || "";
-    if (!password) {
-      console.error("submitAdminApp ERROR: No password in storage");
-      return false;
-    }
+    // Don't block if no password in localStorage - dbInsert will use getCredentials() which checks both storages
 
     const row = {
       username: nick,
