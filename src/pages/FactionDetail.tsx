@@ -72,11 +72,13 @@ const FactionDetail = () => {
   const [recruitOpen, setRecruitOpen] = useState<boolean | null>(null);
   const [resolvedLeader, setResolvedLeader] = useState("");
   const [resolvedDeputy, setResolvedDeputy] = useState("");
+  const [factionLoading, setFactionLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
 
     const loadFaction = async () => {
+      setFactionLoading(true);
       const { data } = await dbSelect("factions", { order: { col: "created_at", dir: "asc" } });
       let found = null;
 
@@ -131,6 +133,7 @@ const FactionDetail = () => {
         }
       }
       setFaction(found);
+      setFactionLoading(false);
     };
 
     const loadMembers = async () => {
@@ -291,6 +294,15 @@ const FactionDetail = () => {
     });
     return () => { mounted = false; };
   }, [faction?.name]);
+
+  if (factionLoading) return (
+    <div className="min-h-screen pb-20 px-4 pt-4">
+      <PageHeader title="ФРАКЦІЯ" backTo="/factions" />
+      <div className="flex items-center justify-center py-16">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    </div>
+  );
 
   if (!faction) return (
     <div className="min-h-screen pb-20 px-4 pt-4">
