@@ -1128,7 +1128,19 @@ const PlatesTab = () => {
       toast.error("\u041f\u043e\u043c\u0438\u043b\u043a\u0430: " + (err.message || "err"));
     }
   };
-  if (loading) return <div className="text-center py-10 opacity-50 text-[10px] font-black animate-pulse uppercase">Завантаження...</div>;
+  const revoke = async (id: number) => {
+    try {
+      const { error } = await dbDelete("car_plates", { id: eq(id) });
+      if (error) {
+        toast.error("Помилка: " + error.message);
+        return;
+      }
+      setPlates(prev => prev.filter(p => p.id !== id));
+      toast.success("Серійний номер вилучено!");
+    } catch (err: any) {
+      toast.error("Помилка: " + (err.message || "err"));
+    }
+  };
 
   return (
     <div className="space-y-3 animate-fade-in">
@@ -1173,6 +1185,11 @@ const PlatesTab = () => {
                   Відхилити
                 </button>
               </div>
+            )}
+            {p.status === "approved" && (
+              <button onClick={() => revoke(p.id)} className="w-full py-2.5 bg-destructive/15 border border-destructive/30 text-destructive text-[10px] font-black uppercase rounded-xl hover:bg-destructive/25 active:scale-95 transition-all">
+                Вилучити серійний номер
+              </button>
             )}
           </div>
         </NeonCard>
