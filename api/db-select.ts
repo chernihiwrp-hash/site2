@@ -92,7 +92,7 @@ export default async function handler(req: any, res: any) {
 
   const { normalizedNick } = user;
   const isSuperAdmin   = normalizedNick === SUPER_ADMIN_NICK.toLowerCase();
-  const isAdmin = isSuperAdmin || user.role === "admin" || user.role === "superadmin";
+  const isAdmin = isSuperAdmin || user.role === "admin" || user.role === "superadmin" || user.role === "moderator";
   const role = isSuperAdmin ? "superadmin" : (user.role || "player");
 
   if (table === "db_logs") {
