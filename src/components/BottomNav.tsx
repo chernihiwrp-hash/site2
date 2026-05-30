@@ -9,6 +9,7 @@ const BottomNav = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [canClaim, setCanClaim] = useState(false);
   const nick = localStorage.getItem("crp_nick") || "";
+  const lastNavRef = useState<number>(0);
 
   useEffect(() => {
     if (!nick) return;
@@ -53,7 +54,12 @@ const BottomNav = () => {
           return (
             <button
               key={tab.path}
-              onClick={() => navigate(tab.path)}
+              onClick={() => {
+                const now = Date.now();
+                if (now - lastNavRef[0] < 300) return;
+                lastNavRef[0] = now;
+                if (location.pathname !== tab.path) navigate(tab.path);
+              }}
               className={`relative flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all duration-200 active:scale-90 ${
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
