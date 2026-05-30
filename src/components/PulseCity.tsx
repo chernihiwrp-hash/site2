@@ -89,10 +89,8 @@ const PulseCity = () => {
           .limit(5);
 
         if (candidates && candidates.length > 0) {
-          const totalVotes = candidates.reduce((s: number, c: any) => s + (c.votes || 0), 0);
           const top = candidates[0] as { candidate_username: string; votes: number };
-          const pct = totalVotes > 0 ? (top.votes / totalVotes) * 100 : 0;
-          if (pct >= 75 && top.candidate_username) {
+          if (top.candidate_username && (top.votes || 0) > 0) {
             const { data: userData } = await supabase
               .from("users")
               .select("avatar_url")
