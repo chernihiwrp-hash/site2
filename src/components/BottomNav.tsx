@@ -1,15 +1,15 @@
 import { Home, Shield, ShoppingCart, Gift, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, memo } from "react";
 import { supabase } from "../lib/store";
 
-const BottomNav = () => {
+const BottomNav = memo(() => {
   const location = useLocation();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [canClaim, setCanClaim] = useState(false);
   const nick = localStorage.getItem("crp_nick") || "";
-  const lastNavRef = useState<number>(0);
+  const lastNavTime = useRef<number>(0);
 
   useEffect(() => {
     if (!nick) return;
@@ -29,7 +29,7 @@ const BottomNav = () => {
     };
 
     load();
-    const interval = setInterval(load, 30_000);
+    const interval = setInterval(load, 60_000); // збільшили до 60с щоб зменшити навантаження
     return () => clearInterval(interval);
   }, [nick]);
 
@@ -56,8 +56,8 @@ const BottomNav = () => {
               key={tab.path}
               onClick={() => {
                 const now = Date.now();
-                if (now - lastNavRef[0] < 300) return;
-                lastNavRef[0] = now;
+                if (now - lastNavTime.current < 300) return;
+                lastNavTime.current = now;
                 if (location.pathname !== tab.path) navigate(tab.path);
               }}
               className={`relative flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all duration-200 active:scale-90 ${
@@ -99,6 +99,8 @@ const BottomNav = () => {
       </div>
     </nav>
   );
-};
+});
+
+BottomNav.displayName = "BottomNav";
 
 export default BottomNav;
