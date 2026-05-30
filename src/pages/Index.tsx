@@ -112,8 +112,8 @@ const MODAL_STYLES = `
     to   { opacity: 0; }
   }
   @keyframes scaleIn {
-    from { transform: scale(0.94) translateX(-50%); opacity: 0; }
-    to   { transform: scale(1)    translateX(-50%); opacity: 1; }
+    from { transform: scale(0.94); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
   }
   @keyframes shimmer {
     0%   { background-position: -200% center; }
@@ -231,7 +231,7 @@ const Index = () => {
       {/* inject keyframes once */}
       <style>{MODAL_STYLES}</style>
 
-      <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, backgroundColor: "#0a0a0a", backgroundImage: `url('${BG_GIF}')`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat", willChange: "transform", transform: "translateZ(0)" }} />
+      <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, backgroundColor: "#0a0a0a", backgroundImage: `url('${BG_GIF}')`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat", willChange: "contents", transform: "translate3d(0,0,0)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" as any, imageRendering: "crisp-edges" as any }} />
       <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, background: "rgba(0,0,0,0.65)" }} />
 
       <div className="relative" style={{ zIndex: 1 }}>
