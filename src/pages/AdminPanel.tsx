@@ -472,28 +472,47 @@ const SuperAdminTab = () => {
   const [editPerms, setEditPerms] = useState<Record<TabId, boolean>>({ ...DEFAULT_PERMS });
 
   useEffect(() => {
-    // SECURITY: use authenticated dbSelect instead of anon supabase client
-    dbSelect<{ username: string; form_data: any; id: any; nick: string }[]>("admin_applications", {
-      filters: [{ col: "status", op: "eq", value: "approved" }],
-    }).then(({ data }) => {
+    // Load admins and their perms from DB
+    const loadAdmins = async () => {
+      const { data } = await dbSelect<{ username: string; form_data: any; id: any; nick: string }[]>("admin_applications", {
+        filters: [{ col: "status", op: "eq", value: "approved" }],
+      });
       if (!data) return;
       const arr = Array.isArray(data) ? data : [data];
-      const list = arr.map((r: any) => {
+      const nicks = arr.map((r: any) => {
         const fd = (r.form_data as Record<string, unknown>) || {};
-        const n = (fd.nick as string)
-          || (fd.nickname as string)
-          || (r.username as string)
-          || (r.nick as string)
-          || String(r.id || "");
-        return { nick: n, perms: getAdminPerms(n) };
-      }).filter((a: any) => a.nick && a.nick.length > 0);
+        return (fd.nick as string) || (fd.nickname as string) || (r.username as string) || (r.nick as string) || String(r.id || "");
+      }).filter((n: string) => n && n.length > 0);
+
+      // Load all perms from DB at once
+      const { data: permsData } = await dbSelect("admin_perms");
+      const permsMap: Record<string, Record<TabId, boolean>> = {};
+      (permsData || []).forEach((p: any) => {
+        const pnick = String(p.username || "").toLowerCase();
+        if (pnick) permsMap[pnick] = { ...DEFAULT_NO_PERMS, ...(p.perms || {}) };
+      });
+
+      const list = nicks.map((n: string) => ({
+        nick: n,
+        perms: permsMap[n.toLowerCase()] || getAdminPerms(n),
+      }));
       setAdmins(list);
-    });
+    };
+    loadAdmins();
   }, []);
 
   const filtered = admins.filter(a => a.nick.toLowerCase().includes(search.toLowerCase()));
 
-  const openEdit = (nick: string) => { setSelectedNick(nick); setEditPerms(getAdminPerms(nick)); };
+  const openEdit = async (nick: string) => {
+    setSelectedNick(nick);
+    // Try to load fresh perms from DB first
+    const { data: permRow } = await dbSelect("admin_perms", {
+      filters: [{ col: "username", op: "ilike", value: nick }],
+      single: true,
+    });
+    const dbPerms = permRow ? { ...DEFAULT_NO_PERMS, ...((permRow as any).perms || {}) } : getAdminPerms(nick);
+    setEditPerms(dbPerms as Record<TabId, boolean>);
+  };
   const savePerms = async () => {
     if (!selectedNick) return;
     await saveAdminPerms(selectedNick, editPerms);
