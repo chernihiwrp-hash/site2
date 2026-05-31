@@ -38,28 +38,28 @@ const menuSections = [
     labelIcon: Landmark,
     label: "Місто",
     items: [
-      { icon: Newspaper,  label: "Новини",      desc: "Останні події",    path: "/news",            badgeKey: "news" },
-      { icon: Vote,       label: "Вибори мера", desc: "Голосування",      path: "/mayor-election" },
-      { icon: Megaphone,  label: "Голос міста", desc: "Скарги та ідеї",   path: "/city-voice",      badgeKey: "voice", clearKey: "crp_voice_seen" },
-      { icon: ScrollText, label: "Правила",     desc: "Офіційні папери",  path: "/documents" },
+      { icon: Newspaper,  label: "Новини",      desc: "Останні події",    path: "/news",            badgeKey: "news",  color: "59,130,246" },
+      { icon: Vote,       label: "Вибори мера", desc: "Голосування",      path: "/mayor-election",                     color: "168,85,247" },
+      { icon: Megaphone,  label: "Голос міста", desc: "Скарги та ідеї",   path: "/city-voice",      badgeKey: "voice", clearKey: "crp_voice_seen", color: "34,197,94" },
+      { icon: ScrollText, label: "Правила",     desc: "Офіційні папери",  path: "/documents",                          color: "251,191,36" },
     ],
   },
   {
     labelIcon: Scale,
     label: "Сервер",
     items: [
-      { icon: Shield,   label: "Фракції",  desc: "Вступ та склад",   path: "/factions" },
-      { icon: FileText, label: "Ліцензії", desc: "Зброя та дозволи", path: "/licenses" },
-      { icon: Home,     label: "Будинки",  desc: "Нерухомість",      path: "/houses" },
+      { icon: Shield,   label: "Фракції",  desc: "Вступ та склад",   path: "/factions",  color: "239,68,68" },
+      { icon: FileText, label: "Ліцензії", desc: "Зброя та дозволи", path: "/licenses",  color: "20,184,166" },
+      { icon: Home,     label: "Будинки",  desc: "Нерухомість",      path: "/houses",    color: "249,115,22" },
     ],
   },
   {
     labelIcon: ShieldAlert,
     label: "Інше",
     items: [
-      { icon: Search,   label: "Розшук",      desc: "Список розшуку",  path: "/wanted",           red: true },
-      { icon: UserPlus, label: "В адмін",     desc: "Подати заявку",   path: "/admin-application" },
-      { icon: Car,      label: "Номери авто", desc: "Реєстрація авто", path: "/car-registration" },
+      { icon: Search,   label: "Розшук",      desc: "Список розшуку",  path: "/wanted",           red: true,         color: "239,68,68" },
+      { icon: UserPlus, label: "В адмін",     desc: "Подати заявку",   path: "/admin-application",                   color: "99,102,241" },
+      { icon: Car,      label: "Номери авто", desc: "Реєстрація авто", path: "/car-registration",                    color: "14,165,233" },
     ],
   },
 ] as const;
@@ -538,9 +538,10 @@ const Index = () => {
               <SectionLabel icon={section.labelIcon} label={section.label} />
               <div className={`grid gap-2 ${section.items.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
                 {section.items.map((item, i) => {
-                  const it = item as { icon: React.ElementType; label: string; desc: string; path: string; red?: boolean; badgeKey?: string; clearKey?: string };
+                  const it = item as { icon: React.ElementType; label: string; desc: string; path: string; red?: boolean; badgeKey?: string; clearKey?: string; color?: string };
                   const hasBadge   = it.badgeKey ? badges[it.badgeKey] : false;
                   const isThreeCol = section.items.length === 3;
+                  const rgb = it.color || "var(--primary-rgb, 255,255,255)";
                   return (
                     <button
                       key={it.label}
@@ -556,30 +557,33 @@ const Index = () => {
                       <div
                         className={`liquid-glass-card relative overflow-hidden rounded-2xl ${isThreeCol ? "p-3" : "p-4"} flex flex-col gap-2 transition-all duration-200 hover:scale-[1.03] active:scale-[0.96] h-full text-left`}
                         style={{
-                          background: "linear-gradient(135deg, hsl(0 0% 100% / 0.10), hsl(0 0% 100% / 0.02))",
+                          background: `linear-gradient(145deg, rgba(${rgb},0.13) 0%, rgba(${rgb},0.04) 60%, rgba(0,0,0,0.12) 100%)`,
                           backdropFilter: "blur(22px) saturate(1.8)",
                           WebkitBackdropFilter: "blur(22px) saturate(1.8)",
-                          border: `1px solid hsl(0 0% 100% / 0.18)`,
-                          boxShadow: "inset 0 1px 0 hsl(0 0% 100% / 0.18), inset 0 -1px 0 hsl(0 0% 0% / 0.25), 0 8px 24px hsl(0 0% 0% / 0.35)",
+                          border: `1px solid rgba(${rgb},0.22)`,
+                          boxShadow: `inset 0 1px 0 rgba(${rgb},0.15), inset 0 -1px 0 hsl(0 0% 0% / 0.25), 0 8px 24px hsl(0 0% 0% / 0.35)`,
                           transition: "transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease",
                         }}
                         onMouseEnter={e => {
                           const el = e.currentTarget as HTMLDivElement;
-                          el.style.boxShadow = `inset 0 1px 0 hsl(0 0% 100% / 0.22), 0 0 28px ${it.red ? "hsl(0 70% 50% / 0.3)" : "hsl(var(--primary) / 0.3)"}`;
-                          el.style.borderColor = it.red ? "hsl(0 70% 50% / 0.35)" : "hsl(var(--primary) / 0.35)";
+                          el.style.boxShadow = `inset 0 1px 0 rgba(${rgb},0.25), 0 0 28px rgba(${rgb},0.35)`;
+                          el.style.borderColor = `rgba(${rgb},0.45)`;
                         }}
                         onMouseLeave={e => {
                           const el = e.currentTarget as HTMLDivElement;
-                          el.style.boxShadow = "inset 0 1px 0 hsl(0 0% 100% / 0.18), inset 0 -1px 0 hsl(0 0% 0% / 0.25), 0 8px 24px hsl(0 0% 0% / 0.35)";
-                          el.style.borderColor = "hsl(0 0% 100% / 0.18)";
+                          el.style.boxShadow = `inset 0 1px 0 rgba(${rgb},0.15), inset 0 -1px 0 hsl(0 0% 0% / 0.25), 0 8px 24px hsl(0 0% 0% / 0.35)`;
+                          el.style.borderColor = `rgba(${rgb},0.22)`;
                         }}
                       >
+                        {/* Colored glow spot bottom-right */}
+                        <span className="pointer-events-none absolute -bottom-4 -right-4 w-20 h-20 rounded-full blur-2xl opacity-30"
+                          style={{ background: `radial-gradient(circle, rgba(${rgb},0.7), transparent 70%)` }} />
                         {/* Glossy highlight */}
                         <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-2xl"
-                          style={{ background: "linear-gradient(180deg, hsl(0 0% 100% / 0.12), transparent)" }} />
+                          style={{ background: `linear-gradient(180deg, rgba(${rgb},0.08), transparent)` }} />
                         {/* Shine on hover */}
                         <span className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-400 rounded-2xl"
-                          style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%)" }} />
+                          style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%)" }} />
 
                         {stickerMap[it.label] && (
                           <img src={stickerMap[it.label]} alt=""
@@ -587,9 +591,10 @@ const Index = () => {
                         )}
 
                         <div
-                          className={`relative ${isThreeCol ? "w-8 h-8" : "w-10 h-10"} rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110 ${it.red ? "bg-destructive/10 border border-destructive/15" : "bg-primary/10 border border-primary/15"}`}
+                          className={`relative ${isThreeCol ? "w-8 h-8" : "w-10 h-10"} rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110`}
+                          style={{ background: `rgba(${rgb},0.15)`, border: `1px solid rgba(${rgb},0.25)` }}
                         >
-                          <it.icon className={`${isThreeCol ? "w-4 h-4" : "w-5 h-5"} ${it.red ? "text-destructive" : "text-primary"}`} />
+                          <it.icon className={`${isThreeCol ? "w-4 h-4" : "w-5 h-5"}`} style={{ color: `rgb(${rgb})` }} />
                           {hasBadge && (
                             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary animate-pulse"
                               style={{ boxShadow: "0 0 6px hsl(var(--primary))" }} />
@@ -597,7 +602,8 @@ const Index = () => {
                         </div>
 
                         <div className="relative">
-                          <p className={`${isThreeCol ? "text-xs" : "text-sm"} font-bold leading-tight truncate ${it.red ? "text-destructive" : "text-foreground"}`}>
+                          <p className={`${isThreeCol ? "text-xs" : "text-sm"} font-bold leading-tight truncate`}
+                            style={{ color: it.red ? `rgb(${rgb})` : "var(--foreground, #f0f0f0)" }}>
                             {it.label}
                           </p>
                           <p className={`${isThreeCol ? "text-[9px]" : "text-[10px]"} text-muted-foreground mt-0.5 truncate`}>
