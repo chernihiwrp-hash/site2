@@ -1,6 +1,6 @@
 import { Users, Home, Shield, Droplets, Crown } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "../lib/store";
+import { dbPublic } from "../lib/db";
 
 function useCountUp(target: number, duration = 1200) {
   const [val, setVal] = useState(0);
@@ -75,27 +75,27 @@ const PulseCity = () => {
     (async () => {
       try {
         const [u, h, f] = await Promise.all([
-          supabase.from("users").select("id", { count: "exact", head: true }),
-          supabase.from("houses").select("id", { count: "exact", head: true }).eq("is_for_sale", false),
-          supabase.from("faction_applications").select("id", { count: "exact", head: true }).eq("status", "approved"),
+          dbPublic("users", { count: true }),
+          dbPublic("houses", { filters: [{ col: "is_for_sale", op: "eq", value: false }], count: true }),
+          dbPublic("faction_applications", { filters: [{ col: "status", op: "eq", value: "approved" }], count: true }),
         ]);
         setData({ citizens: u.count || 0, houses: h.count || 0, factions: f.count || 0 });
 
         // Load current mayor (candidate with most votes if >= 75% of total)
-        const { data: candidates } = await supabase
-          .from("mayor_election")
-          .select("candidate_username, votes")
-          .order("votes", { ascending: false })
-          .limit(5);
+        const { data: candidates } = await dbPublic("mayor_election", {
+          columns: "candidate_username, votes",
+          order: { col: "votes", dir: "desc" },
+          limit: 5,
+        });
 
         if (candidates && candidates.length > 0) {
           const top = candidates[0] as { candidate_username: string; votes: number };
           if (top.candidate_username && (top.votes || 0) > 0) {
-            const { data: userData } = await supabase
-              .from("users")
-              .select("avatar_url")
-              .ilike("username", top.candidate_username)
-              .maybeSingle();
+            const { data: userData } = await dbPublic("users", {
+              columns: "avatar_url",
+              filters: [{ col: "username", op: "ilike", value: top.candidate_username }],
+              single: true,
+            });
             setMayor({ name: top.candidate_username, avatar: (userData as any)?.avatar_url || null });
           }
         }
