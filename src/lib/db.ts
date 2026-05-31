@@ -74,6 +74,23 @@ async function select<T = any>(payload: SelectPayload): Promise<Result<T>> {
   }
 }
 
+// Публічний select — без авторизації, тільки для публічних таблиць.
+// Використовується для даних які доступні всім (фракції, будинки, новини тощо).
+async function publicSelect<T = any>(payload: SelectPayload): Promise<Result<T>> {
+  try {
+    const res = await fetch("/api/db-public", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return { data: null, error: { message: json?.error || `HTTP ${res.status}` } };
+    return { data: (json?.data ?? null) as T, count: json?.count, error: null };
+  } catch (e: any) {
+    return { data: null, error: { message: e?.message || "Network error" } };
+  }
+}
+
 export const dbInsert = <T = any>(table: string, values: unknown, opts?: { returning?: boolean }) =>
   call<T>({ table, op: "insert", values, returning: opts?.returning });
 
@@ -94,6 +111,16 @@ export const dbSelect = <T = any>(table: string, opts?: {
   single?: boolean;
   count?: boolean;
 }) => select<T>({ table, ...opts });
+
+// Публічний select — без авторизації, для даних що доступні всім
+export const dbPublic = <T = any>(table: string, opts?: {
+  columns?: string;
+  filters?: SelectFilter[];
+  order?: { col: string; dir?: "asc" | "desc" };
+  limit?: number;
+  single?: boolean;
+  count?: boolean;
+}) => publicSelect<T>({ table, ...opts });
 
 export const eq    = (value: unknown): Filter => ({ op: "eq",    value });
 export const ilike = (value: unknown): Filter => ({ op: "ilike", value });
