@@ -11,6 +11,7 @@ const READABLE_TABLES = new Set<string>([
   "mayor_election","nft_gifts","nft_owners","news","houses","documents",
   "bans","house_families","recruitment_settings","house_confiscations",
   "mayor_candidate_applications","notifications","db_logs","maintenance_mode",
+  "battlepass_slots","battlepass_rewards","battlepass_config",
 ]);
 
 const ALLOWED_FILTERS = new Set(["eq", "ilike", "in", "or", "is"]);
