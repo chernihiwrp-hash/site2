@@ -5,7 +5,7 @@ import {
   Skull, Target, Eye, BookOpen, ShieldCheck, ChevronRight, Users,
   Car, FileText, MessageSquare, Coins, Crown, Lock, Star, Zap, Search, Building2, Plus
 } from "lucide-react";
-import { supabase } from "../lib/store";
+import { dbSelect } from "../lib/db";
 
 // Іконки за назвою
 const ICON_MAP: Record<string, typeof Shield> = {
@@ -38,17 +38,17 @@ const Factions = () => {
 
   useEffect(() => {
     const load = async () => {
-      // 1. DB фракції з Supabase (з усіма кастомними полями)
-      const { data: dbFactions } = await supabase
-        .from("factions")
-        .select("id, name, color, gradient, description, icon_name, dangerous, questions, section, background_image, banner_image")
-        .order("created_at", { ascending: true });
+      // 1. DB фракції з Supabase через service role key
+      const { data: dbFactions } = await dbSelect("factions", {
+        columns: "id, name, color, gradient, description, icon_name, dangerous, questions, section, background_image, banner_image",
+        order: { col: "created_at", dir: "asc" },
+      });
 
       // 2. Рахуємо учасників
-      const { data: appData } = await supabase
-        .from("faction_applications")
-        .select("faction_id, faction_name")
-        .eq("status", "approved");
+      const { data: appData } = await dbSelect("faction_applications", {
+        columns: "faction_id, faction_name",
+        filters: [{ col: "status", op: "eq", value: "approved" }],
+      });
 
       const countById: Record<string, number> = {};
       const countByName: Record<string, number> = {};
@@ -66,9 +66,7 @@ const Factions = () => {
 
       // 3. DB фракції — беремо всі кастомні поля
       // First load all overrides so DB factions can also use bg_image/banner_image
-      const { data: overrides } = await supabase
-        .from("faction_overrides")
-        .select("*");
+      const { data: overrides } = await dbSelect("faction_overrides");
       const overrideMap: Record<string, Record<string, unknown>> = {};
       (overrides || []).forEach((o: Record<string, unknown>) => {
         overrideMap[o.faction_slug as string] = o;
