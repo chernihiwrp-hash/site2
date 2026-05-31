@@ -15,7 +15,7 @@ const ALLOWED_TABLES = new Set<string>([
   "mayor_election","nft_gifts","nft_owners","news","houses","documents",
   "bans","house_families","recruitment_settings","house_confiscations",
   "mayor_candidate_applications","notifications","db_logs","maintenance_mode",
-  "battlepass_slots","battlepass_rewards",
+  "battlepass_slots","battlepass_rewards","battlepass_config",
 ]);
 
 const ALLOWED_OPS     = new Set(["insert", "update", "delete", "upsert"]);
@@ -47,6 +47,7 @@ const TABLE_PERM: Record<string, string> = {
   maintenance_mode:            "maintenance",
   battlepass_slots:            "battlepass",
   battlepass_rewards:          "battlepass",     // адмін або користувач з пермом "maintenance"
+  battlepass_config:           "battlepass",
 };
 
 // Таблиці де потрібен id/slug у match для delete/update
