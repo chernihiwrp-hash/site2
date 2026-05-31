@@ -10,6 +10,7 @@ import {
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import PulseCity from "../components/PulseCity";
+import CurrentMayor from "../components/CurrentMayor";
 import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
 import { store } from "../lib/store";
@@ -355,6 +356,8 @@ const Index = () => {
         )}
 
         <div className="mb-5 animate-fade-in"><PulseCity /></div>
+
+        <div className="mb-5 animate-fade-in"><CurrentMayor /></div>
 
         {/* ── Servers bottom-sheet modal ── */}
         {showServers && (
