@@ -105,7 +105,7 @@ export default async function handler(req: any, res: any) {
         q = q[f.op](f.col, f.value as any);
       }
       const { count: cnt, error } = await q;
-      if (error) return res.status(400).json({ error: "Database error" });
+      if (error) return res.status(400).json({ error: `Database error: ${error.message}` });
       return res.status(200).json({ data: null, count: cnt ?? 0 });
     }
 
@@ -126,7 +126,7 @@ export default async function handler(req: any, res: any) {
     if (single) q = q.maybeSingle();
 
     const { data, error } = await q;
-    if (error) return res.status(400).json({ error: "Database error" });
+    if (error) return res.status(400).json({ error: `Database error: ${error.message}` });
 
     return res.status(200).json({ data: stripSensitive(data) ?? null });
   } catch {
