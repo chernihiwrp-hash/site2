@@ -50,7 +50,7 @@ const RARITY_CONFIG: Record<Rarity, {
 
 const DEFAULT_CONFIG: BattlePassConfig = {
   season_name:   "БАТЛПАС",
-  gradient_from: "#1a0a2e",
+  gradient_from: "#0a0a0a",
   gradient_to:   "#0a0a0a",
   accent_color:  "#fbbf24",
   description:   "Сезонні нагороди",
@@ -161,7 +161,13 @@ const BattlePass = () => {
           : Promise.resolve({ data: [] }),
       ]);
       const configRow = (configRes.data as any[])?.[0];
-      if (configRow) setCfg({ ...DEFAULT_CONFIG, ...configRow });
+      if (configRow) setCfg({
+        ...DEFAULT_CONFIG,
+        ...configRow,
+        gradient_from: configRow.gradient_from || "#0a0a0a",
+        gradient_to:   configRow.gradient_to   || "#0a0a0a",
+        accent_color:  configRow.accent_color  || "#fbbf24",
+      });
       setSlots((slotsRes.data as any[]) || []);
       setRewards((rewardsRes.data as any[]) || []);
       setLoading(false);
@@ -178,7 +184,7 @@ const BattlePass = () => {
   const accentGlow = accent + "55";
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: `linear-gradient(160deg, ${cfg.gradient_from} 0%, ${cfg.gradient_to} 100%)` }}>
+    <div className="min-h-screen pb-24" style={{ background: "#0a0a0a" }}>
       <style>{`
         @keyframes bp-header-glow{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
         @keyframes bp-fade-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
