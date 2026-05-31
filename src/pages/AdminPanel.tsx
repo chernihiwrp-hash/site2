@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import DbLogsTab from "./admin/DbLogsTab";
 import TechWorkTab from "./admin/TechWorkTab";
+import AdminBattlePassTab from "./admin/AdminBattlePassTab";
 import { store, getBalance, addBalance, subtractBalance } from "../lib/store";
 import { dbInsert, dbUpdate, dbDelete, dbUpsert, eq } from "../lib/db";
 import type {
@@ -71,7 +72,7 @@ type TabId =
   "sos" | "applications" | "factions" | "licenses" | "plates" | "house_requests" |
   "news" | "houses" | "wanted" | "election" | "documents" |
   "add_faction" | "voice" | "tokens" | "nft" | "manage_factions" | "recruitment" |
-  "confiscation" | "mayor_apps" | "debug" | "bans" | "db_logs" | "tech_work";
+  "confiscation" | "mayor_apps" | "debug" | "bans" | "db_logs" | "tech_work" | "battlepass";
 
 const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boolean; category: string }[] = [
   { id: "sos",             label: "SOS Сигнали",           icon: AlertTriangle, sub: "Realtime",    danger: true,  category: "Виклики" },
@@ -90,6 +91,7 @@ const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boo
   { id: "wanted",          label: "Розшук",                icon: Crosshair,     sub: "Важливе",    danger: true,  category: "Важливе" },
   { id: "bans",            label: "Бани гравців",          icon: UserX,         sub: "Важливе",    danger: true,  category: "Важливе" },
   { id: "nft",             label: "NFT Подарунки",         icon: Gift,          sub: "Фінанси",                   category: "Фінанси" },
+  { id: "battlepass",      label: "Батлпас",               icon: Crown,         sub: "Фінанси",                   category: "Фінанси" },
   { id: "tokens",          label: "Токени CR",             icon: Coins,         sub: "Фінанси",                   category: "Фінанси" },
   { id: "recruitment",     label: "Набір у фракції",       icon: Lock,          sub: "Фракції",                   category: "Фракції" },
   { id: "manage_factions", label: "Управління фракціями",  icon: ShieldAlert,   sub: "Фракції",                   category: "Фракції" },
@@ -106,6 +108,7 @@ const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
   election: false, documents: false, add_faction: false, voice: false, 
   tokens: false, nft: false, manage_factions: false, recruitment: false,
   confiscation: false, mayor_apps: false, debug: false, bans: false, db_logs: false, tech_work: false,
+  battlepass: false,
 };
 
 const DEFAULT_PERMS: Record<TabId, boolean> = {
@@ -115,6 +118,7 @@ const DEFAULT_PERMS: Record<TabId, boolean> = {
   election: true, documents: true, add_faction: true, voice: true, 
   tokens: true, nft: true, manage_factions: true, recruitment: true,
   confiscation: true, mayor_apps: true, debug: true, bans: true, db_logs: true, tech_work: true,
+  battlepass: true,
 };
 
 // SECURITY: getAdminPerms from localStorage is NOT used for access control.
@@ -310,6 +314,9 @@ const AdminPanel = () => {
           {tab === "tech_work"       && <TechWorkTab />}
           {tab === "nft" && (
             <NftGiftsTab nftGifts={nftGifts} setNftGifts={setNftGifts} />
+          )}
+          {tab === "battlepass" && (
+            <AdminBattlePassTab />
           )}
         </div>
       </div>
