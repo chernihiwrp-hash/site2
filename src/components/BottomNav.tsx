@@ -1,4 +1,32 @@
-import { Home, Shield, ShoppingCart, Gift, User } from "lucide-react";
+// ─── ПАТЧ для src/components/BottomNav.tsx ────────────────────────
+// Замінити рядок з імпортом:
+//   import { Home, Shield, ShoppingCart, Gift, User } from "lucide-react";
+// На:
+//   import { Home, Shield, ShoppingCart, Gift, User, Crown } from "lucide-react";
+//
+// Замінити масив tabs:
+//
+// БУЛО:
+//   const tabs = [
+//     { path: "/",         icon: Home,         label: "Головна",  badge: null as string | number | null },
+//     { path: "/factions", icon: Shield,        label: "Фракції",  badge: null as string | number | null },
+//     { path: "/casino",   icon: ShoppingCart,  label: "Магазин",  badge: null as string | number | null },
+//     { path: "/shop",     icon: Gift,          label: "Нагороди", badge: canClaim ? "•" : null as string | number | null },
+//     { path: "/profile",  icon: User,          label: "Профіль",  badge: unreadCount > 0 ? (unreadCount > 9 ? "9+" : unreadCount) : null as string | number | null },
+//   ];
+//
+// СТАЛО (додано /battlepass між /shop та /profile):
+//   const tabs = [
+//     { path: "/",           icon: Home,         label: "Головна",  badge: null as string | number | null },
+//     { path: "/factions",   icon: Shield,        label: "Фракції",  badge: null as string | number | null },
+//     { path: "/casino",     icon: ShoppingCart,  label: "Магазин",  badge: null as string | number | null },
+//     { path: "/shop",       icon: Gift,          label: "Нагороди", badge: canClaim ? "•" : null as string | number | null },
+//     { path: "/battlepass", icon: Crown,         label: "Батлпас",  badge: null as string | number | null },
+//     { path: "/profile",    icon: User,          label: "Профіль",  badge: unreadCount > 0 ? (unreadCount > 9 ? "9+" : unreadCount) : null as string | number | null },
+//   ];
+
+// ГОТОВИЙ ФАЙЛ (повна заміна):
+import { Home, Shield, ShoppingCart, Gift, User, Crown } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef, memo } from "react";
 import { supabase } from "../lib/store";
@@ -15,7 +43,6 @@ const BottomNav = memo(() => {
     if (!nick) return;
 
     const load = async () => {
-      // Непрочитані нотифікації
       const { count } = await supabase
         .from("notifications")
         .select("id", { count: "exact", head: true })
@@ -23,22 +50,22 @@ const BottomNav = memo(() => {
         .eq("read", false);
       setUnreadCount(count || 0);
 
-      // Щоденна нагорода
       const lastReward = parseInt(localStorage.getItem("crp_last_reward") || "0");
       setCanClaim(Date.now() - lastReward > 24 * 60 * 60 * 1000);
     };
 
     load();
-    const interval = setInterval(load, 60_000); // збільшили до 60с щоб зменшити навантаження
+    const interval = setInterval(load, 60_000);
     return () => clearInterval(interval);
   }, [nick]);
 
   const tabs = [
-    { path: "/",         icon: Home,         label: "Головна",  badge: null as string | number | null },
-    { path: "/factions", icon: Shield,       label: "Фракції",  badge: null as string | number | null },
-    { path: "/casino",   icon: ShoppingCart, label: "Магазин",  badge: null as string | number | null },
-    { path: "/shop",     icon: Gift,         label: "Нагороди", badge: canClaim ? "•" : null as string | number | null },
-    { path: "/profile",  icon: User,         label: "Профіль",  badge: unreadCount > 0 ? (unreadCount > 9 ? "9+" : unreadCount) : null as string | number | null },
+    { path: "/",           icon: Home,         label: "Головна",  badge: null as string | number | null },
+    { path: "/factions",   icon: Shield,        label: "Фракції",  badge: null as string | number | null },
+    { path: "/casino",     icon: ShoppingCart,  label: "Магазин",  badge: null as string | number | null },
+    { path: "/shop",       icon: Gift,          label: "Нагороди", badge: canClaim ? "•" : null as string | number | null },
+    { path: "/battlepass", icon: Crown,         label: "Батлпас",  badge: null as string | number | null },
+    { path: "/profile",    icon: User,          label: "Профіль",  badge: unreadCount > 0 ? (unreadCount > 9 ? "9+" : unreadCount) : null as string | number | null },
   ];
 
   return (
@@ -48,7 +75,7 @@ const BottomNav = memo(() => {
         backdropFilter: "blur(24px)",
         borderTop: "1px solid hsl(0 0% 100% / 0.06)"
       }}>
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
+      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-1">
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.path;
           return (
@@ -60,7 +87,7 @@ const BottomNav = memo(() => {
                 lastNavTime.current = now;
                 if (location.pathname !== tab.path) navigate(tab.path);
               }}
-              className={`relative flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all duration-200 active:scale-90 ${
+              className={`relative flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition-all duration-200 active:scale-90 ${
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -88,7 +115,7 @@ const BottomNav = memo(() => {
                   </div>
                 )}
               </div>
-              <span className={`text-[10px] font-medium ${isActive ? "text-primary" : ""}`}>{tab.label}</span>
+              <span className={`text-[9px] font-medium ${isActive ? "text-primary" : ""}`}>{tab.label}</span>
               {isActive && (
                 <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-primary"
                   style={{ boxShadow: "0 0 6px hsl(var(--primary))" }} />
