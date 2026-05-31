@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { dbSelect, dbInsert, dbUpdate, dbDelete } from "../lib/db";
+import { dbSelect, dbInsert, dbUpdate, dbDelete } from "../../lib/db";
 import { toast } from "sonner";
-import { eq } from "../lib/db";
+import { eq } from "../../lib/db";
 import {
   Plus, Trash2, Edit3, Save, X, Star, Zap, Trophy, Flame, Image, Upload, Crown
 } from "lucide-react";
