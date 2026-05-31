@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  User, Briefcase, Home, Car, FileCheck, Wallet, Lock,
+  User, Briefcase, Home, Car, FileCheck, Wallet, Lock, Crown,
   Bell, ChevronDown, ChevronRight, Shield, CheckCircle,
   LogIn, RefreshCw, Coins, Clock, Settings, X,
   Sparkles, Zap, Star, Timer, Trophy
@@ -12,6 +12,7 @@ import { dbSelect } from '../lib/db';
 import { store, supabase, getBalanceFromDB } from "../lib/store";
 import type { Notification } from "../lib/store";
 import HouseFamilyModal from "../components/HouseFamilyModal";
+import { BattlePassCarCard } from "./BattlePass";
 
 const getTelegramUser = () => {
   try {
@@ -128,6 +129,7 @@ const Profile = () => {
   const [showOrbitSettings, setShowOrbitSettings] = useState(false);
   const [houseModalId, setHouseModalId] = useState<number | null>(null);
   const [nftVisible, setNftVisible] = useState(false);
+  const [bpRewards, setBpRewards] = useState<any[]>([]);
   const [contentVisible, setContentVisible] = useState(false);
   // true поки перший loadData ще не завершився
   const [loading, setLoading] = useState(true);
@@ -167,6 +169,12 @@ const Profile = () => {
       }
 
       setProfileData({ ...data, cars: carsData || [] });
+
+      // Батлпас нагороди
+      const { data: bpData } = await dbSelect("battlepass_rewards", {
+        filters: [{ col: "username", op: "ilike", value: nick }],
+      });
+      setBpRewards((bpData as any[]) || []);
       setBalanceState(balanceResult);
     } catch (e) {
       console.error("Помилка:", e);
@@ -730,6 +738,24 @@ const Profile = () => {
                 <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
               </div>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* ═══ ЯРУС: БАТЛПАС АВТО ═══ */}
+      {bpRewards.filter((r: any) => r.prize_type === "car").length > 0 && (
+        <div className="space-y-4 mb-10 px-1">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.25)" }}>
+              <Crown className="w-3.5 h-3.5" style={{ color: "#fbbf24" }} />
+            </div>
+            <span className="text-xs font-black uppercase tracking-[0.12em]" style={{ color: "#fbbf24" }}>
+              Батлпас • Авто
+            </span>
+          </div>
+          {bpRewards.filter((r: any) => r.prize_type === "car").map((reward: any, i: number) => (
+            <BattlePassCarCard key={i} reward={reward} />
           ))}
         </div>
       )}
