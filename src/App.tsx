@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { dbSelect } from "./lib/db";
+import { dbSelect, dbPublic } from "./lib/db";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -26,7 +26,7 @@ import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import BalanceTop from "./pages/BalanceTop";
 import Vip from "./pages/Vip";
-import { supabase } from "./lib/store";
+
 import { User, CheckCircle, Eye, EyeOff, Shield, AlertTriangle, ArrowLeft, LogOut } from "lucide-react";
 import GradientButton from "./components/GradientButton";
 import { MaintenanceScreen } from "./pages/admin/TechWorkTab";
@@ -238,23 +238,23 @@ const RegisterModal = ({ onDone, onBack }: { onDone: (nick: string) => void; onB
     const isAddingSecondAccount = existingAccounts.length > 0;
 
     if (tgUser?.id && !isAddingSecondAccount) {
-      const { data: tgBound } = await supabase.from("users").select("username").eq("telegram_id", String(tgUser.id)).maybeSingle();
-      if (tgBound?.username && tgBound.username.toLowerCase() !== nick.trim().toLowerCase()) {
-        setError(`Твій Telegram вже прив'язаний до акаунту "${tgBound.username}". 1 TG = 1 акаунт.`);
+      const { data: tgBound } = await dbPublic("users", { columns: "username", filters: [{ col: "telegram_id", op: "eq", value: String(tgUser.id) }], single: true });
+      if ((tgBound as any)?.username && (tgBound as any).username.toLowerCase() !== nick.trim().toLowerCase()) {
+        setError(`Твій Telegram вже прив'язаний до акаунту "${(tgBound as any).username}". 1 TG = 1 акаунт.`);
         setLoading(false); return;
       }
     }
 
     const reserved = "t1kron1x";
     if (nick.trim().toLowerCase() === reserved) {
-      const { data: existing } = await supabase.from("users").select("id, telegram_id").ilike("username", "T1kron1x").maybeSingle();
-      if (existing && tgUser && String(tgUser.id) !== String(existing.telegram_id)) {
+      const { data: existing } = await dbPublic("users", { columns: "id, telegram_id", filters: [{ col: "username", op: "ilike", value: "T1kron1x" }], single: true });
+      if (existing && tgUser && String((existing as any).telegram_id) !== String(tgUser.id)) {
         setError("Цей нікнейм зарезервований!"); setLoading(false); return;
       }
     }
 
-    const { data: existingNick } = await supabase.from("users").select("id, telegram_id").ilike("username", nick.trim()).maybeSingle();
-    if (existingNick && tgUser && String(tgUser.id) !== String(existingNick.telegram_id)) {
+    const { data: existingNick } = await dbPublic("users", { columns: "id, telegram_id", filters: [{ col: "username", op: "ilike", value: nick.trim() }], single: true });
+    if (existingNick && tgUser && String((existingNick as any).telegram_id) !== String(tgUser.id)) {
       setError("Цей нік вже зайнятий!"); setLoading(false); return;
     }
 
@@ -713,18 +713,23 @@ const App = () => {
       const nick = localStorage.getItem("crp_nick") || "";
 
       if (tgId || nick) {
-        let q = supabase.from("bans").select("reason, expires_at, is_permanent").limit(1);
+        // Перевірка бану через публічний ендпоінт (не потребує авторизації)
+        let filters: any[] = [];
         if (tgId && nick) {
-          q = q.or(`identifier.eq.${tgId},identifier.ilike.${nick}`) as any;
+          filters = [{ op: "or", value: `identifier.eq.${tgId},identifier.ilike.${nick}` }];
         } else if (tgId) {
-          q = q.eq("identifier", tgId) as any;
+          filters = [{ col: "identifier", op: "eq", value: tgId }];
         } else {
-          q = q.ilike("identifier", nick) as any;
+          filters = [{ col: "identifier", op: "ilike", value: nick }];
         }
-        const { data: bans } = await q;
+        const { data: bans } = await dbPublic("bans", {
+          columns: "reason, expires_at, is_permanent",
+          filters,
+          limit: 1,
+        });
 
-        if (bans && bans.length > 0) {
-          const ban = bans[0] as { reason: string; expires_at: string | null; is_permanent: boolean };
+        if (bans && (bans as any[]).length > 0) {
+          const ban = (bans as any[])[0] as { reason: string; expires_at: string | null; is_permanent: boolean };
           if (ban.is_permanent || !ban.expires_at || new Date(ban.expires_at) > new Date()) {
             setBanInfo({ reason: ban.reason, expiresAt: ban.expires_at, isPermanent: ban.is_permanent });
             return;
@@ -734,9 +739,7 @@ const App = () => {
       setBanInfo(null);
 
       // SECURITY: Check admin status via server — not via anon supabase client.
-      // This prevents someone from bypassing maintenance mode by reading
-      // admin_applications directly with an anon key.
-      const { data: mtArr } = await dbSelect("maintenance_mode", { filters: [{ col: "id", op: "eq", value: 1 }] });
+      const { data: mtArr } = await dbPublic("maintenance_mode", { filters: [{ col: "id", op: "eq", value: 1 }] });
       const mt = mtArr?.[0] || null;
       const password = localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password") || "";
       if (mt?.enabled) {
@@ -763,14 +766,13 @@ const App = () => {
       const hasPassword = !!(localStorage.getItem("crp_password") || sessionStorage.getItem("crp_password"));
 
       // ⚡ Перевіряємо, чи юзер досі існує в БД (могли видалити з адмінки).
-      // Якщо ні — чистимо локалку і виводимо вікно реєстрації заново.
       if (isReg && savedNickCheck) {
         try {
-          const { data: dbUser } = await supabase
-            .from("users")
-            .select("id")
-            .ilike("username", savedNickCheck)
-            .maybeSingle();
+          const { data: dbUser } = await dbPublic("users", {
+            columns: "id",
+            filters: [{ col: "username", op: "ilike", value: savedNickCheck }],
+            single: true,
+          });
           if (!dbUser) {
             localStorage.removeItem("crp_registered");
             localStorage.removeItem("crp_password");
