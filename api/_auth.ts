@@ -7,9 +7,19 @@ export interface VerifiedUser {
   password: string;
 }
 
+/** Помилка рівня бази (не "невірний пароль", а саме збій запиту до Supabase). */
+export class DbAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DbAuthError";
+  }
+}
+
 /**
  * Подгружает пользователя по нику и проверяет пароль (plaintext).
- * Возвращает null при любой ошибке.
+ * Возвращает null ТОЛЬКО если пользователь не найден или пароль неверный.
+ * При ошибке самой базы данных — бросает DbAuthError (чтобы не маскировать
+ * сбой БД под "401 Unauthorized").
  */
 export async function verifyCredentials(
   supabase: any,
@@ -27,8 +37,10 @@ export async function verifyCredentials(
     .ilike("username", n)
     .maybeSingle();
 
-  if (error || !row || !row.password) return null;
+  // ВАЖЛИВО: збій бази — це НЕ "невірний пароль".
+  if (error) throw new DbAuthError(error.message || "DB error");
 
+  if (!row || !row.password) return null;
   if (row.password !== p) return null;
 
   const username = String(row.username);
