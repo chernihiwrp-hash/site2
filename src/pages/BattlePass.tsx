@@ -15,7 +15,7 @@ interface BattlePassSlot {
   prize_type: PrizeType;
   prize_value?: string;
   image_url?: string;
-  nft_gift_id?: number;
+  nft_gift_id?: string;
   car_name?: string;
 }
 
