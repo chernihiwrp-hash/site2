@@ -1,6 +1,6 @@
-import { Users, Home, Shield, Droplets, Crown } from "lucide-react";
+import { Users, Home, Shield, Droplets } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
-import { dbPublic } from "../lib/db";
+import { supabase } from "../lib/store";
 
 function useCountUp(target: number, duration = 1200) {
   const [val, setVal] = useState(0);
@@ -64,41 +64,19 @@ const Stat = ({ icon: Icon, label, value, loaded, color, glow }: {
   );
 };
 
-type MayorInfo = { name: string; avatar: string | null } | null;
-
 const PulseCity = () => {
   const [data, setData] = useState({ citizens: 0, houses: 0, factions: 0 });
   const [loaded, setLoaded] = useState(false);
-  const [mayor, setMayor] = useState<MayorInfo>(null);
 
   useEffect(() => {
     (async () => {
       try {
         const [u, h, f] = await Promise.all([
-          dbPublic("users", { count: true }),
-          dbPublic("houses", { filters: [{ col: "is_for_sale", op: "eq", value: false }], count: true }),
-          dbPublic("faction_applications", { filters: [{ col: "status", op: "eq", value: "approved" }], count: true }),
+          supabase.from("users").select("id", { count: "exact", head: true }),
+          supabase.from("houses").select("id", { count: "exact", head: true }).eq("is_for_sale", false),
+          supabase.from("faction_applications").select("id", { count: "exact", head: true }).eq("status", "approved"),
         ]);
         setData({ citizens: u.count || 0, houses: h.count || 0, factions: f.count || 0 });
-
-        // Load current mayor (candidate with most votes if >= 75% of total)
-        const { data: candidates } = await dbPublic("mayor_election", {
-          columns: "candidate_username, votes",
-          order: { col: "votes", dir: "desc" },
-          limit: 5,
-        });
-
-        if (candidates && candidates.length > 0) {
-          const top = candidates[0] as { candidate_username: string; votes: number };
-          if (top.candidate_username && (top.votes || 0) > 0) {
-            const { data: userData } = await dbPublic("users", {
-              columns: "avatar_url",
-              filters: [{ col: "username", op: "ilike", value: top.candidate_username }],
-              single: true,
-            });
-            setMayor({ name: top.candidate_username, avatar: (userData as any)?.avatar_url || null });
-          }
-        }
       } catch {}
       setLoaded(true);
     })();
@@ -164,38 +142,6 @@ const PulseCity = () => {
           </div>
         ))}
       </div>
-
-      {/* Mayor card */}
-      {mayor && (
-        <div style={{
-          margin: "0 12px 12px",
-          borderRadius: 14,
-          background: "linear-gradient(135deg, rgba(251,191,36,0.08), rgba(251,191,36,0.03))",
-          border: "1px solid rgba(251,191,36,0.2)",
-          padding: "10px 14px",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-        }}>
-          <Crown style={{ width: 14, height: 14, color: "#fbbf24", flexShrink: 0 }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-            {mayor.avatar ? (
-              <img src={mayor.avatar} alt={mayor.name}
-                style={{ width: 28, height: 28, borderRadius: 8, objectFit: "cover", border: "1.5px solid rgba(251,191,36,0.4)", flexShrink: 0 }}
-                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-              />
-            ) : (
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(251,191,36,0.15)", border: "1.5px solid rgba(251,191,36,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Crown style={{ width: 14, height: 14, color: "#fbbf24" }} />
-              </div>
-            )}
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 9, color: "rgba(251,191,36,0.6)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>Поточний мер</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#fbbf24", letterSpacing: "0.02em", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{mayor.name}</div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <style>{`
         @keyframes pulseDot {
