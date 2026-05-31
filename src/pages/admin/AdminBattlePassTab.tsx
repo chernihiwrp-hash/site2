@@ -18,7 +18,7 @@ interface BattlePassSlot {
   prize_type: PrizeType;
   prize_value?: string;
   image_url?: string;
-  nft_gift_id?: number;
+  nft_gift_id?: string;
 }
 
 interface NftGift {
@@ -198,7 +198,7 @@ const SlotForm = ({
           <select
             className={inputCls}
             value={form.nft_gift_id || ""}
-            onChange={(e) => set("nft_gift_id", parseInt(e.target.value) || undefined)}
+            onChange={(e) => set("nft_gift_id", e.target.value || undefined)}
             style={{ background: "rgba(255,255,255,0.05)" }}
           >
             <option value="">— Оберіть NFT —</option>
