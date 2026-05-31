@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Gift, Clock, Zap, Star, Trophy, Sparkles, Lock, Flame, AlertTriangle, CheckCircle2 } from "lucide-react";
 import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
-import { setBalance as syncBalance, supabase } from "../lib/store";
+import { setBalance as syncBalance } from "../lib/store";
 import { claimDaily as claimDailyApi } from "../lib/balanceApi";
-import { dbInsert, dbUpdate, ilike } from "../lib/db";
+import { dbInsert, dbUpdate, dbSelect, ilike } from "../lib/db";
 
 /* ───────────── THEMES ───────────── */
 export type ThemeId = "lime" | "neon_blue" | "cyber_red" | "gold_vip" | "purple_haze" | "arctic" | "matrix" | "sunset";
@@ -35,8 +35,16 @@ export const loadSavedTheme = () => {
   const localTheme = localStorage.getItem("crp_theme") as ThemeId | null;
   if (localTheme) { const t = THEMES.find(x=>x.id===localTheme); if (t) applyTheme(t); }
   const nick = localStorage.getItem("crp_nick"); if (!nick) return;
-  supabase.from("users").select("active_theme").ilike("username", nick).maybeSingle()
-    .then(({data}:any)=>{ if (data?.active_theme && data.active_theme !== localTheme) { const t = THEMES.find(x=>x.id===data.active_theme); if (t) applyTheme(t); } }).catch(()=>{});
+  dbSelect<{ active_theme: string }[]>("users", {
+    columns: "active_theme",
+    filters: [{ col: "username", op: "ilike", value: nick }],
+    single: true,
+  }).then(({ data }: any) => {
+    if (data?.active_theme && data.active_theme !== localTheme) {
+      const t = THEMES.find(x => x.id === data.active_theme);
+      if (t) applyTheme(t);
+    }
+  }).catch(() => {});
 };
 
 /* ───────────── STREAK COLOR (interpolated HSL) ───────────── */
@@ -379,18 +387,26 @@ const Shop = () => {
   const streakAtRisk = canClaim && !streakFrozen && lastReward > 0 && timeUntilFreeze < 24 * 60 * 60 * 1000;
 
   useEffect(() => {
-    supabase.from("users").select("balance").ilike("username", nick).maybeSingle().then(({ data }: any) => {
+    dbSelect<{ balance: number }[]>("users", {
+      columns: "balance",
+      filters: [{ col: "username", op: "ilike", value: nick }],
+      single: true,
+    }).then(({ data }: any) => {
       if (data?.balance !== undefined) {
         const bal = (data.balance as number) || 0;
         syncBalance(nick, bal); setBalanceState(bal);
       }
     });
-    supabase.from("nft_gifts").select("*").order("price", { ascending: true }).limit(5)
-      .then(({ data }: any) => { if (data) setNftGifts(data); });
+    dbSelect("nft_gifts", {
+      order: { col: "price", dir: "asc" },
+      limit: 5,
+    }).then(({ data }: any) => { if (data) setNftGifts(data); });
 
     // Load claimed NFTs from DB (source of truth) + merge localStorage cache
-    supabase.from("nft_owners").select("nft_id").ilike("owner_nick", nick)
-      .then(({ data }: any) => {
+    dbSelect<{ nft_id: number }[]>("nft_owners", {
+      columns: "nft_id",
+      filters: [{ col: "owner_nick", op: "ilike", value: nick }],
+    }).then(({ data }: any) => {
         const dbIds: Set<number> = new Set((data || []).map((r: any) => Number(r.nft_id)));
         // Merge any cached ids from localStorage
         const saved = localStorage.getItem("crp_claimed_nfts");
@@ -453,12 +469,14 @@ const Shop = () => {
     setClaimingNft(nft.id);
     try {
       // Перевіряємо чи вже є
-      const { data: existing } = await supabase
-        .from("nft_owners")
-        .select("id")
-        .ilike("owner_nick", nick)
-        .eq("nft_id", nft.id)
-        .maybeSingle();
+      const { data: existing } = await dbSelect("nft_owners", {
+        columns: "id",
+        filters: [
+          { col: "owner_nick", op: "ilike", value: nick },
+          { col: "nft_id", op: "eq", value: nft.id },
+        ],
+        single: true,
+      });
 
       if (!existing) {
         const { error } = await dbInsert("nft_owners", {
