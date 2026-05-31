@@ -15,7 +15,7 @@ const ALL_PERMS = [
   "sos","applications","factions","licenses","plates","house_requests",
   "news","houses","wanted","election","documents","add_faction","voice",
   "tokens","nft","manage_factions","recruitment","confiscation","mayor_apps",
-  "debug","bans","db_logs","tech_work",
+  "debug","bans","db_logs","tech_work","battlepass",
 ] as const;
 
 type Perm = typeof ALL_PERMS[number];
