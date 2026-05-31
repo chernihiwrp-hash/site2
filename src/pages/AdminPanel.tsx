@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import DbLogsTab from "./admin/DbLogsTab";
 import TechWorkTab from "./admin/TechWorkTab";
-import { store, supabase, getBalance, addBalance, subtractBalance } from "../lib/store";
+import { store, getBalance, addBalance, subtractBalance } from "../lib/store";
 import { dbInsert, dbUpdate, dbDelete, dbUpsert, eq } from "../lib/db";
 import type {
   NewsItem, HouseItem, WantedPerson, FactionApplication, AdminApplication,
@@ -1634,12 +1634,12 @@ const DebugTab = () => {
 
   const testSelect = async () => {
     addLog("Тестую SELECT з обох таблиць...");
-    const { data: fa, error: fe } = await supabase.from("faction_applications").select("id").limit(1);
-    const { data: aa, error: ae } = await supabase.from("admin_applications").select("id").limit(1);
+    const { data: fa, error: fe } = await dbSelect("faction_applications", { columns: "id", limit: 1 });
+    const { data: aa, error: ae } = await dbSelect("admin_applications", { columns: "id", limit: 1 });
     if (fe) addLog("faction_applications SELECT: " + fe.message);
-    else addLog("faction_applications SELECT OK, рядків: " + (fa?.length ?? 0));
+    else addLog("faction_applications SELECT OK, рядків: " + ((fa as any[])?.length ?? 0));
     if (ae) addLog("admin_applications SELECT: " + ae.message);
-    else addLog("admin_applications SELECT OK, рядків: " + (aa?.length ?? 0));
+    else addLog("admin_applications SELECT OK, рядків: " + ((aa as any[])?.length ?? 0));
   };
 
   return (
@@ -2795,11 +2795,7 @@ const LeaderAssignmentBlock = ({ factionId, factionName, onAssigned }: { faction
       });
       setMembers(usernames.map(n => ({ name: n, avatar: avatarMap[n.toLowerCase()] || null })));
 
-      const { data: leaderData } = await dbSelect("faction_leaders", { columns: "leader_username, deputy_username", filters: [{ col: "faction_name", op: "ilike", value: factionName }], limit: 1 }).then(r => ({ data: r.data })); const _skip = supabase
-        .from("faction_leaders")
-        .select("leader_username, deputy_username")
-        .eq("faction_name", factionName.toLowerCase())
-        .maybeSingle();
+      const { data: leaderData } = await dbSelect("faction_leaders", { columns: "leader_username, deputy_username", filters: [{ col: "faction_name", op: "ilike", value: factionName }], limit: 1 }).then(r => ({ data: r.data }));
       setCurrentLeader((leaderData?.leader_username as string) || "");
       setCurrentDeputy((leaderData?.deputy_username as string) || "");
     };
