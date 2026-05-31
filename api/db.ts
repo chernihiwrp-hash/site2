@@ -15,6 +15,7 @@ const ALLOWED_TABLES = new Set<string>([
   "mayor_election","nft_gifts","nft_owners","news","houses","documents",
   "bans","house_families","recruitment_settings","house_confiscations",
   "mayor_candidate_applications","notifications","db_logs","maintenance_mode",
+  "battlepass_slots","battlepass_rewards",
 ]);
 
 const ALLOWED_OPS     = new Set(["insert", "update", "delete", "upsert"]);
@@ -43,7 +44,9 @@ const TABLE_PERM: Record<string, string> = {
   notifications:               "sos",
   admin_perms:                 "__superadmin__", // тільки superadmin
   db_logs:                     "__readonly__",    // тільки читати
-  maintenance_mode:            "maintenance",     // адмін або користувач з пермом "maintenance"
+  maintenance_mode:            "maintenance",
+  battlepass_slots:            "battlepass",
+  battlepass_rewards:          "battlepass",     // адмін або користувач з пермом "maintenance"
 };
 
 // Таблиці де потрібен id/slug у match для delete/update
