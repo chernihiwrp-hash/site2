@@ -497,7 +497,7 @@ const RegisterModal = ({ onDone, onBack }: { onDone: (nick: string) => void; onB
                   flex: 1, padding: "11px 0", borderRadius: 11, border: "none",
                   background: "hsl(0 70% 50% / 0.15)", color: "#ef4444",
                   fontSize: 13, fontWeight: 700, cursor: "pointer",
-                  border: "1px solid hsl(0 70% 50% / 0.25)" as any,
+
                 }}
               >
                 Вийти
