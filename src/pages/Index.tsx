@@ -13,6 +13,7 @@ import PulseCity from "../components/PulseCity";
 import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
 import { store } from "../lib/store";
+import { dbPublic, dbSelect } from "../lib/db";
 
 const SERVERS = [
   {
@@ -168,21 +169,25 @@ const Index = () => {
   };
 
   const checkBadges = async () => {
-    const { supabase } = await import("../lib/store");
     const nick = localStorage.getItem("crp_nick") || "";
     const next: Record<string, boolean> = {};
     const [newsRes, voiceRes] = await Promise.all([
-      supabase.from("news").select("created_at").order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("city_voice").select("created_at").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      dbPublic("news", { columns: "created_at", order: { col: "created_at", dir: "desc" }, limit: 1, single: true }),
+      dbPublic("city_voice", { columns: "created_at", order: { col: "created_at", dir: "desc" }, limit: 1, single: true }),
     ]);
     const lastNews  = parseInt(localStorage.getItem("crp_news_seen")  || "0");
     const lastVoice = parseInt(localStorage.getItem("crp_voice_seen") || "0");
-    if (newsRes.data?.created_at)  next["news"]  = new Date(newsRes.data.created_at).getTime()  > lastNews;
-    if (voiceRes.data?.created_at) next["voice"] = new Date(voiceRes.data.created_at).getTime() > lastVoice;
+    if (newsRes.data?.created_at)  next["news"]  = new Date((newsRes.data as any).created_at).getTime()  > lastNews;
+    if (voiceRes.data?.created_at) next["voice"] = new Date((voiceRes.data as any).created_at).getTime() > lastVoice;
     if (nick) {
-      const { count } = await supabase
-        .from("notifications").select("id", { count: "exact", head: true })
-        .ilike("username", nick).eq("read", false);
+      const { count } = await dbSelect("notifications", {
+        columns: "id",
+        filters: [
+          { col: "username", op: "ilike", value: nick },
+          { col: "read", op: "eq", value: false },
+        ],
+        count: true,
+      });
       next["notifs"] = (count || 0) > 0;
     }
     setBadges(next);
