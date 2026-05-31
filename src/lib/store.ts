@@ -421,10 +421,8 @@ export const store = {
       // Try authenticated API first
       const { error: apiErr } = await dbInsert("faction_applications", rowData);
       if (apiErr) {
-        console.warn("submitFactionApp API error, trying direct:", apiErr.message);
-        // Fallback: direct supabase insert (uses anon key, requires RLS to allow inserts)
-        const { error: directErr } = await supabase.from("faction_applications").insert(rowData);
-        if (directErr) throw new Error(directErr.message);
+        // API failed - no fallback to anon key (would bypass security)
+        throw new Error(apiErr.message);
       }
       return true;
     } catch (e) {
@@ -559,10 +557,8 @@ export const store = {
     try {
       const { error: apiErr } = await dbInsert("admin_applications", row);
       if (apiErr) {
-        console.warn("submitAdminApp API error, trying direct:", apiErr.message);
-        // Fallback: direct supabase insert
-        const { error: directErr } = await supabase.from("admin_applications").insert(row);
-        if (directErr) throw new Error(directErr.message);
+        // API failed - no fallback to anon key (would bypass security)
+        throw new Error(apiErr.message);
       }
       return true;
     } catch (serverError: any) {
@@ -896,11 +892,10 @@ export const store = {
   },
 
   getFamily: async (housePurchaseId: number): Promise<FamilyMember[]> => {
-    const { data, error } = await supabase
-      .from("house_families")
-      .select("*")
-      .eq("house_purchase_id", housePurchaseId)
-      .order("role", { ascending: true });
+    const { data, error } = await dbSelect("house_families", {
+      filters: [{ col: "house_purchase_id", op: "eq", value: housePurchaseId }],
+      order: { col: "role", dir: "asc" },
+    });
     if (error) { console.error("getFamily:", error.message); return []; }
     return (data || []) as FamilyMember[];
   },
