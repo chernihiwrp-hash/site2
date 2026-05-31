@@ -1,7 +1,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { logDbRequest, getClientIp, getUserAgent } from "./_logger.js";
-import { verifyCredentials, applyCors, safeDbError } from "./_auth.js";
+import { verifyCredentials, applyCors, safeDbError, DbAuthError } from "./_auth.js";
 import { checkSelectLimit } from "./_ratelimit.js";
 
 const READABLE_TABLES = new Set<string>([
@@ -87,7 +87,17 @@ export default async function handler(req: any, res: any) {
   if (!nick || !password) return deny(401, "Unauthorized: no credentials");
   if (!table || !READABLE_TABLES.has(table)) return deny(400, `Table not allowed: ${table || "empty"}`);
 
-  const user = await verifyCredentials(supabaseAdmin, nick, password);
+  let user;
+  try {
+    user = await verifyCredentials(supabaseAdmin, nick, password);
+  } catch (e: any) {
+    // Збій самої бази (напр. невірний SERVICE_ROLE_KEY або проєкт на паузі).
+    // НЕ маскуємо під 401 — віддаємо чесну 503 з причиною.
+    if (e instanceof DbAuthError) {
+      return deny(503, `Service unavailable (DB): ${e.message}`, null);
+    }
+    return deny(503, "Service unavailable (DB)", null);
+  }
   if (!user) return deny(401, "Unauthorized");
 
   const { normalizedNick } = user;
