@@ -42,10 +42,10 @@ const RARITY_CONFIG: Record<Rarity, {
   label: string; color: string; glow: string;
   border: string; bg: string; icon: any; shimmer: string;
 }> = {
-  common:    { label: "Звичайний",   color: "#9ca3af", glow: "rgba(156,163,175,0.5)", border: "rgba(156,163,175,0.3)", bg: "linear-gradient(135deg,rgba(156,163,175,0.08),rgba(107,114,128,0.05))", icon: Star,   shimmer: "rgba(156,163,175,0.15)" },
-  rare:      { label: "Рідкісний",   color: "#38bdf8", glow: "rgba(56,189,248,0.6)",  border: "rgba(56,189,248,0.4)",  bg: "linear-gradient(135deg,rgba(56,189,248,0.1),rgba(14,165,233,0.06))",   icon: Zap,    shimmer: "rgba(56,189,248,0.2)"   },
-  legendary: { label: "Легендарний", color: "#fbbf24", glow: "rgba(251,191,36,0.7)",  border: "rgba(251,191,36,0.5)",  bg: "linear-gradient(135deg,rgba(251,191,36,0.12),rgba(245,158,11,0.07))", icon: Trophy, shimmer: "rgba(251,191,36,0.25)"  },
-  mythic:    { label: "Міфічний",    color: "#f87171", glow: "rgba(248,113,113,0.8)", border: "rgba(248,113,113,0.55)",bg: "linear-gradient(135deg,rgba(248,113,113,0.13),rgba(239,68,68,0.08))",  icon: Flame,  shimmer: "rgba(248,113,113,0.3)"  },
+  common:    { label: "Звичайний",   color: "#9ca3af", glow: "rgba(156,163,175,0.5)", border: "rgba(156,163,175,0.3)", bg: "linear-gradient(160deg,#0d0d0d 0%,rgba(156,163,175,0.18) 100%)", icon: Star,   shimmer: "rgba(156,163,175,0.15)" },
+  rare:      { label: "Рідкісний",   color: "#38bdf8", glow: "rgba(56,189,248,0.6)",  border: "rgba(56,189,248,0.4)",  bg: "linear-gradient(160deg,#0d0d0d 0%,rgba(56,189,248,0.22) 100%)",   icon: Zap,    shimmer: "rgba(56,189,248,0.2)"   },
+  legendary: { label: "Легендарний", color: "#fbbf24", glow: "rgba(251,191,36,0.7)",  border: "rgba(251,191,36,0.5)",  bg: "linear-gradient(160deg,#0d0d0d 0%,rgba(251,191,36,0.25) 100%)",  icon: Trophy, shimmer: "rgba(251,191,36,0.25)"  },
+  mythic:    { label: "Міфічний",    color: "#f87171", glow: "rgba(248,113,113,0.8)", border: "rgba(248,113,113,0.55)",bg: "linear-gradient(160deg,#0d0d0d 0%,rgba(248,113,113,0.28) 100%)", icon: Flame,  shimmer: "rgba(248,113,113,0.3)"  },
 };
 
 const DEFAULT_CONFIG: BattlePassConfig = {
