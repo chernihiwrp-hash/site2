@@ -4,7 +4,7 @@ import GradientButton from "../components/GradientButton";
 import { toast } from "sonner";
 import { setBalance as syncBalance } from "../lib/store";
 import { claimDaily as claimDailyApi } from "../lib/balanceApi";
-import { dbInsert, dbUpdate, dbSelect, ilike } from "../lib/db";
+import { dbInsert, dbUpdate, dbSelect, dbPublic, ilike } from "../lib/db";
 
 /* ───────────── THEMES ───────────── */
 export type ThemeId = "lime" | "neon_blue" | "cyber_red" | "gold_vip" | "purple_haze" | "arctic" | "matrix" | "sunset";
@@ -35,7 +35,7 @@ export const loadSavedTheme = () => {
   const localTheme = localStorage.getItem("crp_theme") as ThemeId | null;
   if (localTheme) { const t = THEMES.find(x=>x.id===localTheme); if (t) applyTheme(t); }
   const nick = localStorage.getItem("crp_nick"); if (!nick) return;
-  dbSelect<{ active_theme: string }[]>("users", {
+  dbPublic<{ active_theme: string }[]>("users", {
     columns: "active_theme",
     filters: [{ col: "username", op: "ilike", value: nick }],
     single: true,
@@ -397,7 +397,8 @@ const Shop = () => {
         syncBalance(nick, bal); setBalanceState(bal);
       }
     });
-    dbSelect("nft_gifts", {
+    // nft_gifts — публічний список, не потребує авторизації
+    dbPublic("nft_gifts", {
       order: { col: "price", dir: "asc" },
       limit: 5,
     }).then(({ data }: any) => { if (data) setNftGifts(data); });
