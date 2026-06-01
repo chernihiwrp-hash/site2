@@ -734,6 +734,37 @@ const Profile = () => {
         </div>
       )}
 
+            {/* ═══ ЯРУС 2: ТРАНСПОРТ ═══ */}
+      {loading ? (
+        <SkeletonBlock h={72} />
+      ) : (
+        <div className="space-y-4 mb-10 px-1" style={blockAnim(contentVisible, 360)}>
+          {((profileData as any).cars || []).map((car: any) => (
+            <div key={car.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
+                 style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
+              <div className="relative rounded-[15px] overflow-hidden px-5 py-5 flex items-center gap-4" style={{ background: passportBg }}>
+                <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-30"
+                     style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.5) 0%, transparent 80%)` }} />
+                <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
+                  <Car className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
+                </div>
+                <div className="flex-1 flex items-center justify-between min-w-0 z-10">
+                  <div>
+                    <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-black mb-1 opacity-50">НОМЕРИ АВТО</p>
+                    <p className="text-[7px] text-primary/40 uppercase font-bold tracking-tighter mb-0.5">МОДЕЛЬ АВТО</p>
+                    <p className="text-sm font-black text-white italic tracking-tighter leading-none truncate max-w-[110px]">{car.car_model || "НЕВІДОМО"}</p>
+                  </div>
+                  <div className="shrink-0 scale-[1.2] origin-right mr-1 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
+                    <PlateBadge plate={car.plate_number} />
+                  </div>
+                </div>
+                <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ═══ МОДАЛКА ВИБОРУ НФТ ДЛЯ ОРБІТИ ═══ */}
       {showOrbitSettings && (
         <div className="fixed inset-0 z-[999] flex items-end justify-center"
