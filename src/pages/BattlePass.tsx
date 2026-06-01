@@ -201,43 +201,54 @@ const SlotCard = ({
         "--rrgb": cfg.rgb,
       } as any}
     >
-      {/* Діагональні промені — тонкі лінії з гострими кінцями */}
-      {isAnimated && !locked && (
-        <div style={{
-          position: "absolute", inset: 0, zIndex: 10,
-          pointerEvents: "none", borderRadius: 16, overflow: "hidden",
-        }} aria-hidden>
-          {/* Промінь 1: верхній лівий → правий нижній */}
-          <div style={{
-            position: "absolute",
-            width: 3,
-            height: "220%",
-            top: "-60%",
-            left: "50%",
-            transform: "rotate(35deg) translateX(-50%)",
-            transformOrigin: "50% 50%",
-            background: `linear-gradient(to bottom, transparent 0%, ${cfg.color} 30%, white 50%, ${cfg.color} 70%, transparent 100%)`,
-            boxShadow: `0 0 12px 4px ${cfg.color}, 0 0 30px 10px ${cfg.glow}, 0 0 60px 20px ${cfg.glow}`,
-            animation: "bp-diag-1 2.4s ease-in-out infinite",
-            opacity: 0,
-          }} />
-          {/* Промінь 2: правий нижній → лівий верхній */}
-          <div style={{
-            position: "absolute",
-            width: 3,
-            height: "220%",
-            top: "-60%",
-            left: "50%",
-            transform: "rotate(35deg) translateX(-50%)",
-            transformOrigin: "50% 50%",
-            background: `linear-gradient(to bottom, transparent 0%, ${cfg.color} 30%, white 50%, ${cfg.color} 70%, transparent 100%)`,
-            boxShadow: `0 0 12px 4px ${cfg.color}, 0 0 30px 10px ${cfg.glow}, 0 0 60px 20px ${cfg.glow}`,
-            animation: "bp-diag-2 2.4s ease-in-out infinite",
-            animationDelay: "1.2s",
-            opacity: 0,
-          }} />
-        </div>
-      )}
+      {/* Анімовані смуги по периметру картки — як в AutoCardsSection */}
+      {isAnimated && !locked && (() => {
+        const w = 140, h = 230, r = 16;
+        const perim = 2 * (w + h) - (8 - 2 * Math.PI) * r;
+        const dash = perim * 0.18;
+        const gap  = perim - dash;
+        const colorId = cfg.color.replace("#","");
+        return (
+          <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:4, overflow:"visible" }}
+            viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden>
+            <defs>
+              <filter id={`gf-${colorId}-${slot.id}`} x="-80%" y="-80%" width="260%" height="260%">
+                <feGaussianBlur stdDeviation="3" result="b1"/>
+                <feGaussianBlur stdDeviation="8" result="b2"/>
+                <feGaussianBlur stdDeviation="16" result="b3"/>
+                <feMerge>
+                  <feMergeNode in="b3"/>
+                  <feMergeNode in="b2"/>
+                  <feMergeNode in="b1"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            {/* Смуга 1 */}
+            <rect x="1.5" y="1.5" width={w-3} height={h-3} rx={r-1} ry={r-1}
+              fill="none" stroke={cfg.color} strokeWidth="3"
+              strokeLinecap="butt"
+              strokeDasharray={`${dash} ${gap}`}
+              strokeDashoffset="0"
+              filter={`url(#gf-${colorId}-${slot.id})`}
+              style={{ animation: `bp-spin1-${slot.id} 2.6s linear infinite` }}
+            />
+            {/* Смуга 2 — зміщена на половину периметру */}
+            <rect x="1.5" y="1.5" width={w-3} height={h-3} rx={r-1} ry={r-1}
+              fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2"
+              strokeLinecap="butt"
+              strokeDasharray={`${dash} ${gap}`}
+              strokeDashoffset={`${-perim / 2}`}
+              filter={`url(#gf-${colorId}-${slot.id})`}
+              style={{ animation: `bp-spin2-${slot.id} 2.6s linear infinite` }}
+            />
+            <style>{`
+              @keyframes bp-spin1-${slot.id} { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -${perim}px; } }
+              @keyframes bp-spin2-${slot.id} { from { stroke-dashoffset: ${-perim/2}px; } to { stroke-dashoffset: ${-perim*1.5}px; } }
+            `}</style>
+          </svg>
+        );
+      })()}
 
       {/* Полоска рідкості — виходить за верхній край картки */}
       <div style={{
@@ -525,19 +536,8 @@ const BattlePass = () => {
         @keyframes bp-modal-btn-sweep { 0%{transform:translateX(-130%)} 52%,100%{transform:translateX(130%)} }
         @keyframes bp-glow-title { 0%,100%{text-shadow:0 0 30px rgba(168,85,247,0.9),0 0 60px rgba(168,85,247,0.5),0 2px 8px rgba(0,0,0,0.9)} 50%{text-shadow:0 0 50px rgba(168,85,247,1),0 0 90px rgba(168,85,247,0.7),0 2px 8px rgba(0,0,0,0.9)} }
 
-        /* Діагональні промені */
-        @keyframes bp-diag-1 {
-          0%   { opacity: 0; transform: rotate(35deg) translateX(-50%) translateY(-120%); }
-          10%  { opacity: 1; }
-          90%  { opacity: 1; }
-          100% { opacity: 0; transform: rotate(35deg) translateX(-50%) translateY(120%); }
-        }
-        @keyframes bp-diag-2 {
-          0%   { opacity: 0; transform: rotate(35deg) translateX(-50%) translateY(120%); }
-          10%  { opacity: 1; }
-          90%  { opacity: 1; }
-          100% { opacity: 0; transform: rotate(35deg) translateX(-50%) translateY(-120%); }
-        }
+        @keyframes bp-sweep-1 { 0%{stroke-dashoffset:0} 100%{stroke-dashoffset:-520} }
+        @keyframes bp-sweep-2 { 0%{stroke-dashoffset:-260} 100%{stroke-dashoffset:-780} }
 
         .bp-card-row{ scrollbar-width:none }
         .bp-card-row::-webkit-scrollbar{ display:none }
