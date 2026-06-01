@@ -189,7 +189,7 @@ const SlotCard = ({
 
   return (
     <div
-      className={`bp-card relative flex-shrink-0 rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer
+      className={`bp-card relative flex-shrink-0 rounded-2xl transition-all duration-300 cursor-pointer
         ${isAnimated ? "bp-card-animated" : ""}
         ${glass ? "bp-card-glass" : ""}`}
       style={{
@@ -248,19 +248,21 @@ const SlotCard = ({
         </div>
       )}
 
-      {/* Полоска рідкості — маленька, горизонтальна, вгорі зліва */}
-      <div className="absolute top-2 left-2 z-30">
-        <div
-          style={{
-            width: 28,
-            height: 4,
-            borderRadius: 999,
-            background: cfg.color,
-            boxShadow: `0 0 6px ${cfg.glow}`,
-            opacity: locked ? 0.5 : 1,
-          }}
-        />
-      </div>
+      {/* Полоска рідкості — виходить за верхній край картки */}
+      <div style={{
+        position: "absolute",
+        top: -3,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 40,
+        width: 56,
+        height: 5,
+        borderRadius: 999,
+        background: cfg.color,
+        opacity: locked ? 0.4 : 1,
+        boxShadow: `0 0 8px 2px ${cfg.color}, 0 0 20px 4px ${cfg.color}, 0 0 40px 8px ${cfg.glow}`,
+        filter: `blur(0.3px)`,
+      }} />
 
       {/* Бейдж статусу справа */}
       <div className="absolute top-2 right-2 z-30">
