@@ -222,26 +222,26 @@ const SlotCard = ({
             <rect x="1" y="1" width="138" height="228" rx="15" ry="15"
               fill="none"
               stroke={cfg.color}
-              strokeWidth="2.5"
-              strokeLinecap="round"
+              strokeWidth="3"
+              strokeLinecap="butt"
               strokeDasharray="100 420"
               strokeDashoffset="0"
               style={{
                 animation: "bp-sweep-1 2.6s linear infinite",
-                filter: `drop-shadow(0 0 8px ${cfg.color}) drop-shadow(0 0 14px ${cfg.color})`,
+                filter: `drop-shadow(0 0 10px ${cfg.color}) drop-shadow(0 0 22px ${cfg.color}) drop-shadow(0 0 42px ${cfg.color})`,
               }}
             />
             {/* Смуга 2 — стартує з нижнього правого кута (зміщена на 260 = ~половина периметру) */}
             <rect x="1" y="1" width="138" height="228" rx="15" ry="15"
               fill="none"
-              stroke={cfg.color}
-              strokeWidth="2.5"
-              strokeLinecap="round"
+              stroke="rgba(255,255,255,0.92)"
+              strokeWidth="2"
+              strokeLinecap="butt"
               strokeDasharray="100 420"
               strokeDashoffset="-260"
               style={{
                 animation: "bp-sweep-2 2.6s linear infinite",
-                filter: `drop-shadow(0 0 8px ${cfg.color}) drop-shadow(0 0 14px ${cfg.color})`,
+                filter: `drop-shadow(0 0 8px ${cfg.color}) drop-shadow(0 0 20px ${cfg.color}) drop-shadow(0 0 36px rgba(255,255,255,0.8))`,
               }}
             />
           </svg>
@@ -539,28 +539,28 @@ const BattlePass = () => {
           box-shadow: 0 0 22px rgba(var(--rrgb),0.16), inset 0 0 18px rgba(var(--rrgb),0.08);
         }
         .bp-anim-border {
-          position:absolute; inset:0; border-radius:16px; pointer-events:none; z-index:10; overflow:hidden;
+          position:absolute; inset:-4px; border-radius:16px; pointer-events:none; z-index:10; overflow:visible;
         }
         .bp-anim-border svg {
-          position:absolute; inset:0; width:100%; height:100%;
+          position:absolute; inset:0; width:100%; height:100%; overflow:visible;
         }
         .bp-sweep-line-1 {
           stroke: var(--r);
-          stroke-width: 2.5;
+          stroke-width: 3;
           fill: none;
           stroke-dasharray: 80 440;
           stroke-dashoffset: 0;
           animation: bp-sweep-1 2.4s linear infinite;
-          filter: drop-shadow(0 0 6px var(--r));
+          filter: drop-shadow(0 0 8px var(--r)) drop-shadow(0 0 18px var(--r)) drop-shadow(0 0 32px var(--r));
         }
         .bp-sweep-line-2 {
-          stroke: rgba(255,255,255,0.85);
-          stroke-width: 1.5;
+          stroke: rgba(255,255,255,0.9);
+          stroke-width: 2;
           fill: none;
           stroke-dasharray: 40 480;
           stroke-dashoffset: -260;
           animation: bp-sweep-2 2.4s linear infinite;
-          filter: drop-shadow(0 0 4px var(--r));
+          filter: drop-shadow(0 0 6px var(--r)) drop-shadow(0 0 16px var(--r)) drop-shadow(0 0 28px rgba(255,255,255,0.6));
         }
 
         .bp-claim-btn{ position:relative; overflow:hidden; animation: bp-claim-glow 2.2s ease-in-out infinite; }
@@ -605,15 +605,15 @@ const BattlePass = () => {
 
       {/* ─── БАНЕР ─── */}
       {/* Якщо є background_url — він вже на всю сторінку через fixed, банер не показуємо */}
-      <div className="relative w-full overflow-hidden">
+      <div className="relative w-full">
         {cfg.banner_url ? (
           <>
             {/* Банер завжди зверху — незалежно від background_url */}
             <img src={cfg.banner_url} alt="banner"
-              className="w-full object-cover"
-              style={{ height:220, objectFit:"cover", objectPosition:"center top" }} />
-            <div className="absolute inset-0 pointer-events-none"
-              style={{ background:`linear-gradient(to bottom,rgba(0,0,0,0) 0%,rgba(5,5,5,0.5) 65%,rgba(5,5,5,0.85) 100%)` }} />
+              className="w-full block"
+              style={{ objectFit:"cover", objectPosition:"center top" }} />
+            <div className="absolute bottom-0 left-0 right-0 pointer-events-none"
+              style={{ height:"60%", background:`linear-gradient(to bottom,transparent 0%,rgba(5,5,5,0.7) 70%,rgba(5,5,5,1) 100%)` }} />
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <div style={{ position:"absolute",inset:0,background:"linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.05) 50%,transparent 70%)",animation:"bp-shimmer-banner 7s ease-in-out infinite" }} />
             </div>
