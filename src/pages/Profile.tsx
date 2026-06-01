@@ -705,12 +705,15 @@ const Profile = () => {
         <SkeletonBlock h={56} />
       ) : (
         <div className="space-y-4 mb-6 px-1" style={blockAnim(contentVisible, 300)}>
-          {profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any) => (
+          {profileData.licenses?.filter((l: any) => l.status === "approved" && !l.plate_number).map((item: any, idx: number, arr: any[]) => (
             <div key={item.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
                  style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
               <div className="relative rounded-[15px] overflow-hidden px-5 py-4 flex items-center gap-4" style={{ background: passportBg }}>
                 <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-40"
                      style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.6) 0%, transparent 80%)` }} />
+                <div className="absolute top-2 right-3 z-10">
+                  <span className="text-[9px] font-black text-white/40 font-mono">#{arr.length - idx}</span>
+                </div>
                 <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
                   <FileCheck className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
                 </div>
