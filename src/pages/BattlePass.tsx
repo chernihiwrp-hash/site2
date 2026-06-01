@@ -183,9 +183,7 @@ const SlotCard = ({
   const isAnimated = slot.rarity === "legendary" || slot.rarity === "mythic";
   const isNft = slot.prize_type === "nft";
 
-  const cardBg = glass
-    ? `linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)`
-    : `radial-gradient(circle at 0% 0%, rgba(${cfg.rgb},0.76) 0%, rgba(${cfg.rgb},0.46) 24%, rgba(${cfg.rgb},0.18) 48%, rgba(0,0,0,0.96) 78%, #050505 100%)`;
+  const cardBg = `radial-gradient(circle at 20% 20%, rgba(${cfg.rgb},0.18) 0%, rgba(${cfg.rgb},0.06) 40%, rgba(0,0,0,0.92) 75%, #060606 100%)`;
 
   return (
     <div
@@ -195,11 +193,7 @@ const SlotCard = ({
       style={{
         width: 140,
         background: cardBg,
-        backdropFilter: glass ? "blur(22px) saturate(160%)" : undefined,
-        WebkitBackdropFilter: glass ? "blur(22px) saturate(160%)" : undefined,
-        border: glass
-          ? `1px solid rgba(255,255,255,0.18)`
-          : `1px solid rgba(${cfg.rgb},0.22)`,
+        border: `1px solid rgba(${cfg.rgb},0.28)`,
         opacity:   locked ? 0.45 : 1,
         transform: isToday ? "scale(1.04)" : "scale(1)",
         "--r":    cfg.color,
@@ -207,43 +201,54 @@ const SlotCard = ({
         "--rrgb": cfg.rgb,
       } as any}
     >
-      {/* Анімована рамка: 2 glow-смуги що рухаються по контуру картки */}
+      {/* Діагональні промені з гострими кінцями */}
       {isAnimated && !locked && (
-        <div className="bp-anim-border" aria-hidden>
-          <svg viewBox="0 0 140 230" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"
+        <div style={{
+          position: "absolute", inset: -20, zIndex: 10,
+          pointerEvents: "none", overflow: "visible",
+        }} aria-hidden>
+          <svg viewBox="0 0 180 270" xmlns="http://www.w3.org/2000/svg"
             style={{ position:"absolute", inset:0, width:"100%", height:"100%", overflow:"visible" }}>
-            {/*
-              Периметр rect 138×228 rx=15:
-              Довжина кожної прямої сторони: top≈108, right≈198, bottom≈108, left≈198 → ~612 + 4 кути (~24*π≈75) ≈ 520px
-              Смуга = 100px, порожнина = 420px → 1 смуга на весь шлях
-              2 смуги стартують з протилежних кутів (зміщення 260 = половина периметру)
-            */}
-            {/* Смуга 1 — стартує з верхнього лівого кута, йде за годинниковою */}
-            <rect x="1" y="1" width="138" height="228" rx="15" ry="15"
-              fill="none"
-              stroke={cfg.color}
-              strokeWidth="3"
-              strokeLinecap="butt"
-              strokeDasharray="100 420"
-              strokeDashoffset="0"
-              style={{
-                animation: "bp-sweep-1 2.6s linear infinite",
-                filter: `drop-shadow(0 0 10px ${cfg.color}) drop-shadow(0 0 22px ${cfg.color}) drop-shadow(0 0 42px ${cfg.color})`,
-              }}
-            />
-            {/* Смуга 2 — стартує з нижнього правого кута (зміщена на 260 = ~половина периметру) */}
-            <rect x="1" y="1" width="138" height="228" rx="15" ry="15"
-              fill="none"
-              stroke="rgba(255,255,255,0.92)"
-              strokeWidth="2"
-              strokeLinecap="butt"
-              strokeDasharray="100 420"
-              strokeDashoffset="-260"
-              style={{
-                animation: "bp-sweep-2 2.6s linear infinite",
-                filter: `drop-shadow(0 0 8px ${cfg.color}) drop-shadow(0 0 20px ${cfg.color}) drop-shadow(0 0 36px rgba(255,255,255,0.8))`,
-              }}
-            />
+            <defs>
+              <filter id={`glow-${slot.id}`} x="-80%" y="-80%" width="260%" height="260%">
+                <feGaussianBlur stdDeviation="4" result="blur1"/>
+                <feGaussianBlur stdDeviation="10" result="blur2"/>
+                <feGaussianBlur stdDeviation="20" result="blur3"/>
+                <feMerge>
+                  <feMergeNode in="blur3"/>
+                  <feMergeNode in="blur2"/>
+                  <feMergeNode in="blur1"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            {/* Промінь 1: з верхнього лівого → правий нижній */}
+            <g filter={`url(#glow-${slot.id})`} style={{ animation: "bp-diag-1 2.2s ease-in-out infinite" }}>
+              {/* гострий трикутний промінь */}
+              <polygon
+                points="0,0 18,0 90,135 72,135"
+                fill={cfg.color}
+                opacity="0.95"
+              />
+              <polygon
+                points="0,0 18,0 90,135 72,135"
+                fill="white"
+                opacity="0.4"
+              />
+            </g>
+            {/* Промінь 2: з правого нижнього → лівий верхній */}
+            <g filter={`url(#glow-${slot.id})`} style={{ animation: "bp-diag-2 2.2s ease-in-out infinite" }}>
+              <polygon
+                points="180,270 162,270 90,135 108,135"
+                fill={cfg.color}
+                opacity="0.95"
+              />
+              <polygon
+                points="180,270 162,270 90,135 108,135"
+                fill="white"
+                opacity="0.4"
+              />
+            </g>
           </svg>
         </div>
       )}
@@ -534,9 +539,19 @@ const BattlePass = () => {
         @keyframes bp-modal-btn-sweep { 0%{transform:translateX(-130%)} 52%,100%{transform:translateX(130%)} }
         @keyframes bp-glow-title { 0%,100%{text-shadow:0 0 30px rgba(168,85,247,0.9),0 0 60px rgba(168,85,247,0.5),0 2px 8px rgba(0,0,0,0.9)} 50%{text-shadow:0 0 50px rgba(168,85,247,1),0 0 90px rgba(168,85,247,0.7),0 2px 8px rgba(0,0,0,0.9)} }
 
-        /* Смуга glow що рухається по контуру карточки — 2 смуги */
-        @keyframes bp-sweep-1 { 0%{stroke-dashoffset:0} 100%{stroke-dashoffset:-520} }
-        @keyframes bp-sweep-2 { 0%{stroke-dashoffset:-260} 100%{stroke-dashoffset:-780} }
+        /* Діагональні промені */
+        @keyframes bp-diag-1 {
+          0%   { transform: translate(-180px, -270px); opacity: 0; }
+          10%  { opacity: 1; }
+          90%  { opacity: 1; }
+          100% { transform: translate(180px, 270px); opacity: 0; }
+        }
+        @keyframes bp-diag-2 {
+          0%   { transform: translate(180px, 270px); opacity: 0; }
+          10%  { opacity: 1; }
+          90%  { opacity: 1; }
+          100% { transform: translate(-180px, -270px); opacity: 0; }
+        }
 
         .bp-card-row{ scrollbar-width:none }
         .bp-card-row::-webkit-scrollbar{ display:none }
