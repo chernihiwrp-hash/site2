@@ -1,341 +1,289 @@
-import { useState, useEffect, useRef } from "react";
-import { X, Car, Crown, Star, Zap, Flame, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Car, Crown, Star, Zap, Flame, Shield, Settings } from "lucide-react";
 
-// ─── Rarity config (shared with BattlePass) ───────────────────────────────────
 type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 
-const RARITY_CFG: Record<Rarity, {
-  label: string;
-  color: string;
-  glow: string;
-  rgb: string;
-  border: string;
-  borderRGB: string;
-  icon: React.FC<{ className?: string; style?: React.CSSProperties }>;
+const RARITY: Record<Rarity, {
+  label: string; color: string; glow: string; rgb: string;
+  icon: React.FC<{ style?: React.CSSProperties }>;
 }> = {
-  common:    { label: "Звичайний",   color: "#9ca3af", glow: "rgba(156,163,175,0.7)", rgb: "156,163,175", border: "rgba(156,163,175,0.5)", borderRGB: "156,163,175", icon: Shield },
-  rare:      { label: "Рідкісний",   color: "#3b82f6", glow: "rgba(59,130,246,0.8)",  rgb: "59,130,246",  border: "rgba(59,130,246,0.55)", borderRGB: "59,130,246",  icon: Zap    },
-  epic:      { label: "Епічний",     color: "#a855f7", glow: "rgba(168,85,247,0.8)",  rgb: "168,85,247",  border: "rgba(168,85,247,0.55)", borderRGB: "168,85,247",  icon: Star   },
-  legendary: { label: "Легендарний", color: "#fbbf24", glow: "rgba(251,191,36,0.85)", rgb: "251,191,36",  border: "rgba(251,191,36,0.6)",  borderRGB: "251,191,36",  icon: Crown  },
-  mythic:    { label: "Міфічний",    color: "#ef4444", glow: "rgba(239,68,68,0.9)",   rgb: "239,68,68",   border: "rgba(239,68,68,0.65)",  borderRGB: "239,68,68",   icon: Flame  },
+  common:    { label: "Звичайний",   color: "#9ca3af", glow: "rgba(156,163,175,0.6)", rgb: "156,163,175", icon: Shield  },
+  rare:      { label: "Рідкісний",   color: "#3b82f6", glow: "rgba(59,130,246,0.7)",  rgb: "59,130,246",  icon: Zap     },
+  epic:      { label: "Епічний",     color: "#a855f7", glow: "rgba(168,85,247,0.7)",  rgb: "168,85,247",  icon: Star    },
+  legendary: { label: "Легендарний", color: "#fbbf24", glow: "rgba(251,191,36,0.75)", rgb: "251,191,36",  icon: Crown   },
+  mythic:    { label: "Міфічний",    color: "#ef4444", glow: "rgba(239,68,68,0.8)",   rgb: "239,68,68",   icon: Flame   },
 };
+const RARITY_ORDER: Rarity[] = ["common","rare","epic","legendary","mythic"];
 
-const getRarity = (car: CarData): Rarity => {
-  const r = (car.rarity || "common").toLowerCase() as Rarity;
-  return RARITY_CFG[r] ? r : "common";
+const getRarity = (r?: string): Rarity => {
+  const k = (r || "common").toLowerCase() as Rarity;
+  return RARITY[k] ? k : "common";
 };
 
 export type CarData = {
   id: number | string;
-  plate_number: string;
+  plate_number?: string;
   car_model?: string;
   image_url?: string;
   rarity?: string;
-  // BattlePass reward fields
-  prize_value?: string;
   car_name?: string;
+  prize_value?: string;
   prize_type?: string;
 };
 
-// ─── Animated running border ──────────────────────────────────────────────────
-const RunningBorder = ({ color, glow }: { color: string; glow: string }) => (
-  <>
-    <style>{`
-      @keyframes rb-travel-1 {
-        0%   { stroke-dashoffset: 0; }
-        100% { stroke-dashoffset: -700; }
-      }
-      @keyframes rb-travel-2 {
-        0%   { stroke-dashoffset: -350; }
-        100% { stroke-dashoffset: -1050; }
-      }
-    `}</style>
+const getName = (c: CarData) => c.car_name || c.car_model || c.prize_value || "АВТО";
+
+// ─── Анімована рамка — дві смуги біжать по контуру ───────────────────────────
+const GlowBorder = ({ color, size }: { color: string; size: { w: number; h: number; r: number } }) => {
+  const { w, h, r } = size;
+  // Периметр прямокутника із заокругленнями (приблизно)
+  const perim = 2 * (w + h) - (8 - 2 * Math.PI) * r;
+  const dash = perim * 0.18;
+  const gap  = perim - dash;
+
+  return (
     <svg
-      style={{
-        position: "absolute", inset: 0, width: "100%", height: "100%",
-        borderRadius: 14, overflow: "visible", pointerEvents: "none", zIndex: 5,
-      }}
-      viewBox="0 0 90 140"
+      style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:4, overflow:"visible" }}
+      viewBox={`0 0 ${w} ${h}`}
       preserveAspectRatio="none"
     >
       <defs>
-        <filter id={`rb-glow-${color.replace("#","")}`}>
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        <filter id={`gf-${color.replace("#","")}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
-      {/* Strip 1 */}
-      <rect x="1" y="1" width="88" height="138" rx="13" ry="13"
-        fill="none"
-        stroke={color}
-        strokeWidth="2.2"
+      {/* Смуга 1 */}
+      <rect x="1.5" y="1.5" width={w-3} height={h-3} rx={r-1} ry={r-1}
+        fill="none" stroke={color} strokeWidth="2"
         strokeLinecap="round"
-        strokeDasharray="30 670"
+        strokeDasharray={`${dash} ${gap}`}
         strokeDashoffset="0"
-        opacity="0.95"
-        filter={`url(#rb-glow-${color.replace("#","")})`}
-        style={{ animation: "rb-travel-1 2.4s linear infinite" }}
+        filter={`url(#gf-${color.replace("#","")})`}
+        style={{ animation: "gb-spin1 2.8s linear infinite" }}
       />
-      {/* Strip 2 — offset by half perimeter */}
-      <rect x="1" y="1" width="88" height="138" rx="13" ry="13"
-        fill="none"
-        stroke={color}
-        strokeWidth="2.2"
+      {/* Смуга 2 — зміщена на половину периметру */}
+      <rect x="1.5" y="1.5" width={w-3} height={h-3} rx={r-1} ry={r-1}
+        fill="none" stroke={color} strokeWidth="2"
         strokeLinecap="round"
-        strokeDasharray="30 670"
-        strokeDashoffset="-350"
-        opacity="0.95"
-        filter={`url(#rb-glow-${color.replace("#","")})`}
-        style={{ animation: "rb-travel-2 2.4s linear infinite" }}
+        strokeDasharray={`${dash} ${gap}`}
+        strokeDashoffset={`${-perim / 2}`}
+        filter={`url(#gf-${color.replace("#","")})`}
+        style={{ animation: "gb-spin2 2.8s linear infinite" }}
       />
     </svg>
-  </>
-);
+  );
+};
 
-// ─── Mini Card ────────────────────────────────────────────────────────────────
-const MiniCarCard = ({ car, onClick }: { car: CarData; onClick: () => void }) => {
-  const rarity = getRarity(car);
-  const cfg = RARITY_CFG[rarity];
+// ─── Мінікарточка ─────────────────────────────────────────────────────────────
+const MiniCard = ({ car, onClick }: { car: CarData; onClick: () => void }) => {
+  const r = getRarity(car.rarity);
+  const cfg = RARITY[r];
   const Icon = cfg.icon;
-  const name = car.car_name || car.car_model || car.prize_value || "АВТО";
 
   return (
     <button
       onClick={onClick}
-      className="relative shrink-0"
       style={{
-        width: 90,
-        height: 140,
+        position: "relative",
+        width: 88, height: 136,
         borderRadius: 14,
-        overflow: "hidden",
-        border: `1.5px solid ${cfg.border}`,
-        boxShadow: `0 0 18px ${cfg.glow}, 0 4px 16px rgba(0,0,0,0.6)`,
-        background: `radial-gradient(ellipse at 50% 0%, rgba(${cfg.rgb},0.35) 0%, rgba(${cfg.rgb},0.08) 45%, #060606 100%)`,
+        background: `radial-gradient(ellipse at 50% 10%, rgba(${cfg.rgb},0.28) 0%, rgba(${cfg.rgb},0.06) 50%, #080808 100%)`,
+        border: `1.5px solid rgba(${cfg.rgb},0.45)`,
+        boxShadow: `0 0 20px rgba(${cfg.rgb},0.25), 0 6px 20px rgba(0,0,0,0.7)`,
         cursor: "pointer",
-        transition: "transform 0.18s ease, box-shadow 0.18s ease",
+        overflow: "hidden",
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        padding: "0 0 10px",
+        WebkitTapHighlightColor: "transparent",
       }}
-      onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.94)"; }}
-      onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"; }}
+      onTouchStart={e => (e.currentTarget.style.transform = "scale(0.93)")}
+      onTouchEnd={e => (e.currentTarget.style.transform = "scale(1)")}
     >
-      {/* Running border */}
-      <RunningBorder color={cfg.color} glow={cfg.glow} />
+      <style>{`
+        @keyframes gb-spin1 { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -${2*(88+136)}px; } }
+        @keyframes gb-spin2 { from { stroke-dashoffset: ${-(88+136)}px; } to { stroke-dashoffset: ${-3*(88+136)}px; } }
+        @keyframes card-shimmer { 0%,100%{opacity:0.4} 50%{opacity:0.7} }
+        @keyframes car-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+        @keyframes modal-up { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
+        @keyframes fade-bg { from{opacity:0} to{opacity:1} }
+      `}</style>
 
-      {/* Car image — scaled, not cropped */}
-      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: "10px 6px 40px" }}>
+      {/* Бігуча рамка */}
+      <GlowBorder color={cfg.color} size={{ w: 88, h: 136, r: 14 }} />
+
+      {/* Фото авто */}
+      <div style={{
+        position: "absolute", inset: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "10px 6px 38px",
+      }}>
         {car.image_url ? (
-          <img
-            src={car.image_url}
-            alt={name}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              objectPosition: "center",
-              filter: `drop-shadow(0 4px 12px ${cfg.glow})`,
-            }}
-          />
+          <img src={car.image_url} alt="" style={{
+            width: "100%", height: "100%",
+            objectFit: "contain", objectPosition: "center",
+            filter: `drop-shadow(0 4px 10px rgba(${cfg.rgb},0.5))`,
+          }} />
         ) : (
-          <div style={{ opacity: 0.3 }}>
-            <Car style={{ width: 36, height: 36, color: cfg.color }} />
-          </div>
+          <Car style={{ width: 32, height: 32, color: cfg.color, opacity: 0.35 }} />
         )}
       </div>
 
-      {/* Rarity glow bottom */}
+      {/* Нижнє сяйво */}
       <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: 50,
-        background: `linear-gradient(to top, rgba(${cfg.rgb},0.45) 0%, transparent 100%)`,
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 56,
+        background: `linear-gradient(to top, rgba(${cfg.rgb},0.55) 0%, transparent 100%)`,
         pointerEvents: "none",
       }} />
 
-      {/* Rarity badge */}
-      <div style={{
-        position: "absolute", bottom: 8, left: 0, right: 0,
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 2, zIndex: 10,
-      }}>
-        <Icon style={{ width: 10, height: 10, color: cfg.color, filter: `drop-shadow(0 0 4px ${cfg.glow})` }} />
+      {/* Іконка + лейбл редкості */}
+      <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+        <Icon style={{ width: 11, height: 11, color: cfg.color, filter: `drop-shadow(0 0 4px ${cfg.glow})` }} />
         <span style={{
           fontSize: 7, fontWeight: 900, color: cfg.color,
-          textTransform: "uppercase", letterSpacing: "0.12em",
+          textTransform: "uppercase", letterSpacing: "0.1em",
           textShadow: `0 0 8px ${cfg.glow}`,
         }}>{cfg.label}</span>
       </div>
-
-      {/* Shimmer sweep */}
-      <div style={{
-        position: "absolute", inset: 0, borderRadius: 14,
-        background: `linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.07) 50%, transparent 100%)`,
-        backgroundSize: "200% 100%",
-        animation: "shimmerSweep 3s linear infinite",
-        pointerEvents: "none",
-      }} />
     </button>
   );
 };
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
+// ─── Модалка деталей авто ─────────────────────────────────────────────────────
 const CarModal = ({ car, onClose }: { car: CarData; onClose: () => void }) => {
-  const rarity = getRarity(car);
-  const cfg = RARITY_CFG[rarity];
+  const r = getRarity(car.rarity);
+  const cfg = RARITY[r];
   const Icon = cfg.icon;
-  const name = car.car_name || car.car_model || car.prize_value || "АВТО";
-  const plate = car.plate_number;
+  const name = getName(car);
+  const rarityIdx = RARITY_ORDER.indexOf(r);
 
-  // Close on backdrop
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    const fn = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", fn);
+    return () => document.removeEventListener("keydown", fn);
   }, [onClose]);
 
   return (
     <div
+      onClick={onClose}
       style={{
         position: "fixed", inset: 0, zIndex: 9999,
         display: "flex", alignItems: "flex-end", justifyContent: "center",
-        background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)",
-        animation: "fadeIn 0.2s ease",
+        background: "rgba(0,0,0,0.72)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        animation: "fade-bg 0.22s ease",
       }}
-      onClick={onClose}
     >
       <div
-        style={{
-          width: "100%", maxWidth: 480,
-          borderRadius: "28px 28px 0 0",
-          overflow: "hidden",
-          border: `1.5px solid ${cfg.border}`,
-          borderBottom: "none",
-          boxShadow: `0 -12px 60px ${cfg.glow}, 0 -4px 24px rgba(0,0,0,0.8)`,
-          background: `linear-gradient(160deg, rgba(${cfg.rgb},0.18) 0%, #090909 35%, #060606 100%)`,
-          animation: "slideUpModal 0.32s cubic-bezier(0.32,0.72,0,1)",
-        }}
         onClick={e => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: 440,
+          background: `linear-gradient(170deg, rgba(${cfg.rgb},0.14) 0%, #0b0b0b 30%)`,
+          borderTop: `1.5px solid rgba(${cfg.rgb},0.4)`,
+          borderLeft: `1.5px solid rgba(${cfg.rgb},0.15)`,
+          borderRight: `1.5px solid rgba(${cfg.rgb},0.15)`,
+          borderRadius: "24px 24px 0 0",
+          boxShadow: `0 -16px 60px rgba(${cfg.rgb},0.18), 0 -4px 20px rgba(0,0,0,0.8)`,
+          animation: "modal-up 0.3s cubic-bezier(0.32,0.72,0,1)",
+          overflow: "hidden",
+          paddingBottom: 36,
+        }}
       >
-        <style>{`
-          @keyframes slideUpModal {
-            from { transform: translateY(100%); opacity: 0; }
-            to   { transform: translateY(0);    opacity: 1; }
-          }
-          @keyframes carFloat {
-            0%, 100% { transform: translateY(0px); }
-            50%       { transform: translateY(-8px); }
-          }
-        `}</style>
-
-        {/* Header */}
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "20px 20px 0",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Шапка */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 18px 0" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <div style={{
-              width: 38, height: 38, borderRadius: 12,
-              background: `rgba(${cfg.rgb},0.15)`,
-              border: `1px solid ${cfg.border}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: `0 0 14px ${cfg.glow}`,
+              width:38, height:38, borderRadius:12,
+              background: `rgba(${cfg.rgb},0.14)`,
+              border: `1px solid rgba(${cfg.rgb},0.35)`,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              boxShadow: `0 0 12px rgba(${cfg.rgb},0.2)`,
             }}>
-              <Icon style={{ width: 18, height: 18, color: cfg.color, filter: `drop-shadow(0 0 6px ${cfg.glow})` }} />
+              <Icon style={{ width:18, height:18, color:cfg.color, filter:`drop-shadow(0 0 6px ${cfg.glow})` }} />
             </div>
             <div>
-              <p style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.2em", fontWeight: 700 }}>Авто</p>
-              <p style={{ fontSize: 11, color: cfg.color, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 900, textShadow: `0 0 8px ${cfg.glow}` }}>{cfg.label}</p>
+              <p style={{ fontSize:8, color:"rgba(255,255,255,0.3)", textTransform:"uppercase", letterSpacing:"0.22em", fontWeight:700, lineHeight:1.2 }}>Авто</p>
+              <p style={{ fontSize:11, color:cfg.color, textTransform:"uppercase", letterSpacing:"0.12em", fontWeight:900, textShadow:`0 0 8px ${cfg.glow}` }}>{cfg.label}</p>
             </div>
           </div>
           <button
             onClick={onClose}
             style={{
-              width: 34, height: 34, borderRadius: 10,
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer",
+              width:34, height:34, borderRadius:10,
+              background:"rgba(255,255,255,0.05)",
+              border:"1px solid rgba(255,255,255,0.1)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              cursor:"pointer",
             }}
           >
-            <X style={{ width: 16, height: 16, color: "rgba(255,255,255,0.5)" }} />
+            <X style={{ width:15, height:15, color:"rgba(255,255,255,0.45)" }} />
           </button>
         </div>
 
-        {/* Car image */}
+        {/* Фото */}
         <div style={{
-          margin: "20px 20px 0",
-          borderRadius: 20,
-          overflow: "hidden",
-          border: `1px solid ${cfg.border}`,
-          background: `radial-gradient(ellipse at 50% 30%, rgba(${cfg.rgb},0.22) 0%, rgba(${cfg.rgb},0.06) 50%, #0a0a0a 100%)`,
-          boxShadow: `inset 0 0 40px rgba(${cfg.rgb},0.12)`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: 200,
-          position: "relative",
+          margin:"16px 18px 0",
+          borderRadius:18,
+          background: `radial-gradient(ellipse at 50% 30%, rgba(${cfg.rgb},0.2) 0%, rgba(${cfg.rgb},0.05) 55%, #0e0e0e 100%)`,
+          border: `1px solid rgba(${cfg.rgb},0.2)`,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          minHeight:190, position:"relative", overflow:"hidden",
         }}>
-          {/* Glow orb behind car */}
+          {/* Ambient glow */}
           <div style={{
-            position: "absolute", width: 180, height: 120, borderRadius: "50%",
-            background: `radial-gradient(circle, rgba(${cfg.rgb},0.35) 0%, transparent 70%)`,
-            filter: "blur(24px)",
+            position:"absolute", width:200, height:120, borderRadius:"50%",
+            background: `radial-gradient(circle, rgba(${cfg.rgb},0.3) 0%, transparent 70%)`,
+            filter:"blur(28px)",
           }} />
           {car.image_url ? (
-            <img
-              src={car.image_url}
-              alt={name}
-              style={{
-                width: "90%",
-                maxHeight: 200,
-                objectFit: "contain",
-                filter: `drop-shadow(0 8px 30px ${cfg.glow})`,
-                animation: "carFloat 4s ease-in-out infinite",
-                position: "relative", zIndex: 1,
-              }}
-            />
+            <img src={car.image_url} alt={name} style={{
+              width:"85%", maxHeight:185,
+              objectFit:"contain",
+              filter:`drop-shadow(0 10px 32px rgba(${cfg.rgb},0.55))`,
+              animation:"car-float 4s ease-in-out infinite",
+              position:"relative", zIndex:1,
+            }} />
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, opacity: 0.4 }}>
-              <Car style={{ width: 72, height: 72, color: cfg.color }} />
-            </div>
+            <Car style={{ width:72, height:72, color:cfg.color, opacity:0.25 }} />
           )}
         </div>
 
-        {/* Car info */}
-        <div style={{ padding: "20px 20px 32px" }}>
-          {/* Name */}
+        {/* Назва */}
+        <div style={{ padding:"16px 18px 0" }}>
           <h2 style={{
-            fontSize: 26, fontWeight: 900, color: "#fff",
-            textTransform: "uppercase", letterSpacing: "0.04em",
-            textShadow: `0 0 20px ${cfg.glow}`,
-            marginBottom: 6, lineHeight: 1.1,
+            fontSize:28, fontWeight:900, color:"#fff",
+            textTransform:"uppercase", letterSpacing:"0.02em",
+            lineHeight:1.05, marginBottom:14,
+            textShadow:`0 0 24px rgba(${cfg.rgb},0.35)`,
           }}>{name}</h2>
 
-          {/* Plate */}
-          {plate && (
-            <div style={{ marginBottom: 16 }}>
-              <PlateModalBadge plate={plate} />
-            </div>
-          )}
-
-          {/* Rarity bar */}
+          {/* Рядок редкості */}
           <div style={{
-            display: "flex", alignItems: "center", gap: 10,
-            padding: "12px 16px", borderRadius: 14,
-            background: `rgba(${cfg.rgb},0.1)`,
-            border: `1px solid ${cfg.border}`,
-            boxShadow: `0 0 20px rgba(${cfg.rgb},0.15)`,
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            padding:"11px 14px",
+            borderRadius:14,
+            background:`rgba(${cfg.rgb},0.09)`,
+            border:`1px solid rgba(${cfg.rgb},0.22)`,
           }}>
-            <Icon style={{ width: 20, height: 20, color: cfg.color, filter: `drop-shadow(0 0 8px ${cfg.glow})` }} />
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 3 }}>Рідкість</p>
-              <p style={{ fontSize: 15, fontWeight: 900, color: cfg.color, textShadow: `0 0 10px ${cfg.glow}` }}>{cfg.label}</p>
+            <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+              <Icon style={{ width:18, height:18, color:cfg.color, filter:`drop-shadow(0 0 6px ${cfg.glow})` }} />
+              <div>
+                <p style={{ fontSize:8, color:"rgba(255,255,255,0.35)", textTransform:"uppercase", letterSpacing:"0.18em", marginBottom:2 }}>Рідкість</p>
+                <p style={{ fontSize:14, fontWeight:900, color:cfg.color, textShadow:`0 0 10px ${cfg.glow}` }}>{cfg.label}</p>
+              </div>
             </div>
-            {/* Rarity dots */}
-            <div style={{ display: "flex", gap: 4 }}>
-              {(["common","rare","epic","legendary","mythic"] as Rarity[]).map((r, i) => (
-                <div key={r} style={{
-                  width: 8, height: 8, borderRadius: "50%",
-                  background: i <= (["common","rare","epic","legendary","mythic"] as Rarity[]).indexOf(rarity)
-                    ? cfg.color : "rgba(255,255,255,0.12)",
-                  boxShadow: i <= (["common","rare","epic","legendary","mythic"] as Rarity[]).indexOf(rarity)
-                    ? `0 0 8px ${cfg.glow}` : "none",
-                  transition: "all 0.3s ease",
+            {/* Точки рівня */}
+            <div style={{ display:"flex", gap:5 }}>
+              {RARITY_ORDER.map((_, i) => (
+                <div key={i} style={{
+                  width:9, height:9, borderRadius:"50%",
+                  background: i <= rarityIdx ? cfg.color : "rgba(255,255,255,0.1)",
+                  boxShadow: i <= rarityIdx ? `0 0 8px ${cfg.glow}` : "none",
                 }} />
               ))}
             </div>
@@ -346,265 +294,239 @@ const CarModal = ({ car, onClose }: { car: CarData; onClose: () => void }) => {
   );
 };
 
-// Plate badge for modal
-const PlateModalBadge = ({ plate }: { plate: string }) => (
-  <div style={{
-    display: "inline-flex", alignItems: "stretch", borderRadius: 8,
-    border: "2.5px solid #333", background: "#fff", overflow: "hidden",
-    height: 36, boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
-  }}>
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 26, borderRight: "1.5px solid #333", background: "#fff", gap: 2 }}>
-      <div style={{ width: 18, height: 12, overflow: "hidden", borderRadius: 2, border: "0.5px solid #ccc" }}>
-        <div style={{ width: "100%", height: "50%", background: "#005BBB" }} />
-        <div style={{ width: "100%", height: "50%", background: "#FFD500" }} />
-      </div>
-      <span style={{ fontSize: 7, fontWeight: 900, color: "#111", fontFamily: "Arial", lineHeight: 1 }}>UA</span>
-    </div>
-    <span style={{
-      fontFamily: "'Arial Black', Arial, sans-serif", fontWeight: 900, fontSize: 15,
-      color: "#111", letterSpacing: "0.08em", padding: "0 12px",
-      display: "flex", alignItems: "center", textTransform: "uppercase", whiteSpace: "nowrap",
-    }}>{plate}</span>
-  </div>
-);
+// ─── Модалка вибору авто ──────────────────────────────────────────────────────
+const ManageModal = ({
+  allCars, selectedIds, onToggle, onClose,
+}: {
+  allCars: CarData[];
+  selectedIds: (number | string)[];
+  onToggle: (id: number | string) => void;
+  onClose: () => void;
+}) => {
+  const SLOTS = 6;
+  const selCars = allCars.filter(c => selectedIds.some(x => String(x) === String(c.id)));
 
-// ─── Main section ─────────────────────────────────────────────────────────────
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position:"fixed", inset:0, zIndex:9999,
+        display:"flex", alignItems:"flex-end", justifyContent:"center",
+        background:"rgba(0,0,0,0.72)",
+        backdropFilter:"blur(14px)",
+        WebkitBackdropFilter:"blur(14px)",
+        animation:"fade-bg 0.22s ease",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width:"100%", maxWidth:440,
+          background:"#0d0d0d",
+          borderTop:"1.5px solid rgba(255,255,255,0.1)",
+          borderLeft:"1.5px solid rgba(255,255,255,0.06)",
+          borderRight:"1.5px solid rgba(255,255,255,0.06)",
+          borderRadius:"24px 24px 0 0",
+          boxShadow:"0 -8px 40px rgba(0,0,0,0.7)",
+          animation:"modal-up 0.3s cubic-bezier(0.32,0.72,0,1)",
+          paddingBottom:36,
+        }}
+      >
+        {/* Шапка */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 18px 14px" }}>
+          <div>
+            <p style={{ fontSize:15, fontWeight:800, color:"#fff" }}>Авто карти</p>
+            <p style={{ fontSize:10, color:"rgba(255,255,255,0.35)" }}>Обери до {SLOTS} авто для профілю</p>
+          </div>
+          <button onClick={onClose} style={{
+            width:34, height:34, borderRadius:10,
+            background:"rgba(255,255,255,0.05)",
+            border:"1px solid rgba(255,255,255,0.1)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            cursor:"pointer",
+          }}>
+            <X style={{ width:15, height:15, color:"rgba(255,255,255,0.45)" }} />
+          </button>
+        </div>
+
+        {/* Слот-індикатори */}
+        <div style={{
+          display:"flex", alignItems:"center", gap:5, padding:"8px 18px 14px",
+          borderBottom:"1px solid rgba(255,255,255,0.06)",
+        }}>
+          {Array.from({ length: SLOTS }).map((_, i) => {
+            const c = selCars[i];
+            const col = c ? RARITY[getRarity(c.rarity)].color : "rgba(255,255,255,0.1)";
+            const glow = c ? RARITY[getRarity(c.rarity)].glow : "none";
+            return <div key={i} style={{ width:10, height:10, borderRadius:"50%", background:col, boxShadow:c?`0 0 7px ${glow}`:"none", transition:"all 0.25s" }} />;
+          })}
+          <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)", marginLeft:6 }}>{selectedIds.length} / {SLOTS}</span>
+        </div>
+
+        {/* Список */}
+        <div style={{ display:"flex", flexDirection:"column", gap:6, padding:"12px 18px 0", maxHeight:320, overflowY:"auto" }}>
+          {allCars.map(car => {
+            const r = getRarity(car.rarity);
+            const cfg = RARITY[r];
+            const Icon = cfg.icon;
+            const sel = selectedIds.some(x => String(x) === String(car.id));
+            const name = getName(car);
+            return (
+              <button
+                key={car.id}
+                onClick={() => onToggle(car.id)}
+                style={{
+                  display:"flex", alignItems:"center", gap:12,
+                  padding:"10px 12px", borderRadius:14, cursor:"pointer",
+                  background: sel ? `rgba(${cfg.rgb},0.1)` : "rgba(255,255,255,0.03)",
+                  border: sel ? `1.5px solid rgba(${cfg.rgb},0.4)` : "1.5px solid rgba(255,255,255,0.07)",
+                  boxShadow: sel ? `0 0 14px rgba(${cfg.rgb},0.15)` : "none",
+                  transition:"all 0.2s",
+                  textAlign:"left",
+                }}
+              >
+                {/* Мініатюра */}
+                <div style={{
+                  width:52, height:38, borderRadius:9, flexShrink:0,
+                  background:`rgba(${cfg.rgb},0.1)`,
+                  border:`1px solid rgba(${cfg.rgb},0.2)`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  overflow:"hidden",
+                }}>
+                  {car.image_url
+                    ? <img src={car.image_url} alt="" style={{ width:"100%", height:"100%", objectFit:"contain" }} />
+                    : <Car style={{ width:20, height:20, color:cfg.color, opacity:0.4 }} />
+                  }
+                </div>
+                {/* Текст */}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <p style={{ fontSize:12, fontWeight:800, color:"#fff", marginBottom:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{name}</p>
+                  <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                    <Icon style={{ width:9, height:9, color:cfg.color }} />
+                    <span style={{ fontSize:9, color:cfg.color, fontWeight:700 }}>{cfg.label}</span>
+                  </div>
+                </div>
+                {/* Чекбокс */}
+                <div style={{
+                  width:22, height:22, borderRadius:7, flexShrink:0,
+                  background: sel ? cfg.color : "rgba(255,255,255,0.05)",
+                  border: sel ? `1.5px solid ${cfg.color}` : "1.5px solid rgba(255,255,255,0.12)",
+                  boxShadow: sel ? `0 0 8px ${cfg.glow}` : "none",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  transition:"all 0.2s",
+                }}>
+                  {sel && <svg viewBox="0 0 10 10" style={{ width:12, height:12 }} fill="none" stroke="#000" strokeWidth="2.2"><path d="M2 5l2.5 2.5L8 3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Головний компонент ───────────────────────────────────────────────────────
 interface AutoCardsSectionProps {
   cars: CarData[];
   bpCars?: CarData[];
   visible?: boolean;
 }
 
-const SLOT_COUNT = 6;
+const SLOTS = 6;
 
-const AutoCardsSection = ({ cars, bpCars = [], visible = true }: AutoCardsSectionProps) => {
-  const allCars = [...cars, ...bpCars];
-  const [selectedCar, setSelectedCar] = useState<CarData | null>(null);
-  const [showManage, setShowManage] = useState(false);
+const AutoCardsSection = ({ cars, bpCars = [] }: AutoCardsSectionProps) => {
+  // Тільки батлпас авто — номери машин не входять
+  const allCars = [...bpCars, ...cars.filter(c => c.image_url)];
+
+  const [selected, setSelected] = useState<CarData | null>(null);
+  const [managing, setManaging] = useState(false);
   const [selectedIds, setSelectedIds] = useState<(number | string)[]>(() => {
-    try { return JSON.parse(localStorage.getItem("auto_cards_selected") || "[]"); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem("auto_cards_v2") || "[]"); } catch { return []; }
   });
 
-  // keep only valid ids
+  // Ініціалізація: якщо нічого не вибрано — беремо перші SLOTS
   useEffect(() => {
-    const validIds = selectedIds.filter(id => allCars.some(c => String(c.id) === String(id)));
-    if (validIds.length !== selectedIds.length) {
-      setSelectedIds(validIds);
-      localStorage.setItem("auto_cards_selected", JSON.stringify(validIds));
+    if (selectedIds.length === 0 && allCars.length > 0) {
+      const ids = allCars.slice(0, SLOTS).map(c => c.id);
+      setSelectedIds(ids);
+      localStorage.setItem("auto_cards_v2", JSON.stringify(ids));
     }
-  }, [allCars]); // eslint-disable-line
+  }, [allCars.length]); // eslint-disable-line
 
-  const displayedCars = allCars.filter(c => selectedIds.some(id => String(id) === String(c.id))).slice(0, SLOT_COUNT);
-
-  const toggleCar = (id: number | string) => {
+  const toggle = (id: number | string) => {
     setSelectedIds(prev => {
       let next: (number | string)[];
       if (prev.some(x => String(x) === String(id))) {
         next = prev.filter(x => String(x) !== String(id));
       } else {
-        if (prev.length >= SLOT_COUNT) return prev;
+        if (prev.length >= SLOTS) return prev;
         next = [...prev, id];
       }
-      localStorage.setItem("auto_cards_selected", JSON.stringify(next));
+      localStorage.setItem("auto_cards_v2", JSON.stringify(next));
       return next;
     });
   };
 
+  const displayed = allCars.filter(c => selectedIds.some(x => String(x) === String(c.id))).slice(0, SLOTS);
+
   if (allCars.length === 0) return null;
 
   return (
-    <div style={{ marginBottom: 8 }}>
-      <style>{`
-        @keyframes shimmerSweep {
-          0%   { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
-
-      {/* Section header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, paddingLeft: 4, paddingRight: 4 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 9,
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <Car style={{ width: 14, height: 14, color: "rgba(255,255,255,0.6)" }} />
-          </div>
-          <span style={{ fontSize: 11, fontWeight: 900, color: "rgba(255,255,255,0.8)", textTransform: "uppercase", letterSpacing: "0.15em" }}>
-            Авто карти
-          </span>
-          <span style={{
-            fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.3)",
-            background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 6, padding: "2px 6px",
-          }}>{displayedCars.length}/{SLOT_COUNT}</span>
-        </div>
+    <div style={{ padding: "10px 0 4px" }}>
+      {/* Заголовок */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+        <span style={{ fontSize:9, fontWeight:700, color:"rgba(255,255,255,0.3)", textTransform:"uppercase", letterSpacing:"0.2em" }}>
+          Авто · {displayed.length}/{SLOTS}
+        </span>
         <button
-          onClick={() => setShowManage(true)}
+          onClick={() => setManaging(true)}
           style={{
-            fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.45)",
-            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 8, padding: "4px 10px", cursor: "pointer",
+            display:"flex", alignItems:"center", gap:4,
+            fontSize:9, fontWeight:600, color:"rgba(255,255,255,0.35)",
+            background:"transparent", border:"none", cursor:"pointer", padding:0,
           }}
         >
+          <Settings style={{ width:10, height:10 }} />
           Змінити
         </button>
       </div>
 
-      {/* Cards row */}
-      {displayedCars.length > 0 ? (
-        <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, paddingLeft: 2, paddingRight: 2, scrollbarWidth: "none" }}>
-          {displayedCars.map(car => (
-            <MiniCarCard key={car.id} car={car} onClick={() => setSelectedCar(car)} />
+      {/* Горизонтальна стрічка карток */}
+      {displayed.length > 0 ? (
+        <div style={{
+          display:"flex", gap:8,
+          overflowX:"auto", paddingBottom:2,
+          scrollbarWidth:"none",
+          msOverflowStyle:"none",
+        }}>
+          {displayed.map(car => (
+            <MiniCard key={car.id} car={car} onClick={() => setSelected(car)} />
           ))}
         </div>
       ) : (
-        <div
+        <button
+          onClick={() => setManaging(true)}
           style={{
-            borderRadius: 16, padding: "20px 16px",
-            background: "rgba(255,255,255,0.03)",
-            border: "1px dashed rgba(255,255,255,0.1)",
-            textAlign: "center", cursor: "pointer",
+            width:"100%", padding:"16px 0",
+            borderRadius:12, cursor:"pointer",
+            background:"rgba(255,255,255,0.02)",
+            border:"1px dashed rgba(255,255,255,0.1)",
+            color:"rgba(255,255,255,0.3)", fontSize:11,
           }}
-          onClick={() => setShowManage(true)}
         >
-          <Car style={{ width: 28, height: 28, color: "rgba(255,255,255,0.2)", margin: "0 auto 8px" }} />
-          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 600 }}>Оберіть авто для відображення</p>
-        </div>
+          Обрати авто →
+        </button>
       )}
 
-      {/* Car detail modal */}
-      {selectedCar && <CarModal car={selectedCar} onClose={() => setSelectedCar(null)} />}
-
-      {/* Manage modal */}
-      {showManage && (
-        <div
-          style={{
-            position: "fixed", inset: 0, zIndex: 9999,
-            display: "flex", alignItems: "flex-end", justifyContent: "center",
-            background: "rgba(0,0,0,0.75)", backdropFilter: "blur(10px)",
-            animation: "fadeIn 0.2s ease",
-          }}
-          onClick={() => setShowManage(false)}
-        >
-          <div
-            style={{
-              width: "100%", maxWidth: 480,
-              borderRadius: "28px 28px 0 0", padding: "20px 20px 36px",
-              background: "linear-gradient(160deg, hsl(240 15% 8% / 0.98), hsl(0 0% 4% / 0.97))",
-              border: "1px solid rgba(255,255,255,0.1)", borderBottom: "none",
-              boxShadow: "0 -8px 48px rgba(0,0,0,0.6)",
-              animation: "slideUpModal 0.32s cubic-bezier(0.32,0.72,0,1)",
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <div>
-                <p style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>Авто карти</p>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>Обери до {SLOT_COUNT} авто для профілю</p>
-              </div>
-              <button
-                onClick={() => setShowManage(false)}
-                style={{
-                  width: 34, height: 34, borderRadius: 10,
-                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
-                  display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                }}
-              >
-                <X style={{ width: 16, height: 16, color: "rgba(255,255,255,0.5)" }} />
-              </button>
-            </div>
-
-            {/* Slot dots */}
-            <div style={{
-              display: "flex", alignItems: "center", gap: 6, marginBottom: 16,
-              padding: "8px 12px", borderRadius: 12,
-              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-            }}>
-              {Array.from({ length: SLOT_COUNT }).map((_, i) => {
-                const car = displayedCars[i];
-                const rarity = car ? getRarity(car) : null;
-                const col = rarity ? RARITY_CFG[rarity].color : "rgba(255,255,255,0.12)";
-                const glow = rarity ? RARITY_CFG[rarity].glow : "none";
-                return (
-                  <div key={i} style={{
-                    width: 10, height: 10, borderRadius: "50%",
-                    background: col,
-                    boxShadow: rarity ? `0 0 8px ${glow}` : "none",
-                    transition: "all 0.3s ease",
-                  }} />
-                );
-              })}
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>{selectedIds.length} / {SLOT_COUNT}</span>
-            </div>
-
-            {/* Car list */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 320, overflowY: "auto" }}>
-              {allCars.map(car => {
-                const rarity = getRarity(car);
-                const cfg = RARITY_CFG[rarity];
-                const Icon = cfg.icon;
-                const name = car.car_name || car.car_model || car.prize_value || "АВТО";
-                const isSelected = selectedIds.some(x => String(x) === String(car.id));
-                return (
-                  <button
-                    key={car.id}
-                    onClick={() => toggleCar(car.id)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      padding: "10px 12px", borderRadius: 14, cursor: "pointer",
-                      background: isSelected ? `rgba(${cfg.rgb},0.12)` : "rgba(255,255,255,0.04)",
-                      border: isSelected ? `1.5px solid ${cfg.border}` : "1.5px solid rgba(255,255,255,0.08)",
-                      boxShadow: isSelected ? `0 0 16px rgba(${cfg.rgb},0.2)` : "none",
-                      transition: "all 0.2s ease",
-                    }}
-                  >
-                    {/* Thumb */}
-                    <div style={{
-                      width: 50, height: 36, borderRadius: 8, flexShrink: 0, overflow: "hidden",
-                      background: `rgba(${cfg.rgb},0.12)`, border: `1px solid ${cfg.border}`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      {car.image_url ? (
-                        <img src={car.image_url} alt={name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                      ) : (
-                        <Car style={{ width: 20, height: 20, color: cfg.color, opacity: 0.5 }} />
-                      )}
-                    </div>
-                    {/* Info */}
-                    <div style={{ flex: 1, textAlign: "left" }}>
-                      <p style={{ fontSize: 12, fontWeight: 800, color: "#fff", marginBottom: 2 }}>{name}</p>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <Icon style={{ width: 9, height: 9, color: cfg.color }} />
-                        <span style={{ fontSize: 9, color: cfg.color, fontWeight: 700 }}>{cfg.label}</span>
-                        {car.plate_number && (
-                          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", marginLeft: 4 }}>{car.plate_number}</span>
-                        )}
-                      </div>
-                    </div>
-                    {/* Checkbox */}
-                    <div style={{
-                      width: 22, height: 22, borderRadius: 7, flexShrink: 0,
-                      background: isSelected ? cfg.color : "rgba(255,255,255,0.06)",
-                      border: isSelected ? `1.5px solid ${cfg.color}` : "1.5px solid rgba(255,255,255,0.15)",
-                      boxShadow: isSelected ? `0 0 10px ${cfg.glow}` : "none",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      transition: "all 0.2s ease",
-                    }}>
-                      {isSelected && (
-                        <svg viewBox="0 0 10 10" style={{ width: 12, height: 12 }} fill="none" stroke="#000" strokeWidth="2">
-                          <path d="M2 5l2.5 2.5L8 3" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+      {selected && <CarModal car={selected} onClose={() => setSelected(null)} />}
+      {managing && (
+        <ManageModal
+          allCars={allCars}
+          selectedIds={selectedIds}
+          onToggle={toggle}
+          onClose={() => setManaging(false)}
+        />
       )}
     </div>
   );
