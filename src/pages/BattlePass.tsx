@@ -63,8 +63,8 @@ const RARITY_CONFIG: Record<Rarity, {
 }> = {
   common:    { label:"Звичайний",   color:"#9ca3af", glow:"rgba(156,163,175,0.55)", rgb:"156,163,175", border:"rgba(156,163,175,0.3)", icon:Star   },
   rare:      { label:"Рідкісний",   color:"#3b82f6", glow:"rgba(59,130,246,0.65)",  rgb:"59,130,246",  border:"rgba(59,130,246,0.42)",  icon:Zap    },
-  legendary: { label:"Легендарний", color:"#fbbf24", glow:"rgba(251,191,36,0.75)",  rgb:"251,191,36",  border:"rgba(251,191,36,0.5)",   icon:Trophy },
-  mythic:    { label:"Міфічний",    color:"#ef4444", glow:"rgba(239,68,68,0.8)",    rgb:"239,68,68",   border:"rgba(239,68,68,0.55)",   icon:Flame  },
+  legendary: { label:"Легендарний", color:"#FFD000", glow:"rgba(255,208,0,0.9)",    rgb:"255,208,0",   border:"rgba(255,208,0,0.6)",    icon:Trophy },
+  mythic:    { label:"Міфічний",    color:"#FF1A1A", glow:"rgba(255,26,26,0.95)",   rgb:"255,26,26",   border:"rgba(255,26,26,0.65)",   icon:Flame  },
 };
 
 const DEFAULT_CONFIG: BattlePassConfig = {
@@ -201,55 +201,41 @@ const SlotCard = ({
         "--rrgb": cfg.rgb,
       } as any}
     >
-      {/* Діагональні промені з гострими кінцями */}
+      {/* Діагональні промені — тонкі лінії з гострими кінцями */}
       {isAnimated && !locked && (
         <div style={{
-          position: "absolute", inset: -20, zIndex: 10,
-          pointerEvents: "none", overflow: "visible",
+          position: "absolute", inset: 0, zIndex: 10,
+          pointerEvents: "none", borderRadius: 16, overflow: "hidden",
         }} aria-hidden>
-          <svg viewBox="0 0 180 270" xmlns="http://www.w3.org/2000/svg"
-            style={{ position:"absolute", inset:0, width:"100%", height:"100%", overflow:"visible" }}>
-            <defs>
-              <filter id={`glow-${slot.id}`} x="-80%" y="-80%" width="260%" height="260%">
-                <feGaussianBlur stdDeviation="4" result="blur1"/>
-                <feGaussianBlur stdDeviation="10" result="blur2"/>
-                <feGaussianBlur stdDeviation="20" result="blur3"/>
-                <feMerge>
-                  <feMergeNode in="blur3"/>
-                  <feMergeNode in="blur2"/>
-                  <feMergeNode in="blur1"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-            </defs>
-            {/* Промінь 1: з верхнього лівого → правий нижній */}
-            <g filter={`url(#glow-${slot.id})`} style={{ animation: "bp-diag-1 2.2s ease-in-out infinite" }}>
-              {/* гострий трикутний промінь */}
-              <polygon
-                points="0,0 18,0 90,135 72,135"
-                fill={cfg.color}
-                opacity="0.95"
-              />
-              <polygon
-                points="0,0 18,0 90,135 72,135"
-                fill="white"
-                opacity="0.4"
-              />
-            </g>
-            {/* Промінь 2: з правого нижнього → лівий верхній */}
-            <g filter={`url(#glow-${slot.id})`} style={{ animation: "bp-diag-2 2.2s ease-in-out infinite" }}>
-              <polygon
-                points="180,270 162,270 90,135 108,135"
-                fill={cfg.color}
-                opacity="0.95"
-              />
-              <polygon
-                points="180,270 162,270 90,135 108,135"
-                fill="white"
-                opacity="0.4"
-              />
-            </g>
-          </svg>
+          {/* Промінь 1: верхній лівий → правий нижній */}
+          <div style={{
+            position: "absolute",
+            width: 3,
+            height: "220%",
+            top: "-60%",
+            left: "50%",
+            transform: "rotate(35deg) translateX(-50%)",
+            transformOrigin: "50% 50%",
+            background: `linear-gradient(to bottom, transparent 0%, ${cfg.color} 30%, white 50%, ${cfg.color} 70%, transparent 100%)`,
+            boxShadow: `0 0 12px 4px ${cfg.color}, 0 0 30px 10px ${cfg.glow}, 0 0 60px 20px ${cfg.glow}`,
+            animation: "bp-diag-1 2.4s ease-in-out infinite",
+            opacity: 0,
+          }} />
+          {/* Промінь 2: правий нижній → лівий верхній */}
+          <div style={{
+            position: "absolute",
+            width: 3,
+            height: "220%",
+            top: "-60%",
+            left: "50%",
+            transform: "rotate(35deg) translateX(-50%)",
+            transformOrigin: "50% 50%",
+            background: `linear-gradient(to bottom, transparent 0%, ${cfg.color} 30%, white 50%, ${cfg.color} 70%, transparent 100%)`,
+            boxShadow: `0 0 12px 4px ${cfg.color}, 0 0 30px 10px ${cfg.glow}, 0 0 60px 20px ${cfg.glow}`,
+            animation: "bp-diag-2 2.4s ease-in-out infinite",
+            animationDelay: "1.2s",
+            opacity: 0,
+          }} />
         </div>
       )}
 
@@ -541,16 +527,16 @@ const BattlePass = () => {
 
         /* Діагональні промені */
         @keyframes bp-diag-1 {
-          0%   { transform: translate(-180px, -270px); opacity: 0; }
+          0%   { opacity: 0; transform: rotate(35deg) translateX(-50%) translateY(-120%); }
           10%  { opacity: 1; }
           90%  { opacity: 1; }
-          100% { transform: translate(180px, 270px); opacity: 0; }
+          100% { opacity: 0; transform: rotate(35deg) translateX(-50%) translateY(120%); }
         }
         @keyframes bp-diag-2 {
-          0%   { transform: translate(180px, 270px); opacity: 0; }
+          0%   { opacity: 0; transform: rotate(35deg) translateX(-50%) translateY(120%); }
           10%  { opacity: 1; }
           90%  { opacity: 1; }
-          100% { transform: translate(-180px, -270px); opacity: 0; }
+          100% { opacity: 0; transform: rotate(35deg) translateX(-50%) translateY(-120%); }
         }
 
         .bp-card-row{ scrollbar-width:none }
