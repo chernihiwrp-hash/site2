@@ -494,7 +494,17 @@ const BattlePass = () => {
   };
 
   return (
-    <div className="min-h-screen pb-24 relative" style={{ background: "#050505" }}>
+    <div className="min-h-screen pb-24 relative" style={{
+      background: (cfg.banner_url || cfg.background_url)
+        ? undefined
+        : "#050505",
+      ...(cfg.banner_url || cfg.background_url ? {
+        backgroundImage: `url(${cfg.banner_url || cfg.background_url})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center top",
+        backgroundAttachment: "local",
+      } : {}),
+    }}>
 
       {/* Чорний екран поки модалка активна — щоб не спойлерити контент */}
       {showModal && (
@@ -583,22 +593,16 @@ const BattlePass = () => {
         }
       `}</style>
 
-      {/* ─── ФОН СТОРІНКИ ─── */}
-      <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
-        {(cfg.banner_url || cfg.background_url) ? (
-          <>
-            <img src={cfg.banner_url || cfg.background_url} alt=""
-              className="w-full h-full"
-              style={{ objectFit:"cover", objectPosition:"center top", minHeight:"100%" }} />
-            {/* Притемнення: зверху трохи, знизу сильніше */}
-            <div className="absolute inset-0"
-              style={{ background:"linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.45) 50%, rgba(5,5,5,0.82) 80%, rgba(5,5,5,0.97) 100%)" }} />
-          </>
-        ) : (
-          <div className="absolute inset-0"
-            style={{ background:`linear-gradient(180deg, ${cfg.gradient_from}, ${cfg.gradient_to})` }} />
-        )}
-      </div>
+      {/* ─── ФОН СТОРІНКИ (fallback градієнт якщо немає зображення) ─── */}
+      {!cfg.banner_url && !cfg.background_url && (
+        <div className="absolute inset-0 -z-10 pointer-events-none"
+          style={{ background:`linear-gradient(180deg, ${cfg.gradient_from}, ${cfg.gradient_to})` }} />
+      )}
+      {/* Притемнення поверх банера знизу */}
+      {(cfg.banner_url || cfg.background_url) && (
+        <div className="absolute inset-0 -z-10 pointer-events-none"
+          style={{ background:"linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 50%, rgba(5,5,5,0.75) 80%, rgba(5,5,5,0.95) 100%)" }} />
+      )}
 
       {/* ─── ОСНОВНИЙ КОНТЕНТ (ховаємо поки модалка активна) ─── */}
       <div style={{ visibility: showModal ? "hidden" : "visible", opacity: showModal ? 0 : 1, transition: "opacity 0.4s ease" }}>
