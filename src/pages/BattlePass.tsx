@@ -583,16 +583,16 @@ const BattlePass = () => {
         }
       `}</style>
 
-      {/* ─── ФОН СТОРІНКИ (тільки під контентом батлпасу, не на весь сайт) ─── */}
+      {/* ─── ФОН СТОРІНКИ ─── */}
       <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
-        {cfg.background_url ? (
+        {(cfg.banner_url || cfg.background_url) ? (
           <>
-            {/* background_url — замінює темний фон сторінки, банер залишається зверху */}
-            <img src={cfg.background_url} alt=""
+            <img src={cfg.banner_url || cfg.background_url} alt=""
               className="w-full h-full"
               style={{ objectFit:"cover", objectPosition:"center top", minHeight:"100%" }} />
+            {/* Притемнення: зверху трохи, знизу сильніше */}
             <div className="absolute inset-0"
-              style={{ background:"linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)" }} />
+              style={{ background:"linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.45) 50%, rgba(5,5,5,0.82) 80%, rgba(5,5,5,0.97) 100%)" }} />
           </>
         ) : (
           <div className="absolute inset-0"
@@ -603,41 +603,23 @@ const BattlePass = () => {
       {/* ─── ОСНОВНИЙ КОНТЕНТ (ховаємо поки модалка активна) ─── */}
       <div style={{ visibility: showModal ? "hidden" : "visible", opacity: showModal ? 0 : 1, transition: "opacity 0.4s ease" }}>
 
-      {/* ─── БАНЕР ─── */}
-      {/* Якщо є background_url — він вже на всю сторінку через fixed, банер не показуємо */}
-      <div className="relative w-full">
-        {cfg.banner_url ? (
-          <>
-            {/* Банер завжди зверху — незалежно від background_url */}
-            <img src={cfg.banner_url} alt="banner"
-              className="w-full block"
-              style={{ objectFit:"cover", objectPosition:"center top" }} />
-            <div className="absolute bottom-0 left-0 right-0 pointer-events-none"
-              style={{ height:"60%", background:`linear-gradient(to bottom,transparent 0%,rgba(5,5,5,0.7) 70%,rgba(5,5,5,1) 100%)` }} />
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div style={{ position:"absolute",inset:0,background:"linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.05) 50%,transparent 70%)",animation:"bp-shimmer-banner 7s ease-in-out infinite" }} />
-            </div>
-          </>
-        ) : null}
-
+      {/* ─── ШАПКА ─── */}
+      <div className="relative w-full pt-4">
         <button onClick={() => navigate(-1)}
           className="absolute left-4 top-4 w-9 h-9 rounded-xl flex items-center justify-center z-10"
           style={{ background:"rgba(0,0,0,0.55)",border:"1px solid rgba(255,255,255,0.14)",backdropFilter:"blur(12px)" }}>
           <ChevronLeft className="w-4 h-4 text-white" />
         </button>
 
-        <div className={`${cfg.banner_url ? "absolute bottom-0 left-0 right-0" : "relative pt-16"} px-4 pb-4 text-center`}>
-          {!cfg.banner_url && (
+        <div className="px-4 pb-4 pt-16 text-center">
+          {!cfg.banner_url && !cfg.background_url && (
             <div className="relative inline-flex items-center justify-center mb-4">
               <div className="absolute w-24 h-24 rounded-full pointer-events-none"
                 style={{ background:`radial-gradient(circle,rgba(${accentRgb},0.35) 0%,transparent 70%)` }} />
               <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center"
                 style={{
-                  background: glass
-                    ? `linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))`
-                    : `linear-gradient(135deg,rgba(${accentRgb},0.18),rgba(${accentRgb},0.08))`,
+                  background: `linear-gradient(135deg,rgba(${accentRgb},0.18),rgba(${accentRgb},0.08))`,
                   border: `1.5px solid rgba(${accentRgb},0.4)`,
-                  backdropFilter: glass ? "blur(14px)" : undefined,
                   boxShadow: `0 0 28px rgba(${accentRgb},0.35)`,
                 }}>
                 <Crown className="w-8 h-8" style={{ color:accent }} />
