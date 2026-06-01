@@ -212,29 +212,36 @@ const SlotCard = ({
         <div className="bp-anim-border" aria-hidden>
           <svg viewBox="0 0 140 230" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"
             style={{ position:"absolute", inset:0, width:"100%", height:"100%", overflow:"visible" }}>
-            {/* Периметр: прямокутник з заокругленими кутами (rx=16) */}
-            {/* Довжина ~= 2*(140+230) - кути = ~520px */}
+            {/*
+              Периметр rect 138×228 rx=15:
+              Довжина кожної прямої сторони: top≈108, right≈198, bottom≈108, left≈198 → ~612 + 4 кути (~24*π≈75) ≈ 520px
+              Смуга = 100px, порожнина = 420px → 1 смуга на весь шлях
+              2 смуги стартують з протилежних кутів (зміщення 260 = половина периметру)
+            */}
+            {/* Смуга 1 — стартує з верхнього лівого кута, йде за годинниковою */}
             <rect x="1" y="1" width="138" height="228" rx="15" ry="15"
               fill="none"
               stroke={cfg.color}
               strokeWidth="2.5"
-              strokeDasharray="80 440"
+              strokeLinecap="round"
+              strokeDasharray="100 420"
               strokeDashoffset="0"
               style={{
-                animation: "bp-sweep-1 2.4s linear infinite",
-                filter: `drop-shadow(0 0 6px ${cfg.color})`,
+                animation: "bp-sweep-1 2.6s linear infinite",
+                filter: `drop-shadow(0 0 8px ${cfg.color}) drop-shadow(0 0 14px ${cfg.color})`,
               }}
             />
-            {/* Друга смуга — зміщена на 260 (половина периметру) */}
+            {/* Смуга 2 — стартує з нижнього правого кута (зміщена на 260 = ~половина периметру) */}
             <rect x="1" y="1" width="138" height="228" rx="15" ry="15"
               fill="none"
-              stroke="rgba(255,255,255,0.9)"
-              strokeWidth="1.5"
-              strokeDasharray="40 480"
+              stroke={cfg.color}
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeDasharray="100 420"
               strokeDashoffset="-260"
               style={{
-                animation: "bp-sweep-2 2.4s linear infinite",
-                filter: `drop-shadow(0 0 4px ${cfg.color})`,
+                animation: "bp-sweep-2 2.6s linear infinite",
+                filter: `drop-shadow(0 0 8px ${cfg.color}) drop-shadow(0 0 14px ${cfg.color})`,
               }}
             />
           </svg>
@@ -430,15 +437,15 @@ const BattlePass = () => {
       const seenVal = localStorage.getItem(seenKey);
       const seasonId = configRow?.id || configRow?.season_name || "default";
       if (seenVal !== String(seasonId)) {
-        setTimeout(() => setShowModal(true), 400);
+        // Зберігаємо одразу — щоб не показувалась повторно навіть при обновленні
+        localStorage.setItem(seenKey, String(seasonId));
+        setTimeout(() => setShowModal(true), 150);
       }
     })();
   }, [nick]);
 
   const handleCloseModal = () => {
     setShowModal(false);
-    const seasonId = cfg.season_name || "default";
-    localStorage.setItem(seenKey, String(seasonId));
   };
 
   const ownedIds    = new Set(rewards.map(r => r.slot_id));
@@ -488,6 +495,11 @@ const BattlePass = () => {
 
   return (
     <div className="min-h-screen pb-24 relative" style={{ background: "#050505" }}>
+
+      {/* Чорний екран поки модалка активна — щоб не спойлерити контент */}
+      {showModal && (
+        <div className="fixed inset-0 z-[998] bg-black pointer-events-none" />
+      )}
 
       {/* Модалка першого входу */}
       {showModal && (
@@ -575,11 +587,12 @@ const BattlePass = () => {
       <div className="fixed inset-0 -z-10 pointer-events-none">
         {cfg.background_url ? (
           <>
+            {/* background_url — на всю сторінку, замінює градієнт І банер */}
             <img src={cfg.background_url} alt=""
               className="w-full h-full"
-              style={{ objectFit:"cover", objectPosition:"center" }} />
+              style={{ objectFit:"cover", objectPosition:"center top" }} />
             <div className="absolute inset-0"
-              style={{ background:"linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.72) 100%)" }} />
+              style={{ background:"linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.65) 100%)" }} />
           </>
         ) : (
           <div className="absolute inset-0"
@@ -587,20 +600,15 @@ const BattlePass = () => {
         )}
       </div>
 
-      {/* ─── БАНЕР (з фоном вкладки) ─── */}
+      {/* ─── ОСНОВНИЙ КОНТЕНТ (ховаємо поки модалка активна) ─── */}
+      <div style={{ visibility: showModal ? "hidden" : "visible", opacity: showModal ? 0 : 1, transition: "opacity 0.4s ease" }}>
+
+      {/* ─── БАНЕР ─── */}
+      {/* Якщо є background_url — він вже на всю сторінку через fixed, банер не показуємо */}
       <div className="relative w-full overflow-hidden">
-        {cfg.banner_url ? (
+        {cfg.banner_url && !cfg.background_url ? (
           <>
-            {/* Фон на всю площу під банером */}
-            {cfg.background_url && (
-              <div className="fixed inset-0 -z-10">
-                <img src={cfg.background_url} alt=""
-                  className="w-full h-full"
-                  style={{ objectFit:"cover", objectPosition:"center" }} />
-                <div className="absolute inset-0" style={{ background:"rgba(0,0,0,0.55)" }} />
-              </div>
-            )}
-            {/* Сам банер зверху */}
+            {/* Банер тільки якщо немає повноекранного фону */}
             <img src={cfg.banner_url} alt="banner"
               className="w-full object-cover"
               style={{ height:220, objectFit:"cover", objectPosition:"center top" }} />
@@ -619,7 +627,7 @@ const BattlePass = () => {
         </button>
 
         <div className={`${cfg.banner_url ? "absolute bottom-0 left-0 right-0" : "relative pt-16"} px-4 pb-4 text-center`}>
-          {!cfg.banner_url && (
+          {(!cfg.banner_url || cfg.background_url) && (
             <div className="relative inline-flex items-center justify-center mb-4">
               <div className="absolute w-24 h-24 rounded-full pointer-events-none"
                 style={{ background:`radial-gradient(circle,rgba(${accentRgb},0.35) 0%,transparent 70%)` }} />
@@ -837,6 +845,8 @@ const BattlePass = () => {
           )}
         </div>
       )}
+
+      </div>{/* кінець основного контенту */}
 
       {/* SVG для анімованої рамки (глобальний defs) */}
       <svg width="0" height="0" style={{ position:"absolute" }}>
