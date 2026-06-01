@@ -491,6 +491,31 @@ const Profile = () => {
 
             {/* Machine line */}
             <div className="relative px-4 py-1.5 rounded-b-2xl" style={{ borderTop: "1px solid hsl(0 0% 100% / 0.05)", background: "hsl(0 0% 100% / 0.02)" }}>
+              {/* ── Авто карти всередині удостоверення ── */}
+              {((profileData as any).cars?.length > 0 || bpRewards.filter((r: any) => r.prize_type === "car").length > 0) && (
+                <div style={{ marginBottom: 8 }}>
+                  <AutoCardsSection
+                    cars={((profileData as any).cars || []).map((car: any): CarData => ({
+                      id: car.id,
+                      plate_number: car.plate_number,
+                      car_model: car.car_model,
+                      image_url: car.image_url || car.car_image,
+                      rarity: car.rarity || "common",
+                    }))}
+                    bpCars={bpRewards
+                      .filter((r: any) => r.prize_type === "car")
+                      .map((r: any, i: number): CarData => ({
+                        id: `bp_${i}`,
+                        plate_number: "",
+                        car_model: r.car_name || r.prize_value,
+                        car_name: r.car_name || r.prize_value,
+                        image_url: r.image_url,
+                        rarity: r.rarity || "legendary",
+                      }))}
+                    visible={contentVisible}
+                  />
+                </div>
+              )}
               <p className="text-[6px] text-muted-foreground/20 font-mono tracking-widest text-center truncate">
                 CHERNIHIV RP &lt;&lt; {nick.toUpperCase()} &lt;&lt; {uid.slice(-8)}
               </p>
@@ -710,32 +735,6 @@ const Profile = () => {
             </div>
           ))}
         </div>
-      )}
-
-      {/* ═══ АВТО КАРТИ ═══ */}
-      {loading ? (
-        <SkeletonBlock h={180} />
-      ) : (
-        <AutoCardsSection
-          cars={((profileData as any).cars || []).map((car: any): CarData => ({
-            id: car.id,
-            plate_number: car.plate_number,
-            car_model: car.car_model,
-            image_url: car.image_url || car.car_image,
-            rarity: car.rarity || "common",
-          }))}
-          bpCars={bpRewards
-            .filter((r: any) => r.prize_type === "car")
-            .map((r: any, i: number): CarData => ({
-              id: `bp_${i}`,
-              plate_number: "",
-              car_model: r.car_name || r.prize_value,
-              car_name: r.car_name || r.prize_value,
-              image_url: r.image_url,
-              rarity: r.rarity || "legendary",
-            }))}
-          visible={contentVisible}
-        />
       )}
 
       {/* ═══ МОДАЛКА ВИБОРУ НФТ ДЛЯ ОРБІТИ ═══ */}
