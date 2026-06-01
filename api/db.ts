@@ -46,7 +46,6 @@ const TABLE_PERM: Record<string, string> = {
   db_logs:                     "__readonly__",    // тільки читати
   maintenance_mode:            "maintenance",
   battlepass_slots:            "battlepass",
-  battlepass_rewards:          "battlepass",     // адмін або користувач з пермом "maintenance"
   battlepass_config:           "battlepass",
 };
 
@@ -328,6 +327,21 @@ export default async function handler(req: any, res: any) {
     const ownerNick = String((values as any)["owner_nick"] || "").toLowerCase().trim();
     if (ownerNick !== normalizedNick) {
       return deny(403, "Forbidden: owner_nick must match your nick");
+    }
+  }
+
+  if (table === "battlepass_rewards" && !hasPerm("battlepass")) {
+    // Players can claim only one reward row for their own account.
+    if (op !== "insert") {
+      return deny(403, "Forbidden: can only insert your own battlepass reward");
+    }
+    const rows = Array.isArray(values) ? values : [values];
+    if (rows.length !== 1 || !rows[0] || typeof rows[0] !== "object") {
+      return deny(400, "Invalid values for battlepass_rewards insert");
+    }
+    const rewardUser = String((rows[0] as any)["username"] || "").toLowerCase().trim();
+    if (rewardUser !== normalizedNick) {
+      return deny(403, "Forbidden: username must match your nick");
     }
   }
 
