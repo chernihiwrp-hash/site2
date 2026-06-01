@@ -62,7 +62,7 @@ const RARITY_CONFIG: Record<Rarity, {
   border: string; icon: any;
 }> = {
   common:    { label:"Звичайний",   color:"#9ca3af", glow:"rgba(156,163,175,0.55)", rgb:"156,163,175", border:"rgba(156,163,175,0.3)", icon:Star   },
-  rare:      { label:"Рідкісний",   color:"#a855f7", glow:"rgba(168,85,247,0.65)",  rgb:"168,85,247",  border:"rgba(168,85,247,0.4)",  icon:Zap    },
+  rare:      { label:"Рідкісний",   color:"#3b82f6", glow:"rgba(59,130,246,0.65)",   rgb:"59,130,246",   border:"rgba(59,130,246,0.42)",  icon:Zap    },
   legendary: { label:"Легендарний", color:"#fbbf24", glow:"rgba(251,191,36,0.75)",  rgb:"251,191,36",  border:"rgba(251,191,36,0.5)",  icon:Trophy },
   mythic:    { label:"Міфічний",    color:"#ef4444", glow:"rgba(239,68,68,0.8)",    rgb:"239,68,68",   border:"rgba(239,68,68,0.55)",  icon:Flame  },
 };
@@ -104,7 +104,7 @@ const SlotCard = ({
   /* фон карточки: чорний з градієнтом-«кружечком» зверху-зліва */
   const cardBg = glass
     ? `linear-gradient(160deg, rgba(20,20,20,0.55) 0%, rgba(0,0,0,0.65) 100%)`
-    : `radial-gradient(circle at 0% 0%, rgba(${cfg.rgb},0.55) 0%, rgba(${cfg.rgb},0.18) 18%, rgba(0,0,0,0.95) 55%, #050505 100%)`;
+    : `radial-gradient(circle at 0% 0%, rgba(${cfg.rgb},0.76) 0%, rgba(${cfg.rgb},0.46) 24%, rgba(${cfg.rgb},0.18) 48%, rgba(0,0,0,0.96) 78%, #050505 100%)`;
 
   return (
     <div
@@ -136,9 +136,8 @@ const SlotCard = ({
         <div
           className="rounded-full"
           style={{
-            width: 14, height: 14,
-            background: `radial-gradient(circle at 30% 30%, ${cfg.color}, rgba(${cfg.rgb},0.35) 70%, transparent 100%)`,
-            boxShadow: `0 0 12px ${cfg.glow}, 0 0 24px ${cfg.glow}`,
+            width: 12, height: 12,
+            background: cfg.color,
           }}
         />
       </div>
@@ -205,18 +204,18 @@ const SlotCard = ({
       <div className="relative pb-3 pt-1 flex items-center justify-center">
         <div className="absolute left-3 right-3 h-[2px] rounded-full"
           style={{
-            background: `linear-gradient(90deg, ${levelColor}55, ${levelColor}, ${levelColor}55)`,
-            boxShadow: `0 0 6px ${levelColor}aa`,
+            background: `linear-gradient(90deg, rgba(${cfg.rgb},0.15), ${cfg.color}, rgba(${cfg.rgb},0.15))`,
+            boxShadow: `0 0 8px ${cfg.glow}`,
             opacity: locked ? 0.3 : 1,
           }} />
         <div className="relative rounded-full flex items-center justify-center font-black tabular-nums"
           style={{
             width: 28, height: 28,
             background: `radial-gradient(circle, #0b0b0b, #000)`,
-            border: `2px solid ${levelColor}`,
-            color: levelColor,
+            border: `2px solid ${cfg.color}`,
+            color: cfg.color,
             fontSize: 11,
-            boxShadow: `0 0 12px ${levelColor}88, inset 0 0 8px rgba(0,0,0,0.6)`,
+            boxShadow: `0 0 12px ${cfg.glow}, inset 0 0 8px rgba(0,0,0,0.6)`,
             opacity: locked ? 0.5 : 1,
           }}>
           {slot.slot_number}
@@ -376,8 +375,8 @@ const BattlePass = () => {
         @keyframes bp-fade-up    { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
         @keyframes bp-float      { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
         @keyframes bp-border-spin{ 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-        @keyframes bp-pulse      { 0%,100%{opacity:.85;box-shadow:0 0 18px var(--rg)} 50%{opacity:1;box-shadow:0 0 36px var(--rg),0 0 60px var(--rg)} }
-        @keyframes bp-claim-glow { 0%,100%{box-shadow:0 0 20px var(--ag),0 0 40px var(--ag)} 50%{box-shadow:0 0 32px var(--ag),0 0 70px var(--ag)} }
+        @keyframes bp-claim-glow { 0%,100%{box-shadow:0 0 18px var(--ag),0 0 34px var(--ag)} 50%{box-shadow:0 0 30px var(--ag),0 0 64px var(--ag)} }
+        @keyframes bp-btn-sweep  { 0%{transform:translateX(-130%)} 52%,100%{transform:translateX(130%)} }
         @keyframes bp-shimmer-banner { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
 
         .bp-card-row{ scrollbar-width:none }
@@ -390,25 +389,29 @@ const BattlePass = () => {
           box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
         }
 
-        /* Анімована рамка legendary/mythic */
-        .bp-card-animated{ animation: bp-pulse 2.4s ease-in-out infinite; }
+        /* Анімована рамка legendary/mythic — два протилежні glow-сегменти їдуть по контуру */
+        .bp-card-animated{ box-shadow: 0 0 22px rgba(var(--rrgb),0.16), inset 0 0 18px rgba(var(--rrgb),0.08); }
         .bp-anim-border{
-          position:absolute; inset:-1px; border-radius:16px; padding:1.5px;
+          position:absolute; inset:-1px; border-radius:16px; pointer-events:none; z-index:10;
+        }
+        .bp-anim-border::before,
+        .bp-anim-border::after{
+          content:""; position:absolute; inset:0; border-radius:inherit; padding:2px;
           background: conic-gradient(from 0deg,
-            transparent 0%,
-            var(--r) 25%,
-            rgba(255,255,255,0.9) 50%,
-            var(--r) 75%,
-            transparent 100%);
+            transparent 0deg, transparent 26deg,
+            var(--r) 40deg, rgba(255,255,255,0.95) 52deg, var(--r) 64deg,
+            transparent 82deg, transparent 206deg,
+            var(--r) 220deg, rgba(255,255,255,0.95) 232deg, var(--r) 244deg,
+            transparent 262deg, transparent 360deg);
           -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
           -webkit-mask-composite: xor;
                   mask-composite: exclude;
-          animation: bp-border-spin 3.5s linear infinite;
-          pointer-events:none;
-          z-index: 10;
+          animation: bp-border-spin 3.8s linear infinite;
         }
+        .bp-anim-border::after{ filter: blur(7px); opacity:.9; }
 
-        .bp-claim-btn{ animation: bp-claim-glow 2.2s ease-in-out infinite; }
+        .bp-claim-btn{ position:relative; overflow:hidden; animation: bp-claim-glow 2.2s ease-in-out infinite; }
+        .bp-claim-btn::after{ content:""; position:absolute; inset:0; background:linear-gradient(105deg, transparent 25%, rgba(255,255,255,.16) 50%, transparent 75%); animation:bp-btn-sweep 2.9s ease-in-out infinite; pointer-events:none; }
       `}</style>
 
       {/* Banner / Header */}
@@ -486,7 +489,7 @@ const BattlePass = () => {
               : !nextSlot
               ? "Усі нагороди зібрано"
               : canClaim
-              ? "Забрати щоденну нагороду (+1 рівень)"
+              ? "отримати"
               : "Сьогодні вже отримано — приходь завтра"}
           </button>
         </div>
@@ -559,7 +562,7 @@ const BattlePass = () => {
                   <div key={r} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
                     style={{ background:`rgba(${rc.rgb},0.1)`,border:`1px solid rgba(${rc.rgb},0.28)` }}>
                     <div className="w-2.5 h-2.5 rounded-full"
-                      style={{ background:`radial-gradient(circle at 30% 30%, ${rc.color}, transparent 75%)`, boxShadow:`0 0 6px ${rc.glow}` }} />
+                      style={{ background: rc.color }} />
                     <Icon className="w-3 h-3" style={{ color:rc.color }} />
                     <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color:rc.color }}>{rc.label}</span>
                     <span className="text-[8px]" style={{ color:rc.color+"99" }}>×{count}</span>
