@@ -176,9 +176,9 @@ const SlotCard = ({
           <div className="flex flex-col items-center gap-1">
             <span style={{ fontSize: 34, opacity: locked ? 0.2 : 1,
               filter: owned ? `drop-shadow(0 0 10px ${cfg.color})` : "none" }}>
-              {slot.prize_type === "cr" ? "" :
-               slot.prize_type === "nft" ? "" :
-               slot.prize_type === "car" ? "" : ""}
+              {slot.prize_type === "cr" ? "💰" :
+               slot.prize_type === "nft" ? "🎁" :
+               slot.prize_type === "car" ? "🚗" : "✨"}
             </span>
             <Icon className="w-4 h-4" style={{ color: cfg.color, opacity: locked ? 0.2 : 0.8 }} />
           </div>
@@ -262,6 +262,7 @@ const BattlePass = () => {
   const [rewards, setRewards] = useState<BattlePassReward[]>([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
+  const [nftMap, setNftMap] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const claimKey = `bp_last_claim_${nick}`;
@@ -276,17 +277,31 @@ const BattlePass = () => {
 
   useEffect(() => {
     (async () => {
-      const [configRes, slotsRes, rewardsRes] = await Promise.all([
+      const [configRes, slotsRes, rewardsRes, nftsRes] = await Promise.all([
         dbSelect("battlepass_config", { limit: 1 }),
         dbSelect("battlepass_slots",  { order: { col: "slot_number", dir: "asc" } }),
         nick
           ? dbSelect("battlepass_rewards", { filters: [{ col: "username", op: "ilike", value: nick }] })
           : Promise.resolve({ data: [], error: null }),
+        // Спроба підвантажити NFT — щоб показати картинку замість смайлика 🎁.
+        // Якщо таблиця називається інакше — просто проігнорується.
+        dbSelect("nfts", {}).catch(() => ({ data: [], error: null })),
       ]);
       const configRow = (configRes.data as any[])?.[0];
       if (configRow) setCfg({ ...DEFAULT_CONFIG, ...configRow });
       setSlots((slotsRes.data   as any[]) || []);
       setRewards((rewardsRes.data as any[]) || []);
+
+      // Будуємо мапу: id → image_url (з різними можливими назвами поля)
+      const nfts = (nftsRes?.data as any[]) || [];
+      const map: Record<string, string> = {};
+      for (const n of nfts) {
+        const img = n.image_url || n.image || n.img || n.url || n.picture || "";
+        if (img && n.id != null) map[String(n.id)] = img;
+        if (img && n.gift_id != null) map[String(n.gift_id)] = img;
+        if (img && n.name) map[String(n.name)] = img;
+      }
+      setNftMap(map);
       setLoading(false);
     })();
   }, [nick]);
@@ -507,18 +522,28 @@ const BattlePass = () => {
           <div ref={scrollRef}
             className="bp-card-row flex gap-3 overflow-x-auto pb-4"
             style={{ paddingLeft:16, paddingRight:16 }}>
-            {sortedSlots.map(slot => (
-              <div key={slot.id} data-day={slot.slot_number}>
-                <SlotCard
-                  slot={slot}
-                  owned={ownedIds.has(slot.id)}
-                  isToday={slot.slot_number === daysPassed}
-                  daysPassed={daysPassed}
-                  glass={glass}
-                  levelColor={levelColor}
-                />
-              </div>
-            ))}
+            {sortedSlots.map(slot => {
+              // Якщо це NFT і нема явного image_url — підтягуємо з мапи nft
+              const resolvedImg =
+                slot.image_url ||
+                (slot.prize_type === "nft" && slot.nft_gift_id
+                  ? nftMap[String(slot.nft_gift_id)]
+                  : "") ||
+                "";
+              const slotWithImg = { ...slot, image_url: resolvedImg };
+              return (
+                <div key={slot.id} data-day={slot.slot_number}>
+                  <SlotCard
+                    slot={slotWithImg}
+                    owned={ownedIds.has(slot.id)}
+                    isToday={slot.slot_number === daysPassed}
+                    daysPassed={daysPassed}
+                    glass={glass}
+                    levelColor={levelColor}
+                  />
+                </div>
+              );
+            })}
           </div>
 
           {/* Легенда рідкості */}
@@ -569,7 +594,7 @@ export const BattlePassCarCard = ({ reward }: { reward: BattlePassReward }) => {
         ) : (
           <div className="flex items-center justify-center mb-3 rounded-xl"
             style={{ height:100, border:`1px dashed ${cfg.border}` }}>
-            <span style={{ fontSize:48 }}></span>
+            <span style={{ fontSize:48 }}>🚗</span>
           </div>
         )}
         <div className="text-center">
