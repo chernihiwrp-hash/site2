@@ -12,7 +12,8 @@ import { dbSelect } from '../lib/db';
 import { store, supabase, getBalanceFromDB } from "../lib/store";
 import type { Notification } from "../lib/store";
 import HouseFamilyModal from "../components/HouseFamilyModal";
-import { BattlePassCarCard } from "./BattlePass";
+import AutoCardsSection from "../components/AutoCardsSection";
+import type { CarData } from "../components/AutoCardsSection";
 
 const getTelegramUser = () => {
   try {
@@ -711,53 +712,30 @@ const Profile = () => {
         </div>
       )}
 
-      {/* ═══ ЯРУС 2: ТРАНСПОРТ ═══ */}
+      {/* ═══ АВТО КАРТИ ═══ */}
       {loading ? (
-        <SkeletonBlock h={72} />
+        <SkeletonBlock h={180} />
       ) : (
-        <div className="space-y-4 mb-10 px-1" style={blockAnim(contentVisible, 360)}>
-          {((profileData as any).cars || []).map((car: any) => (
-            <div key={car.id} className="relative w-full rounded-2xl p-[1.2px] overflow-hidden shadow-2xl"
-                 style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, hsl(var(--primary) / 0.4) 100%)" }}>
-              <div className="relative rounded-[15px] overflow-hidden px-5 py-5 flex items-center gap-4" style={{ background: passportBg }}>
-                <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none opacity-30"
-                     style={{ background: `radial-gradient(circle at 50% 100%, hsl(var(--primary) / 0.5) 0%, transparent 80%)` }} />
-                <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg shrink-0 z-10">
-                  <Car className="w-5 h-5 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)))" }} />
-                </div>
-                <div className="flex-1 flex items-center justify-between min-w-0 z-10">
-                  <div>
-                    <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-black mb-1 opacity-50">НОМЕРИ АВТО</p>
-                    <p className="text-[7px] text-primary/40 uppercase font-bold tracking-tighter mb-0.5">МОДЕЛЬ АВТО</p>
-                    <p className="text-sm font-black text-white italic tracking-tighter leading-none truncate max-w-[110px]">{car.car_model || "НЕВІДОМО"}</p>
-                  </div>
-                  <div className="shrink-0 scale-[1.2] origin-right mr-1 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
-                    <PlateBadge plate={car.plate_number} />
-                  </div>
-                </div>
-                <div className="opacity-[0.03] absolute right-4 top-1/2 -translate-y-1/2 w-10 h-12 z-0"><Trident /></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ═══ ЯРУС: БАТЛПАС АВТО ═══ */}
-      {bpRewards.filter((r: any) => r.prize_type === "car").length > 0 && (
-        <div className="space-y-4 mb-10 px-1">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.25)" }}>
-              <Crown className="w-3.5 h-3.5" style={{ color: "#fbbf24" }} />
-            </div>
-            <span className="text-xs font-black uppercase tracking-[0.12em]" style={{ color: "#fbbf24" }}>
-              Батлпас • Авто
-            </span>
-          </div>
-          {bpRewards.filter((r: any) => r.prize_type === "car").map((reward: any, i: number) => (
-            <BattlePassCarCard key={i} reward={reward} />
-          ))}
-        </div>
+        <AutoCardsSection
+          cars={((profileData as any).cars || []).map((car: any): CarData => ({
+            id: car.id,
+            plate_number: car.plate_number,
+            car_model: car.car_model,
+            image_url: car.image_url || car.car_image,
+            rarity: car.rarity || "common",
+          }))}
+          bpCars={bpRewards
+            .filter((r: any) => r.prize_type === "car")
+            .map((r: any, i: number): CarData => ({
+              id: `bp_${i}`,
+              plate_number: "",
+              car_model: r.car_name || r.prize_value,
+              car_name: r.car_name || r.prize_value,
+              image_url: r.image_url,
+              rarity: r.rarity || "legendary",
+            }))}
+          visible={contentVisible}
+        />
       )}
 
       {/* ═══ МОДАЛКА ВИБОРУ НФТ ДЛЯ ОРБІТИ ═══ */}
