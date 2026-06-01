@@ -282,9 +282,8 @@ const BattlePass = () => {
         nick
           ? dbSelect("battlepass_rewards", { filters: [{ col: "username", op: "ilike", value: nick }] })
           : Promise.resolve({ data: [], error: null }),
-        // Спроба підвантажити NFT — щоб показати картинку замість смайлика 🎁.
-        // Якщо таблиця називається інакше — просто проігнорується.
-        dbSelect("nfts", {}).catch(() => ({ data: [], error: null })),
+        // Підвантажуємо NFT-подарунки, щоб показати реальну картинку замість смайлика 🎁.
+        dbSelect("nft_gifts", {}).catch(() => ({ data: [], error: null })),
       ]);
       const configRow = (configRes.data as any[])?.[0];
       if (configRow) setCfg({ ...DEFAULT_CONFIG, ...configRow });
@@ -529,8 +528,9 @@ const BattlePass = () => {
               // Якщо це NFT і нема явного image_url — підтягуємо з мапи nft
               const resolvedImg =
                 slot.image_url ||
-                (slot.prize_type === "nft" && slot.nft_gift_id
-                  ? nftMap[String(slot.nft_gift_id)]
+                (slot.prize_type === "nft"
+                  ? (slot.nft_gift_id ? nftMap[String(slot.nft_gift_id)] : "") ||
+                    (slot.title ? nftMap[String(slot.title)] : "")
                   : "") ||
                 "";
               const slotWithImg = { ...slot, image_url: resolvedImg };
