@@ -583,16 +583,16 @@ const BattlePass = () => {
         }
       `}</style>
 
-      {/* ─── ГЛОБАЛЬНИЙ ФОН ─── */}
-      <div className="fixed inset-0 -z-10 pointer-events-none">
+      {/* ─── ФОН СТОРІНКИ (тільки під контентом батлпасу, не на весь сайт) ─── */}
+      <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
         {cfg.background_url ? (
           <>
-            {/* background_url — на всю сторінку, замінює градієнт І банер */}
+            {/* background_url — замінює темний фон сторінки, банер залишається зверху */}
             <img src={cfg.background_url} alt=""
               className="w-full h-full"
-              style={{ objectFit:"cover", objectPosition:"center top" }} />
+              style={{ objectFit:"cover", objectPosition:"center top", minHeight:"100%" }} />
             <div className="absolute inset-0"
-              style={{ background:"linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.65) 100%)" }} />
+              style={{ background:"linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)" }} />
           </>
         ) : (
           <div className="absolute inset-0"
@@ -606,14 +606,14 @@ const BattlePass = () => {
       {/* ─── БАНЕР ─── */}
       {/* Якщо є background_url — він вже на всю сторінку через fixed, банер не показуємо */}
       <div className="relative w-full overflow-hidden">
-        {cfg.banner_url && !cfg.background_url ? (
+        {cfg.banner_url ? (
           <>
-            {/* Банер тільки якщо немає повноекранного фону */}
+            {/* Банер завжди зверху — незалежно від background_url */}
             <img src={cfg.banner_url} alt="banner"
               className="w-full object-cover"
               style={{ height:220, objectFit:"cover", objectPosition:"center top" }} />
             <div className="absolute inset-0 pointer-events-none"
-              style={{ background:`linear-gradient(to bottom,rgba(0,0,0,0) 0%,rgba(5,5,5,0.7) 65%,#050505 100%)` }} />
+              style={{ background:`linear-gradient(to bottom,rgba(0,0,0,0) 0%,rgba(5,5,5,0.5) 65%,rgba(5,5,5,0.85) 100%)` }} />
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <div style={{ position:"absolute",inset:0,background:"linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.05) 50%,transparent 70%)",animation:"bp-shimmer-banner 7s ease-in-out infinite" }} />
             </div>
@@ -627,7 +627,7 @@ const BattlePass = () => {
         </button>
 
         <div className={`${cfg.banner_url ? "absolute bottom-0 left-0 right-0" : "relative pt-16"} px-4 pb-4 text-center`}>
-          {(!cfg.banner_url || cfg.background_url) && (
+          {!cfg.banner_url && (
             <div className="relative inline-flex items-center justify-center mb-4">
               <div className="absolute w-24 h-24 rounded-full pointer-events-none"
                 style={{ background:`radial-gradient(circle,rgba(${accentRgb},0.35) 0%,transparent 70%)` }} />
