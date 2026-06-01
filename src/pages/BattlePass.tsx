@@ -136,13 +136,11 @@ const SlotCard = ({
         <div
           className="rounded-full"
           style={{
-            width: 8, height: 8,
+            width: 12, height: 12,
             background: cfg.color,
-            boxShadow: `0 0 6px ${cfg.glow}`,
           }}
         />
       </div>
-
 
       {/* Бейдж статусу справа */}
       <div className="absolute top-2 right-2 z-30">
@@ -165,29 +163,14 @@ const SlotCard = ({
       <div className="relative w-full flex items-center justify-center mt-1"
         style={{ height: 108 }}>
         {slot.image_url ? (
-          slot.prize_type === "nft" ? (
-            <div className="relative" style={{ width: "82%", height: "92%" }}>
-              <img src={slot.image_url} alt={slot.title}
-                className="w-full h-full"
-                style={{
-                  objectFit: "cover",
-                  borderRadius: 14,
-                  border: `1px solid rgba(${cfg.rgb},0.45)`,
-                  boxShadow: owned ? `0 4px 14px ${cfg.glow}` : `0 2px 8px rgba(0,0,0,0.45)`,
-                  filter: locked ? "grayscale(1) brightness(0.3)" : "none",
-                  animation: owned ? "bp-float 4s ease-in-out infinite" : "none",
-                }} />
-            </div>
-          ) : (
-            <img src={slot.image_url} alt={slot.title}
-              className="w-full h-full"
-              style={{
-                objectFit: "contain", padding: 6,
-                filter: locked ? "grayscale(1) brightness(0.3)"
-                  : owned ? `drop-shadow(0 4px 14px ${cfg.glow})` : "none",
-                animation: owned ? "bp-float 4s ease-in-out infinite" : "none",
-              }} />
-          )
+          <img src={slot.image_url} alt={slot.title}
+            className="w-full h-full"
+            style={{
+              objectFit: "contain", padding: 6,
+              filter: locked ? "grayscale(1) brightness(0.3)"
+                : owned ? `drop-shadow(0 4px 14px ${cfg.glow})` : "none",
+              animation: owned ? "bp-float 4s ease-in-out infinite" : "none",
+            }} />
         ) : (
           <div className="flex flex-col items-center gap-1">
             <span style={{ fontSize: 34, opacity: locked ? 0.2 : 1,
@@ -200,7 +183,6 @@ const SlotCard = ({
           </div>
         )}
       </div>
-
 
       {/* Назва */}
       <div className="px-2 pt-1 pb-2 relative z-20">
@@ -334,10 +316,7 @@ const BattlePass = () => {
   const accentRgb   = hexToRgb(accent);
   const levelColor  = cfg.level_color || "#38bdf8";
   const sortedSlots = [...slots].sort((a,b) => a.slot_number - b.slot_number);
-  // banner_url теж використовується як повноекранний вертикальний фон
-  const bgImage     = cfg.background_url || cfg.banner_url || "";
-  const glass       = !!bgImage;
-
+  const glass       = !!cfg.background_url;
 
   /* ── Щоденний клейм ── */
   const canClaim = !!nick && lastClaim !== todayKey();
@@ -375,12 +354,12 @@ const BattlePass = () => {
 
   return (
     <div className="min-h-screen pb-24 relative" style={{ background: "#050505" }}>
-      {/* Глобальний фон — або кастомне фото (банер/окремий фон), або градієнт */}
+      {/* Глобальний фон — або кастомне фото, або градієнт */}
       <div className="fixed inset-0 -z-10 pointer-events-none">
-        {bgImage ? (
+        {cfg.background_url ? (
           <>
-            <img src={bgImage} alt=""
-              className="absolute inset-0 w-full h-full"
+            <img src={cfg.background_url} alt=""
+              className="w-full h-full"
               style={{ objectFit:"cover", objectPosition:"center" }} />
             <div className="absolute inset-0"
               style={{ background:"linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.72) 100%)" }} />
@@ -390,7 +369,6 @@ const BattlePass = () => {
             style={{ background:`linear-gradient(180deg, ${cfg.gradient_from}, ${cfg.gradient_to})` }} />
         )}
       </div>
-
 
       <style>{`
         @keyframes bp-fade-up    { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
@@ -435,30 +413,46 @@ const BattlePass = () => {
         .bp-claim-btn::after{ content:""; position:absolute; inset:0; background:linear-gradient(105deg, transparent 25%, rgba(255,255,255,.16) 50%, transparent 75%); animation:bp-btn-sweep 2.9s ease-in-out infinite; pointer-events:none; }
       `}</style>
 
-      {/* Header (банер тепер працює як фон, тут лише навбар + назва) */}
-      <div className="relative w-full">
+      {/* Banner / Header */}
+      <div className="relative w-full overflow-hidden"
+        style={{ minHeight: cfg.banner_url && !cfg.background_url ? 220 : 0 }}>
+        {cfg.banner_url && !cfg.background_url && (
+          <>
+            <img src={cfg.banner_url} alt="banner"
+              className="w-full object-cover"
+              style={{ height:220, objectFit:"cover", objectPosition:"center top" }} />
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background:`linear-gradient(to bottom,rgba(0,0,0,0) 0%,rgba(5,5,5,0.7) 65%,#050505 100%)` }} />
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div style={{ position:"absolute",inset:0,background:"linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.05) 50%,transparent 70%)",animation:"bp-shimmer-banner 7s ease-in-out infinite" }} />
+            </div>
+          </>
+        )}
+
         <button onClick={() => navigate(-1)}
           className="absolute left-4 top-4 w-9 h-9 rounded-xl flex items-center justify-center z-10"
           style={{ background:"rgba(0,0,0,0.55)",border:"1px solid rgba(255,255,255,0.14)",backdropFilter:"blur(12px)" }}>
           <ChevronLeft className="w-4 h-4 text-white" />
         </button>
 
-        <div className="relative pt-16 px-4 pb-4 text-center">
-          <div className="relative inline-flex items-center justify-center mb-4">
-            <div className="absolute w-24 h-24 rounded-full pointer-events-none"
-              style={{ background:`radial-gradient(circle,rgba(${accentRgb},0.35) 0%,transparent 70%)` }} />
-            <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{
-                background: glass
-                  ? `linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))`
-                  : `linear-gradient(135deg,rgba(${accentRgb},0.18),rgba(${accentRgb},0.08))`,
-                border: `1.5px solid rgba(${accentRgb},0.4)`,
-                backdropFilter: glass ? "blur(14px)" : undefined,
-                boxShadow: `0 0 28px rgba(${accentRgb},0.35)`,
-              }}>
-              <Crown className="w-8 h-8" style={{ color:accent }} />
+        <div className={`${cfg.banner_url && !cfg.background_url ? "absolute bottom-0 left-0 right-0" : "relative pt-16"} px-4 pb-4 text-center`}>
+          {(!cfg.banner_url || cfg.background_url) && (
+            <div className="relative inline-flex items-center justify-center mb-4">
+              <div className="absolute w-24 h-24 rounded-full pointer-events-none"
+                style={{ background:`radial-gradient(circle,rgba(${accentRgb},0.35) 0%,transparent 70%)` }} />
+              <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{
+                  background: glass
+                    ? `linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))`
+                    : `linear-gradient(135deg,rgba(${accentRgb},0.18),rgba(${accentRgb},0.08))`,
+                  border: `1.5px solid rgba(${accentRgb},0.4)`,
+                  backdropFilter: glass ? "blur(14px)" : undefined,
+                  boxShadow: `0 0 28px rgba(${accentRgb},0.35)`,
+                }}>
+                <Crown className="w-8 h-8" style={{ color:accent }} />
+              </div>
             </div>
-          </div>
+          )}
           <h1 className="text-2xl font-black uppercase tracking-[0.18em]"
             style={{ color:accent, textShadow:`0 0 28px rgba(${accentRgb},0.7),0 2px 8px rgba(0,0,0,0.9)` }}>
             {cfg.season_name || "БАТЛПАС"}
@@ -471,57 +465,34 @@ const BattlePass = () => {
         </div>
       </div>
 
-
       {/* Кнопка щоденного клейму */}
       {!loading && slots.length > 0 && (
         <div className="px-4 mb-4" style={{ animation:"bp-fade-up .4s ease both" }}>
-          {(() => {
-            const allDone   = !nextSlot;
-            const claimed   = !canClaim && !allDone;            // вже забрали сьогодні
-            const active    = canClaim && !!nextSlot && !claiming;
-            const btnLabel  = claiming
+          <button
+            onClick={handleDailyClaim}
+            disabled={!canClaim || claiming || !nextSlot}
+            className={`w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 font-black uppercase tracking-widest text-sm transition-all active:scale-[0.98] ${canClaim && nextSlot ? "bp-claim-btn" : ""}`}
+            style={{
+              background: canClaim && nextSlot
+                ? `linear-gradient(135deg, rgba(${accentRgb},0.25), rgba(${accentRgb},0.1))`
+                : "rgba(255,255,255,0.04)",
+              border: `1.5px solid ${canClaim && nextSlot ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.1)"}`,
+              color: canClaim && nextSlot ? accent : "rgba(255,255,255,0.35)",
+              backdropFilter: "blur(10px)",
+              "--ag": `rgba(${accentRgb},0.45)`,
+            } as any}
+          >
+            <Gift className="w-4 h-4" />
+            {claiming
               ? "Отримання..."
-              : allDone
+              : !nextSlot
               ? "Усі нагороди зібрано"
-              : claimed
-              ? "Отримано"
-              : "Отримати";
-            return (
-              <>
-                <button
-                  onClick={handleDailyClaim}
-                  disabled={!active}
-                  className={`w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 font-black uppercase tracking-widest text-sm transition-all active:scale-[0.98] ${active ? "bp-claim-btn" : ""}`}
-                  style={{
-                    background: active
-                      ? `linear-gradient(135deg, rgba(${accentRgb},0.25), rgba(${accentRgb},0.1))`
-                      : "rgba(255,255,255,0.05)",
-                    border: `1.5px solid ${active ? `rgba(${accentRgb},0.55)` : "rgba(255,255,255,0.08)"}`,
-                    color: active ? accent : "rgba(255,255,255,0.4)",
-                    backdropFilter: "blur(10px)",
-                    cursor: active ? "pointer" : "default",
-                    "--ag": `rgba(${accentRgb},0.45)`,
-                  } as any}
-                >
-                  <Gift className="w-4 h-4" />
-                  {btnLabel}
-                </button>
-                {(claimed || allDone) && (
-                  <p
-                    className="text-center mt-2 text-[10px] uppercase tracking-[0.2em] font-bold"
-                    style={{ color: "rgba(255,255,255,0.45)" }}>
-                    {allDone
-                      ? "Усі нагороди вже зібрано"
-                      : "Сьогодні вже отримано — приходь завтра"}
-                  </p>
-                )}
-              </>
-            );
-          })()}
+              : canClaim
+              ? "отримати"
+              : "Сьогодні вже отримано — приходь завтра"}
+          </button>
         </div>
       )}
-
-
 
       {/* Progress */}
       {!loading && (
@@ -590,9 +561,8 @@ const BattlePass = () => {
                 return (
                   <div key={r} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
                     style={{ background:`rgba(${rc.rgb},0.1)`,border:`1px solid rgba(${rc.rgb},0.28)` }}>
-                    <div className="w-1.5 h-1.5 rounded-full"
+                    <div className="w-2.5 h-2.5 rounded-full"
                       style={{ background: rc.color }} />
-
                     <Icon className="w-3 h-3" style={{ color:rc.color }} />
                     <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color:rc.color }}>{rc.label}</span>
                     <span className="text-[8px]" style={{ color:rc.color+"99" }}>×{count}</span>
