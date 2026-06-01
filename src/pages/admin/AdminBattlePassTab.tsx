@@ -149,17 +149,17 @@ export const SeasonConfigTab = () => {
         </div>
       </div>
 
-      {/* Banner — тепер також виконує роль фону */}
+      {/* Банер (зверху сторінки) */}
       <div
         className="rounded-2xl p-4"
         style={{ background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.25)" }}>
         <p className="text-[10px] font-black uppercase tracking-widest text-purple-300 mb-1.5">
           <ImageIcon className="w-3 h-3 inline mr-1.5" />
-          Банер сторінки
+          Банер (шапка сторінки)
         </p>
         <p className="text-[9px] text-white/40 mb-3">
-          Якщо задано — використовується як <span className="text-purple-300 font-bold">повноекранний вертикальний фон</span> сторінки батлпасу,
-          а картки автоматично стають <span className="text-purple-300 font-bold">liquid glass</span> (blur + затемнення).
+          Відображається <span className="text-purple-300 font-bold">зверху сторінки</span> батлпасу як шапка-картинка.
+          Автоматично вмикає <span className="text-purple-300 font-bold">liquid glass</span> на картках.
         </p>
         <input
           className={inputCls}
@@ -176,16 +176,20 @@ export const SeasonConfigTab = () => {
         )}
       </div>
 
-      {/* Окреме фото-фон (опційно, перекриває banner_url) */}
+      {/* Фон вкладки батлпас (повноекранний, під банером) */}
       <div
         className="rounded-2xl p-4"
-        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <p className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-1.5">
+        style={{ background: "rgba(56,189,248,0.05)", border: "1px solid rgba(56,189,248,0.25)" }}>
+        <p className="text-[10px] font-black uppercase tracking-widest mb-1.5"
+          style={{ color: "#38bdf8" }}>
           <Layers className="w-3 h-3 inline mr-1.5" />
-          Окремий фон (опційно)
+          Фон вкладки батлпас (повноекранний)
         </p>
         <p className="text-[9px] text-white/40 mb-3">
-          Якщо заповнено — перекриває банер у ролі фону.
+          Замінює стандартний градієнт —{" "}
+          <span style={{ color:"#38bdf8" }} className="font-bold">заповнює всю площу</span> сторінки батлпасу.
+          Банер при цьому залишається зверху.{" "}
+          <span style={{ color:"#38bdf8" }} className="font-bold">Картки стають liquid glass</span>.
         </p>
         <input
           className={inputCls}
@@ -196,7 +200,7 @@ export const SeasonConfigTab = () => {
         {form.background_url && (
           <div
             className="mt-2 rounded-xl overflow-hidden"
-            style={{ height: 120, border: "1px solid rgba(255,255,255,0.1)" }}>
+            style={{ height: 120, border: "1px solid rgba(56,189,248,0.2)" }}>
             <img src={form.background_url} alt="" className="w-full h-full object-cover" />
           </div>
         )}
