@@ -186,3 +186,5 @@ export const SeasonConfigTab = () => {
     </div>
   );
 };
+
+export default SeasonConfigTab;
