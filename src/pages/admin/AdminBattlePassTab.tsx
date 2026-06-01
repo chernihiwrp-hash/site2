@@ -518,7 +518,7 @@ const AdminBattlePassTab = () => {
                 return (
                   <button key={r} onClick={() => setFilterRarity(r)}
                     className="shrink-0 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
-                    style={{ border:`1px solid ${active?(rc?.color||"rgba(255,255,255,0.5)"):\"rgba(255,255,255,0.08)\"}`, background:active?(rc?.bg||"rgba(255,255,255,0.06)"):\"rgba(255,255,255,0.02)\", color:active?(rc?.color||"#fff"):\"rgba(255,255,255,0.3)\" }}>
+                    style={{ border:`1px solid ${active?(rc?.color||"rgba(255,255,255,0.5)"):"rgba(255,255,255,0.08)"}`, background:active?(rc?.bg||"rgba(255,255,255,0.06)"):"rgba(255,255,255,0.02)", color:active?(rc?.color||"#fff"):"rgba(255,255,255,0.3)" }}>
                     {r==="all"?"Всі":rc?.label}
                     {r!=="all" && <span className="ml-1 opacity-50">{slots.filter(s=>s.rarity===r).length}</span>}
                   </button>
