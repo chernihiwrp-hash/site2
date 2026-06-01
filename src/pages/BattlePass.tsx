@@ -543,7 +543,10 @@ const BattlePass = () => {
         .bp-card{ transition:transform .2s, box-shadow .3s, border-color .3s }
         .bp-card:active{ transform:scale(0.97)!important }
         .bp-card-glass{
-          box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.10);
+          background: rgba(0,0,0,0.45) !important;
+          backdrop-filter: blur(16px) saturate(120%) !important;
+          -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
         }
 
         /* Анімована рамка: SVG-полоски що їдуть по периметру */
@@ -585,11 +588,11 @@ const BattlePass = () => {
 
         .bp-nft-img { border-radius: 12px !important; }
 
-        /* Liquid glass панелі на сторінці пропуску */
+        /* Liquid glass панелі — з затемненням і blur */
         .bp-glass-panel {
-          background: rgba(255,255,255,0.045);
-          backdrop-filter: blur(20px) saturate(150%);
-          -webkit-backdrop-filter: blur(20px) saturate(150%);
+          background: rgba(0,0,0,0.4);
+          backdrop-filter: blur(18px) saturate(130%);
+          -webkit-backdrop-filter: blur(18px) saturate(130%);
           border: 1px solid rgba(255,255,255,0.10);
           border-radius: 20px;
         }
@@ -653,10 +656,11 @@ const BattlePass = () => {
               disabled={claiming}
               className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 font-black uppercase tracking-widest text-sm transition-all active:scale-[0.98] bp-claim-btn"
               style={{
-                background: `linear-gradient(135deg, rgba(${accentRgb},0.25), rgba(${accentRgb},0.1))`,
+                background: `linear-gradient(135deg, rgba(${accentRgb},0.35), rgba(${accentRgb},0.18))`,
                 border: `1.5px solid rgba(${accentRgb},0.55)`,
                 color: accent,
-                backdropFilter: "blur(10px)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
                 "--ag": `rgba(${accentRgb},0.45)`,
               } as any}
             >
@@ -669,10 +673,11 @@ const BattlePass = () => {
                 disabled
                 className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 font-black uppercase tracking-widest text-sm"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
+                  background: "rgba(0,0,0,0.45)",
                   border: "1.5px solid rgba(255,255,255,0.1)",
                   color: "rgba(255,255,255,0.35)",
-                  backdropFilter: "blur(10px)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
                 }}
               >
                 <Gift className="w-4 h-4" />
