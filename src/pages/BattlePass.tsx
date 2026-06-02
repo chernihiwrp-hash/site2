@@ -178,7 +178,7 @@ const SlotCard = ({
   levelColor: string;
 }) => {
   const cfg    = RARITY_CONFIG[slot.rarity];
-  const Icon   = cfg.icon;
+  const Icon    = cfg.icon;
   const locked = slot.slot_number > daysPassed + 1 && !owned;
   const isAnimated = slot.rarity === "legendary" || slot.rarity === "mythic";
   const isNft = slot.prize_type === "nft";
@@ -201,54 +201,15 @@ const SlotCard = ({
         "--rrgb": cfg.rgb,
       } as any}
     >
-      {/* Анімовані смуги по периметру картки — як в AutoCardsSection */}
-      {isAnimated && !locked && (() => {
-        const w = 140, h = 230, r = 16;
-        const perim = 2 * (w + h) - (8 - 2 * Math.PI) * r;
-        const dash = perim * 0.18;
-        const gap  = perim - dash;
-        const colorId = cfg.color.replace("#","");
-        return (
-          <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:4, overflow:"visible" }}
-            viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden>
-            <defs>
-              <filter id={`gf-${colorId}-${slot.id}`} x="-80%" y="-80%" width="260%" height="260%">
-                <feGaussianBlur stdDeviation="3" result="b1"/>
-                <feGaussianBlur stdDeviation="8" result="b2"/>
-                <feGaussianBlur stdDeviation="16" result="b3"/>
-                <feMerge>
-                  <feMergeNode in="b3"/>
-                  <feMergeNode in="b2"/>
-                  <feMergeNode in="b1"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-            </defs>
-            {/* Смуга 1 */}
-            <rect x="1.5" y="1.5" width={w-3} height={h-3} rx={r-1} ry={r-1}
-              fill="none" stroke={cfg.color} strokeWidth="3"
-              strokeLinecap="butt"
-              strokeDasharray={`${dash} ${gap}`}
-              strokeDashoffset="0"
-              filter={`url(#gf-${colorId}-${slot.id})`}
-              style={{ animation: `bp-spin1-${slot.id} 2.6s linear infinite` }}
-            />
-            {/* Смуга 2 — зміщена на половину периметру */}
-            <rect x="1.5" y="1.5" width={w-3} height={h-3} rx={r-1} ry={r-1}
-              fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2"
-              strokeLinecap="butt"
-              strokeDasharray={`${dash} ${gap}`}
-              strokeDashoffset={`${-perim / 2}`}
-              filter={`url(#gf-${colorId}-${slot.id})`}
-              style={{ animation: `bp-spin2-${slot.id} 2.6s linear infinite` }}
-            />
-            <style>{`
-              @keyframes bp-spin1-${slot.id} { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -${perim}px; } }
-              @keyframes bp-spin2-${slot.id} { from { stroke-dashoffset: ${-perim/2}px; } to { stroke-dashoffset: ${-perim*1.5}px; } }
-            `}</style>
+      {/* Анімовані смуги по периметру картки */}
+      {isAnimated && !locked && (
+        <div className="bp-anim-border">
+          <svg viewBox="0 0 148 238" fill="none" preserveAspectRatio="none">
+            <rect x="2" y="2" width="144" height="234" rx="16" className="bp-sweep-line-1" />
+            <rect x="2" y="2" width="144" height="234" rx="16" className="bp-sweep-line-2" />
           </svg>
-        );
-      })()}
+        </div>
+      )}
 
       {/* Полоска рідкості — виходить за верхній край картки */}
       <div style={{
@@ -396,7 +357,7 @@ const BattlePass = () => {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
   const [nftMap, setNftMap] = useState<Record<string, string>>({});
-  const [page, setPage] = useState(0); // сторінка листання
+  const [page, setPage] = useState(0); 
   const [showModal, setShowModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -437,11 +398,9 @@ const BattlePass = () => {
       setNftMap(map);
       setLoading(false);
 
-      // Показати welcome-модалку тільки при першому відкритті сезону
       const seenVal = localStorage.getItem(seenKey);
       const seasonId = configRow?.id || configRow?.season_name || "default";
       if (seenVal !== String(seasonId)) {
-        // Зберігаємо одразу — щоб не показувалась повторно навіть при обновленні
         localStorage.setItem(seenKey, String(seasonId));
         setTimeout(() => setShowModal(true), 150);
       }
@@ -459,11 +418,9 @@ const BattlePass = () => {
   const sortedSlots = [...slots].sort((a,b) => a.slot_number - b.slot_number);
   const glass       = !!cfg.background_url || !!cfg.banner_url;
 
-  // Листання: розбиваємо слоти на "сторінки"
   const totalPages = Math.ceil(sortedSlots.length / PAGE_SIZE);
   const pageSlots  = sortedSlots.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  /* ── Щоденний клейм ── */
   const canClaim = !!nick && lastClaim !== todayKey();
   const nextSlot = sortedSlots.find(s => !ownedIds.has(s.id));
 
@@ -510,12 +467,10 @@ const BattlePass = () => {
       } : {}),
     }}>
 
-      {/* Чорний екран поки модалка активна — щоб не спойлерити контент */}
       {showModal && (
         <div className="fixed inset-0 z-[998] bg-black pointer-events-none" />
       )}
 
-      {/* Модалка першого входу */}
       {showModal && (
         <WelcomeModal
           bannerUrl={cfg.banner_url || cfg.background_url}
@@ -525,78 +480,85 @@ const BattlePass = () => {
         />
       )}
 
-      {/* CSS */}
+      {/* CSS Стили и Анимации */}
       <style>{`
         @keyframes bp-fade-up    { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes bp-float      { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-        @keyframes bp-claim-glow { 0%,100%{box-shadow:0 0 18px var(--ag),0 0 34px var(--ag)} 50%{box-shadow:0 0 30px var(--ag),0 0 64px var(--ag)} }
-        @keyframes bp-btn-sweep  { 0%{transform:translateX(-130%)} 52%,100%{transform:translateX(130%)} }
-        @keyframes bp-shimmer-banner { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
-        @keyframes bp-modal-in   { from{opacity:0;transform:scale(0.88) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
-        @keyframes bp-modal-btn-sweep { 0%{transform:translateX(-130%)} 52%,100%{transform:translateX(130%)} }
-        @keyframes bp-glow-title { 0%,100%{text-shadow:0 0 30px rgba(168,85,247,0.9),0 0 60px rgba(168,85,247,0.5),0 2px 8px rgba(0,0,0,0.9)} 50%{text-shadow:0 0 50px rgba(168,85,247,1),0 0 90px rgba(168,85,247,0.7),0 2px 8px rgba(0,0,0,0.9)} }
+@keyframes bp-float      { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+@keyframes bp-claim-glow { 0%,100%{box-shadow:0 0 18px var(--ag),0 0 34px var(--ag)} 50%{box-shadow:0 0 30px var(--ag),0 0 64px var(--ag)} }
+@keyframes bp-btn-sweep  { 0%{transform:translateX(-130%)} 52%,100%{transform:translateX(130%)} }
+@keyframes bp-shimmer-banner { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
+@keyframes bp-modal-in   { from{opacity:0;transform:scale(0.88) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
+@keyframes bp-modal-btn-sweep { 0%{transform:translateX(-130%)} 52%,100%{transform:translateX(130%)} }
+@keyframes bp-glow-title { 0%,100%{text-shadow:0 0 30px rgba(168,85,247,0.9),0 0 60px rgba(168,85,247,0.5),0 2px 8px rgba(0,0,0,0.9)} 50%{text-shadow:0 0 50px rgba(168,85,247,1),0 0 90px rgba(168,85,247,0.7),0 2px 8px rgba(0,0,0,0.9)} }
 
-        @keyframes bp-sweep-1 { 0%{stroke-dashoffset:0} 100%{stroke-dashoffset:-520} }
-        @keyframes bp-sweep-2 { 0%{stroke-dashoffset:-260} 100%{stroke-dashoffset:-780} }
+@keyframes bp-sweep-1 { 0%{stroke-dashoffset:0} 100%{stroke-dashoffset:-520} }
+@keyframes bp-sweep-2 { 0%{stroke-dashoffset:-260} 100%{stroke-dashoffset:-780} }
 
-        .bp-card-row{ scrollbar-width:none }
-        .bp-card-row::-webkit-scrollbar{ display:none }
-        .bp-card{ transition:transform .2s, box-shadow .3s, border-color .3s }
-        .bp-card:active{ transform:scale(0.97)!important }
-        .bp-card-glass{
-          background: rgba(0,0,0,0.45) !important;
-          backdrop-filter: blur(16px) saturate(120%) !important;
-          -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
-        }
+.bp-card-row{ scrollbar-width:none }
+.bp-card-row::-webkit-scrollbar{ display:none }
+.bp-card{ transition:transform .2s, box-shadow .3s, border-color .3s }
+.bp-card:active{ transform:scale(0.97)!important }
+.bp-card-glass{
+  background: rgba(0,0,0,0.45) !important;
+  backdrop-filter: blur(16px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+}
 
-        /* Анімована рамка: SVG-полоски що їдуть по периметру */
-        .bp-card-animated {
-          box-shadow: 0 0 22px rgba(var(--rrgb),0.16), inset 0 0 18px rgba(var(--rrgb),0.08);
-        }
-        .bp-anim-border {
-          position:absolute; inset:-4px; border-radius:16px; pointer-events:none; z-index:10; overflow:visible;
-        }
-        .bp-anim-border svg {
-          position:absolute; inset:0; width:100%; height:100%; overflow:visible;
-        }
-        .bp-sweep-line-1 {
-          stroke: var(--r);
-          stroke-width: 3;
-          fill: none;
-          stroke-dasharray: 80 440;
-          stroke-dashoffset: 0;
-          animation: bp-sweep-1 2.4s linear infinite;
-          filter: drop-shadow(0 0 8px var(--r)) drop-shadow(0 0 18px var(--r)) drop-shadow(0 0 32px var(--r));
-        }
-        .bp-sweep-line-2 {
-          stroke: rgba(255,255,255,0.9);
-          stroke-width: 2;
-          fill: none;
-          stroke-dasharray: 40 480;
-          stroke-dashoffset: -260;
-          animation: bp-sweep-2 2.4s linear infinite;
-          filter: drop-shadow(0 0 6px var(--r)) drop-shadow(0 0 16px var(--r)) drop-shadow(0 0 28px rgba(255,255,255,0.6));
-        }
+.bp-card-animated {
+  box-shadow: 0 0 22px rgba(var(--rrgb),0.16), inset 0 0 18px rgba(var(--rrgb),0.08);
+}
+.bp-anim-border {
+  position: absolute; 
+  inset: -2px; 
+  border-radius: 16px; 
+  pointer-events: none; 
+  z-index: 10; 
+  overflow: visible;
+}
+.bp-anim-border svg {
+  position: absolute; 
+  inset: 0; 
+  width: 100%; 
+  height: 100%; 
+  overflow: visible;
+}
+.bp-sweep-line-1 {
+  stroke: var(--r);
+  stroke-width: 3;
+  fill: none;
+  stroke-dasharray: 80 440;
+  stroke-dashoffset: 0;
+  animation: bp-sweep-1 2.4s linear infinite;
+  filter: drop-shadow(0 0 8px var(--r)) drop-shadow(0 0 18px var(--r)) drop-shadow(0 0 32px var(--r));
+}
+.bp-sweep-line-2 {
+  stroke: rgba(255,255,255,0.9);
+  stroke-width: 2;
+  fill: none;
+  stroke-dasharray: 40 480;
+  stroke-dashoffset: -260;
+  animation: bp-sweep-2 2.4s linear infinite;
+  filter: drop-shadow(0 0 6px var(--r)) drop-shadow(0 0 16px var(--r)) drop-shadow(0 0 28px rgba(255,255,255,0.6));
+}
 
-        .bp-claim-btn{ position:relative; overflow:hidden; animation: bp-claim-glow 2.2s ease-in-out infinite; }
-        .bp-claim-btn::after{ content:""; position:absolute; inset:0; background:linear-gradient(105deg, transparent 25%, rgba(255,255,255,.16) 50%, transparent 75%); animation:bp-btn-sweep 2.9s ease-in-out infinite; pointer-events:none; }
+.bp-claim-btn{ position:relative; overflow:hidden; animation: bp-claim-glow 2.2s ease-in-out infinite; }
+.bp-claim-btn::after{ content:""; position:absolute; inset:0; background:linear-gradient(105deg, transparent 25%, rgba(255,255,255,.16) 50%, transparent 75%); animation:bp-btn-sweep 2.9s ease-in-out infinite; pointer-events:none; }
 
-        .bp-modal-in { animation: bp-modal-in 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
-        .bp-modal-title { animation: bp-glow-title 2.5s ease-in-out infinite; }
-        .bp-modal-btn { position:relative; overflow:hidden; }
-        .bp-modal-btn::after { content:""; position:absolute; inset:0; background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.2) 50%,transparent 75%); animation:bp-modal-btn-sweep 2.5s ease-in-out infinite; pointer-events:none; }
+.bp-modal-in { animation: bp-modal-in 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+.bp-modal-title { animation: bp-glow-title 2.5s ease-in-out infinite; }
+.bp-modal-btn { position:relative; overflow:hidden; }
+.bp-modal-btn::after { content:""; position:absolute; inset:0; background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.2) 50%,transparent 75%); animation:bp-modal-btn-sweep 2.5s ease-in-out infinite; pointer-events:none; }
 
-        .bp-nft-img { border-radius: 12px !important; }
+.bp-nft-img { border-radius: 12px !important; }
 
-        /* Liquid glass панелі — з затемненням і blur */
-        .bp-glass-panel {
-          background: rgba(0,0,0,0.4);
-          backdrop-filter: blur(18px) saturate(130%);
-          -webkit-backdrop-filter: blur(18px) saturate(130%);
-          border: 1px solid rgba(255,255,255,0.10);
-          border-radius: 20px;
-        }
+.bp-glass-panel {
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 20px;
+}
       `}</style>
 
       {/* ─── ФОН СТОРІНКИ (fallback градієнт якщо немає зображення) ─── */}
