@@ -481,85 +481,98 @@ const BattlePass = () => {
       )}
 
       {/* CSS Стили и Анимации */}
-      <style>{`
-        @keyframes bp-fade-up    { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-@keyframes bp-float      { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-@keyframes bp-claim-glow { 0%,100%{box-shadow:0 0 18px var(--ag),0 0 34px var(--ag)} 50%{box-shadow:0 0 30px var(--ag),0 0 64px var(--ag)} }
-@keyframes bp-btn-sweep  { 0%{transform:translateX(-130%)} 52%,100%{transform:translateX(130%)} }
-@keyframes bp-shimmer-banner { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
-@keyframes bp-modal-in   { from{opacity:0;transform:scale(0.88) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
-@keyframes bp-modal-btn-sweep { 0%{transform:translateX(-130%)} 52%,100%{transform:translateX(130%)} }
-@keyframes bp-glow-title { 0%,100%{text-shadow:0 0 30px rgba(168,85,247,0.9),0 0 60px rgba(168,85,247,0.5),0 2px 8px rgba(0,0,0,0.9)} 50%{text-shadow:0 0 50px rgba(168,85,247,1),0 0 90px rgba(168,85,247,0.7),0 2px 8px rgba(0,0,0,0.9)} }
+      <style>{``
+       @keyframes bp-fade-up    { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes bp-float      { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+        @keyframes bp-claim-glow { 0%,100%{box-shadow:0 0 18px var(--ag),0 0 34px var(--ag)} 50%{box-shadow:0 0 30px var(--ag),0 0 64px var(--ag)} }
+        @keyframes bp-btn-sweep  { 0%{transform:translateX(-130%)} 52%,100%{transform:translateX(130%)} }
+        @keyframes bp-shimmer-banner { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
+        @keyframes bp-modal-in   { from{opacity:0;transform:scale(0.88) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes bp-modal-btn-sweep { 0%{transform:translateX(-130%)} 52%,100%{transform:translateX(130%)} }
+        @keyframes bp-glow-title { 0%,100%{text-shadow:0 0 30px rgba(168,85,247,0.9),0 0 60px rgba(168,85,247,0.5),0 2px 8px rgba(0,0,0,0.9)} 50%{text-shadow:0 0 50px rgba(168,85,247,1),0 0 90px rgba(168,85,247,0.7),0 2px 8px rgba(0,0,0,0.9)} }
 
-@keyframes bp-sweep-1 { 0%{stroke-dashoffset:0} 100%{stroke-dashoffset:-520} }
-@keyframes bp-sweep-2 { 0%{stroke-dashoffset:-260} 100%{stroke-dashoffset:-780} }
+        /* Вращение градиента вокруг карточки (эффект неоновой рамки-фонарика) */
+        @keyframes bp-rotate-glow {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
 
-.bp-card-row{ scrollbar-width:none }
-.bp-card-row::-webkit-scrollbar{ display:none }
-.bp-card{ transition:transform .2s, box-shadow .3s, border-color .3s }
-.bp-card:active{ transform:scale(0.97)!important }
-.bp-card-glass{
-  background: rgba(0,0,0,0.45) !important;
-  backdrop-filter: blur(16px) saturate(120%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
-}
+        .bp-card-row{ scrollbar-width:none }
+        .bp-card-row::-webkit-scrollbar{ display:none }
+        .bp-card{ transition:transform .2s, box-shadow .3s, border-color .3s }
+        .bp-card:active{ transform:scale(0.97)!important }
 
-.bp-card-animated {
-  box-shadow: 0 0 22px rgba(var(--rrgb),0.16), inset 0 0 18px rgba(var(--rrgb),0.08);
-}
-.bp-anim-border {
-  position: absolute; 
-  inset: -2px; 
-  border-radius: 16px; 
-  pointer-events: none; 
-  z-index: 10; 
-  overflow: visible;
-}
-.bp-anim-border svg {
-  position: absolute; 
-  inset: 0; 
-  width: 100%; 
-  height: 100%; 
-  overflow: visible;
-}
-.bp-sweep-line-1 {
-  stroke: var(--r);
-  stroke-width: 3;
-  fill: none;
-  stroke-dasharray: 80 440;
-  stroke-dashoffset: 0;
-  animation: bp-sweep-1 2.4s linear infinite;
-  filter: drop-shadow(0 0 8px var(--r)) drop-shadow(0 0 18px var(--r)) drop-shadow(0 0 32px var(--r));
-}
-.bp-sweep-line-2 {
-  stroke: rgba(255,255,255,0.9);
-  stroke-width: 2;
-  fill: none;
-  stroke-dasharray: 40 480;
-  stroke-dashoffset: -260;
-  animation: bp-sweep-2 2.4s linear infinite;
-  filter: drop-shadow(0 0 6px var(--r)) drop-shadow(0 0 16px var(--r)) drop-shadow(0 0 28px rgba(255,255,255,0.6));
-}
+        /* Эффект матового стекла (блюр + плотная подложка) для карточек */
+        .bp-card-glass {
+          background: rgba(10, 10, 10, 0.65) !important;
+          backdrop-filter: blur(20px) saturate(140%) !important;
+          -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+          box-shadow: 0 12px 40px rgba(0,0,0,0.65), inset 0 1px 1px rgba(255,255,255,0.1);
+        }
 
-.bp-claim-btn{ position:relative; overflow:hidden; animation: bp-claim-glow 2.2s ease-in-out infinite; }
-.bp-claim-btn::after{ content:""; position:absolute; inset:0; background:linear-gradient(105deg, transparent 25%, rgba(255,255,255,.16) 50%, transparent 75%); animation:bp-btn-sweep 2.9s ease-in-out infinite; pointer-events:none; }
+        /* Мощная неоновая анимация краев как на скриншоте для легендарных/мифических карт */
+        .bp-card-animated {
+          position: relative;
+          overflow: hidden;
+        }
 
-.bp-modal-in { animation: bp-modal-in 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
-.bp-modal-title { animation: bp-glow-title 2.5s ease-in-out infinite; }
-.bp-modal-btn { position:relative; overflow:hidden; }
-.bp-modal-btn::after { content:""; position:absolute; inset:0; background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.2) 50%,transparent 75%); animation:bp-modal-btn-sweep 2.5s ease-in-out infinite; pointer-events:none; }
+        /* Сама светящаяся рамка (фонарик) */
+        .bp-anim-border {
+          position: absolute;
+          inset: 0;
+          border-radius: 16px;
+          padding: 2px; /* Толщина светящейся линии */
+          background: linear-gradient(0deg, var(--r), transparent 60%, var(--r));
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+          z-index: 10;
+        }
 
-.bp-nft-img { border-radius: 12px !important; }
+        .bp-card-animated::before {
+          content: "";
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: conic-gradient(from 0deg, transparent, var(--r), transparent 40%, var(--r), transparent);
+          animation: bp-rotate-glow 4s linear infinite;
+          pointer-events: none;
+          z-index: 1;
+        }
 
-.bp-glass-panel {
-  background: rgba(0,0,0,0.4);
-  backdrop-filter: blur(18px) saturate(130%);
-  -webkit-backdrop-filter: blur(18px) saturate(130%);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 20px;
-}
-      `}</style>
+        /* Размытие и подложка на ВСЕХ кнопках в интерфейсе */
+        .bp-claim-btn, button {
+          position: relative;
+          overflow: hidden;
+          background: rgba(255, 255, 255, 0.05) !important;
+          backdrop-filter: blur(14px) saturate(120%) !important;
+          -webkit-backdrop-filter: blur(14px) saturate(120%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .bp-claim-btn{ animation: bp-claim-glow 2.2s ease-in-out infinite; }
+        .bp-claim-btn::after{ content:""; position:absolute; inset:0; background:linear-gradient(105deg, transparent 25%, rgba(255,255,255,.16) 50%, transparent 75%); animation:bp-btn-sweep 2.9s ease-in-out infinite; pointer-events:none; }
+
+        .bp-modal-in { animation: bp-modal-in 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+        .bp-modal-title { animation: bp-glow-title 2.5s ease-in-out infinite; }
+        .bp-modal-btn { position:relative; overflow:hidden; }
+        .bp-modal-btn::after { content:""; position:absolute; inset:0; background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.2) 50%,transparent 75%); animation:bp-modal-btn-sweep 2.5s ease-in-out infinite; pointer-events:none; }
+
+        .bp-nft-img { border-radius: 12px !important; }
+
+        /* Жидкое стекло для панелей */
+        .bp-glass-panel {
+          background: rgba(5, 5, 5, 0.55);
+          backdrop-filter: blur(24px) saturate(130%);
+          -webkit-backdrop-filter: blur(24px) saturate(130%);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 20px;
+        }
+      ``}</style>
 
       {/* ─── ФОН СТОРІНКИ (fallback градієнт якщо немає зображення) ─── */}
       {!cfg.banner_url && !cfg.background_url && (
