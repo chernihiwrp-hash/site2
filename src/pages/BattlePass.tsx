@@ -481,7 +481,7 @@ const BattlePass = () => {
       )}
 
       {/* CSS Стили и Анимации */}
-      <style>{``
+      <style>{`
        @keyframes bp-fade-up    { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
         @keyframes bp-float      { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
         @keyframes bp-claim-glow { 0%,100%{box-shadow:0 0 18px var(--ag),0 0 34px var(--ag)} 50%{box-shadow:0 0 30px var(--ag),0 0 64px var(--ag)} }
@@ -572,7 +572,7 @@ const BattlePass = () => {
           border: 1px solid rgba(255,255,255,0.08);
           border-radius: 20px;
         }
-      ``}</style>
+      `}</style>
 
       {/* ─── ФОН СТОРІНКИ (fallback градієнт якщо немає зображення) ─── */}
       {!cfg.banner_url && !cfg.background_url && (
