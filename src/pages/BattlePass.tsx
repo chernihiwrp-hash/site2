@@ -87,48 +87,47 @@ const todayKey = () => new Date().toISOString().slice(0,10);
 /* ───────────────── WELCOME MODAL ───────────────── */
 const WelcomeModal = ({
   bannerUrl, seasonName, accent, onClose,
-}: {
-  bannerUrl?: string;
-  seasonName: string;
-  accent: string;
-  onClose: () => void;
-}) => {
+}: { bannerUrl?: string; seasonName: string; accent: string; onClose: () => void; }) => {
   const accentRgb = hexToRgb(accent);
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }}
       onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
     >
       <div
         className="bp-modal-in relative w-full max-w-md rounded-3xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
         style={{
-          background: "linear-gradient(160deg, #0d0e15, #050508)",
+          background: "linear-gradient(160deg, #0b0d14, #050609)",
           border: `1px solid rgba(${accentRgb},0.4)`,
           boxShadow: `0 30px 80px -10px rgba(${accentRgb},0.4)`,
         }}
-        onClick={e => e.stopPropagation()}
       >
         {bannerUrl && (
-          <div className="w-full h-44 overflow-hidden relative">
+          <div className="relative w-full h-44 overflow-hidden">
             <img src={bannerUrl} alt={seasonName} className="w-full h-full object-cover" />
-            <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent, #0d0e15)" }} />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, transparent, #0b0d14)" }} />
           </div>
         )}
 
         <div className="p-6 text-center">
-          <div className="text-xs font-bold tracking-[0.3em] mb-2" style={{ color: accent }}>
-            новий сезон
+          <div className="mb-4">
+            <div className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-3"
+              style={{ background: `rgba(${accentRgb},0.15)`, color: accent, border: `1px solid rgba(${accentRgb},0.3)` }}>
+              новий сезон
+            </div>
+            <div className="text-2xl font-black text-white leading-tight">
+              СЕЗОН "ЛІТО 2026"<br/>ВЖЕ РОЗПОЧАТО!
+            </div>
           </div>
-          <div className="text-2xl font-extrabold text-white mb-3 leading-tight">
-            СЕЗОН «{seasonName}»<br/>ВЖЕ РОЗПОЧАТО!
-          </div>
-          <p className="text-sm text-white/70 mb-6">Доєднуйся!</p>
+
+          <p className="text-white/60 text-sm mb-6">Доєднуйся!</p>
+
           <button
             onClick={onClose}
-            className="w-full py-3 rounded-xl font-bold text-black transition-transform active:scale-95"
-            style={{ background: accent, boxShadow: `0 10px 30px -5px rgba(${accentRgb},0.6)` }}
-          >
+            className="w-full py-3 rounded-xl font-bold text-black uppercase tracking-wider transition-transform active:scale-95"
+            style={{ background: `linear-gradient(135deg, ${accent}, #ff7a00)`, boxShadow: `0 10px 30px -5px rgba(${accentRgb},0.6)` }}>
             ПОЧАТИ!
           </button>
         </div>
@@ -141,112 +140,127 @@ const WelcomeModal = ({
 const SlotCard = ({
   slot, owned, isToday, daysPassed, glass, levelColor,
 }: {
-  slot: BattlePassSlot;
-  owned: boolean;
-  isToday: boolean;
-  daysPassed: number;
-  glass: boolean;
-  levelColor: string;
+  slot: BattlePassSlot; owned: boolean; isToday: boolean;
+  daysPassed: number; glass: boolean; levelColor: string;
 }) => {
   const cfg    = RARITY_CONFIG[slot.rarity];
   const Icon   = cfg.icon;
   const locked = slot.slot_number > daysPassed + 1 && !owned;
   const isAnimated = slot.rarity === "legendary" || slot.rarity === "mythic";
+  const premiumBg = slot.rarity === "legendary"
+    ? "bp-card-premium-legendary"
+    : slot.rarity === "mythic" ? "bp-card-premium-mythic" : "";
 
   return (
     <div
-      className={`bp-card relative flex-shrink-0 w-[160px] h-[240px] rounded-2xl overflow-visible ${
-        slot.rarity === "legendary" ? "bp-card-premium-legendary" : ""
-      } ${slot.rarity === "mythic" ? "bp-card-premium-mythic" : ""}`}
+      className={`bp-card relative flex-shrink-0 rounded-2xl overflow-hidden ${premiumBg}`}
       style={{
-        background: cfg.gradient,
+        width: 142, height: 220,
+        background: !isAnimated ? cfg.gradient : undefined,
         border: `1px solid ${cfg.border}`,
+        boxShadow: locked
+          ? "0 4px 12px rgba(0,0,0,0.4)"
+          : `0 8px 24px -4px rgba(${cfg.rgb},0.35)`,
+        opacity: locked ? 0.55 : 1,
       }}
     >
-      {/* === NEW: Conic-gradient rotating glow border (legendary / mythic) === */}
+      {/* Laser border — для legendary/mythic */}
       {isAnimated && !locked && (
-        <div
-          className={`bp-glow-layer ${slot.rarity === "mythic" ? "bp-glow-mythic" : "bp-glow-legendary"}`}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          viewBox="0 0 142 220" fill="none" preserveAspectRatio="none"
+          style={{ zIndex: 2 }}
         >
-          <div className="bp-glow-spinner" />
-        </div>
+          <rect x="1" y="1" width="140" height="218" rx="15" ry="15"
+            fill="none" stroke={cfg.border} strokeWidth="1" />
+          <rect x="1" y="1" width="140" height="218" rx="15" ry="15"
+            fill="none" stroke={cfg.color} strokeWidth="2"
+            strokeDasharray="180 520"
+            className={slot.rarity === "legendary" ? "bp-laser-fast-legendary" : "bp-laser-fast-mythic"}
+            style={{ filter: `drop-shadow(0 0 6px ${cfg.glow})` }} />
+          <rect x="1" y="1" width="140" height="218" rx="15" ry="15"
+            fill="none" stroke={cfg.color} strokeWidth="1.5"
+            strokeDasharray="120 580"
+            className={slot.rarity === "legendary" ? "bp-laser-fast-rev-legendary" : "bp-laser-fast-rev-mythic"}
+            style={{ filter: `drop-shadow(0 0 4px ${cfg.glow})` }} />
+        </svg>
       )}
 
-      {/* Inner content sits above glow */}
-      <div className="relative z-[5] w-full h-full rounded-2xl overflow-hidden flex flex-col"
-           style={{ background: "linear-gradient(145deg, rgba(8,9,14,0.85), rgba(4,4,8,0.95))" }}>
+      {/* Нижня лінія-акцент */}
+      <div className="absolute bottom-0 left-0 right-0 h-[2px] z-[1]"
+        style={{ background: `linear-gradient(90deg, transparent, ${cfg.color}, transparent)` }} />
 
-        {/* Status badge */}
-        <div className="absolute top-2 right-2 z-10">
-          {owned ? (
-            <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(34,197,94,0.9)" }}>
-              <CheckCircle2 size={16} className="text-white" />
-            </div>
-          ) : locked ? (
-            <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.15)" }}>
-              <Lock size={14} className="text-white/60" />
-            </div>
-          ) : isToday ? (
-            <div className="px-2 py-1 rounded-md text-[9px] font-bold text-black" style={{ background: cfg.color }}>
-              СЬОГОДНІ
-            </div>
-          ) : null}
-        </div>
+      {/* Верхній глянцевий блик */}
+      <div className="absolute top-0 left-0 right-0 h-[40%] pointer-events-none z-[1]"
+        style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.06), transparent)" }} />
 
-        {/* === FIX 1: NFT / image as square with rounded corners === */}
-        <div className="px-3 pt-3">
-          <div
-            className="w-full aspect-square rounded-xl overflow-hidden flex items-center justify-center"
-            style={{
-              background: "rgba(0,0,0,0.35)",
-              border: `1px solid ${cfg.border}`,
-            }}
-          >
-            {slot.image_url ? (
-              <img
-                src={slot.image_url}
-                alt={slot.title}
-                className="w-full h-full object-cover"
-                draggable={false}
-              />
-            ) : (
-              <div className="text-4xl opacity-70">
-                {slot.prize_type === "cr" ? "💰" :
-                 slot.prize_type === "nft" ? "🎁" :
-                 slot.prize_type === "car" ? "🚗" : "✨"}
-              </div>
-            )}
+      {/* Статус бейдж */}
+      <div className="absolute top-2 right-2 z-[3]">
+        {owned ? (
+          <div className="w-6 h-6 rounded-full flex items-center justify-center"
+            style={{ background: "#22c55e", boxShadow: "0 0 12px rgba(34,197,94,0.6)" }}>
+            <CheckCircle2 size={14} className="text-white" />
           </div>
-        </div>
-
-        {/* Info */}
-        <div className="px-3 pt-2 pb-2 flex-1 flex flex-col justify-end">
-          <div className="text-[12px] font-semibold text-white truncate" title={slot.title}>
-            {slot.title || "Приз"}
+        ) : locked ? (
+          <div className="w-6 h-6 rounded-full flex items-center justify-center"
+            style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.15)" }}>
+            <Lock size={12} className="text-white/60" />
           </div>
-          {slot.prize_type === "cr" && slot.prize_value && (
-            <div className="text-[11px] mt-0.5" style={{ color: cfg.color }}>
-              {slot.prize_value} CR
+        ) : isToday ? (
+          <div className="px-2 py-[3px] rounded-full text-[9px] font-bold uppercase tracking-wider"
+            style={{ background: levelColor, color: "#000" }}>
+            СЬОГОДНІ
+          </div>
+        ) : null}
+      </div>
+
+      {/* Зображення — КВАДРАТ з заокругленими краями (NFT та інші) */}
+      <div className="relative w-full px-3 pt-3 z-[1]">
+        <div className="relative w-full aspect-square rounded-xl overflow-hidden"
+          style={{ background: "rgba(0,0,0,0.25)" }}>
+          {slot.image_url ? (
+            <img
+              src={slot.image_url}
+              alt={slot.title}
+              className="absolute inset-0 w-full h-full object-cover"
+              draggable={false}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-4xl">
+              {slot.prize_type === "cr" ? "💰" :
+               slot.prize_type === "nft" ? "🎁" :
+               slot.prize_type === "car" ? "🚗" : "✨"}
             </div>
           )}
-          {slot.prize_type === "car" && slot.car_name && (
-            <div className="text-[11px] text-white/70 mt-0.5 truncate">🚗 {slot.car_name}</div>
-          )}
         </div>
+      </div>
 
-        {/* Level */}
-        <div className="flex items-center justify-between px-3 py-2 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center gap-1">
-            <Icon size={11} style={{ color: cfg.color }} />
-            <span className="text-[10px] uppercase tracking-wider" style={{ color: cfg.color }}>{cfg.label}</span>
-          </div>
-          <div
-            className="w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-bold text-white"
-            style={{ background: `rgba(${hexToRgb(levelColor)},0.18)`, border: `1px solid rgba(${hexToRgb(levelColor)},0.35)` }}
-          >
-            {slot.slot_number}
-          </div>
+      {/* Інфо-блок */}
+      <div className="absolute bottom-7 left-0 right-0 px-3 z-[2]">
+        <div className="text-[11px] font-bold text-white truncate leading-tight">
+          {slot.title || "Приз"}
         </div>
+        {slot.prize_type === "cr" && slot.prize_value && (
+          <div className="text-[10px] font-semibold mt-0.5" style={{ color: cfg.color }}>
+            {slot.prize_value} CR
+          </div>
+        )}
+        {slot.prize_type === "car" && slot.car_name && (
+          <div className="text-[10px] text-white/70 mt-0.5 truncate">🚗 {slot.car_name}</div>
+        )}
+      </div>
+
+      {/* Рівень */}
+      <div className="absolute bottom-1.5 left-2 right-2 flex items-center justify-between z-[2]">
+        <div className="flex items-center gap-1">
+          <Icon size={9} style={{ color: cfg.color }} />
+          <span className="text-[9px] uppercase tracking-wider font-semibold" style={{ color: cfg.color }}>
+            {cfg.label}
+          </span>
+        </div>
+        <span className="text-[10px] font-black" style={{ color: levelColor }}>
+          #{slot.slot_number}
+        </span>
       </div>
     </div>
   );
@@ -259,23 +273,25 @@ const ProgressTrack = ({
   const pct = slots.length > 0 ? (ownedIds.size / slots.length) * 100 : 0;
   const accentRgb = hexToRgb(accent);
   return (
-    <div className="bp-glass-luxury rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div>
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Calendar size={14} style={{ color: accent }} />
-          <span className="text-xs text-white/80">День {Math.min(daysPassed, slots.length)} з {slots.length}</span>
+          <span className="text-xs text-white/70">
+            День {Math.min(daysPassed, slots.length)} з {slots.length}
+          </span>
         </div>
-        <span className="text-xs text-white/60">{ownedIds.size} / {slots.length} отримано</span>
+        <span className="text-xs font-semibold text-white/90">
+          {ownedIds.size} / {slots.length} отримано
+        </span>
       </div>
-      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
-        <div
-          className="h-full rounded-full transition-all duration-500"
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+        <div className="h-full rounded-full transition-all duration-500"
           style={{
             width: `${pct}%`,
             background: `linear-gradient(90deg, ${accent}, rgba(${accentRgb},0.6))`,
-            boxShadow: `0 0 12px rgba(${accentRgb},0.6)`,
-          }}
-        />
+            boxShadow: `0 0 12px rgba(${accentRgb},0.5)`,
+          }} />
       </div>
     </div>
   );
@@ -291,16 +307,18 @@ const BattlePass = () => {
   const [rewards, setRewards] = useState<BattlePassReward[]>([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
-  const [nftMap, setNftMap] = useState<Record<string, string>>({});
+  const [nftMap, setNftMap] = useState<Record<string,string>>({});
   const [showModal, setShowModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // === FIX 2: slider state for PC scrolling ===
+  // ── PC slider state ──
   const [sliderPos, setSliderPos] = useState(0);
+  const [maxScroll, setMaxScroll] = useState(0);
+  const syncingRef = useRef(false);
 
   const claimKey = `bp_last_claim_${nick}`;
   const seenKey  = `bp_season_seen`;
-  const [lastClaim, setLastClaim] = useState<string>(() => localStorage.getItem(claimKey) || "");
+  const [lastClaim, setLastClaim] = useState(() => localStorage.getItem(claimKey) || "");
 
   const getDaysPassed = (seasonStart?: string): number => {
     if (!seasonStart) return 0;
@@ -325,7 +343,7 @@ const BattlePass = () => {
       setRewards((rewardsRes.data as any[]) || []);
 
       const nfts = (nftsRes?.data as any[]) || [];
-      const map: Record<string, string> = {};
+      const map: Record<string,string> = {};
       for (const n of nfts) {
         const img = n.image_url || n.image || n.img || n.url || n.picture || "";
         if (img && n.id != null)       map[String(n.id)]      = img;
@@ -344,26 +362,44 @@ const BattlePass = () => {
     })();
   }, [nick]);
 
-  // Sync slider <-> scroll position
+  // ── Recompute slider max + listen scroll ──
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const onScroll = () => {
-      const max = el.scrollWidth - el.clientWidth;
-      if (max <= 0) { setSliderPos(0); return; }
-      setSliderPos((el.scrollLeft / max) * 100);
+
+    const recompute = () => {
+      const max = Math.max(0, el.scrollWidth - el.clientWidth);
+      setMaxScroll(max);
     };
+    recompute();
+
+    const onScroll = () => {
+      if (syncingRef.current) return;
+      const max = Math.max(0, el.scrollWidth - el.clientWidth);
+      const pct = max > 0 ? (el.scrollLeft / max) * 100 : 0;
+      setSliderPos(pct);
+    };
+
     el.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [loading, slots.length]);
+    window.addEventListener("resize", recompute);
+    const ro = new ResizeObserver(recompute);
+    ro.observe(el);
+
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", recompute);
+      ro.disconnect();
+    };
+  }, [slots.length, loading]);
 
   const handleSliderChange = (val: number) => {
-    setSliderPos(val);
     const el = scrollRef.current;
     if (!el) return;
-    const max = el.scrollWidth - el.clientWidth;
+    syncingRef.current = true;
+    setSliderPos(val);
+    const max = Math.max(0, el.scrollWidth - el.clientWidth);
     el.scrollLeft = (val / 100) * max;
+    requestAnimationFrame(() => { syncingRef.current = false; });
   };
 
   const ownedIds    = new Set(rewards.map(r => r.slot_id));
@@ -407,10 +443,9 @@ const BattlePass = () => {
   };
 
   return (
-    <div
-      className="min-h-screen pb-24 relative overflow-hidden"
-      style={{ background: `linear-gradient(160deg, ${cfg.gradient_from}, ${cfg.gradient_to})` }}
-    >
+    <div className="relative min-h-screen text-white overflow-hidden"
+      style={{ background: `linear-gradient(180deg, ${cfg.gradient_from}, ${cfg.gradient_to})` }}>
+
       {showModal && (
         <WelcomeModal
           bannerUrl={cfg.banner_url}
@@ -421,77 +456,47 @@ const BattlePass = () => {
       )}
 
       <style>{`
-        /* === Legendary laser keyframes (kept for compatibility) === */
-        @keyframes bp-laser-legendary { 0%{stroke-dashoffset:700} 100%{stroke-dashoffset:0} }
-        @keyframes bp-laser-legendary-rev { 0%{stroke-dashoffset:0} 100%{stroke-dashoffset:-700} }
-        .bp-laser-fast-legendary { animation: bp-laser-legendary 1.8s linear infinite; }
-        .bp-laser-fast-rev-legendary { animation: bp-laser-legendary-rev 2.6s linear infinite; opacity:.6; }
-        @keyframes bp-laser-mythic { 0%{stroke-dashoffset:700} 100%{stroke-dashoffset:0} }
-        @keyframes bp-laser-mythic-rev { 0%{stroke-dashoffset:0} 100%{stroke-dashoffset:-700} }
-        .bp-laser-fast-mythic { animation: bp-laser-mythic 1.4s linear infinite; }
-        .bp-laser-fast-rev-mythic { animation: bp-laser-mythic-rev 2.0s linear infinite; opacity:.5; }
-
-        /* === FIX 3: rotating conic-gradient glow border (from тест.html) === */
-        .bp-glow-layer {
-          position: absolute;
-          inset: -2px;
-          border-radius: 18px;
-          z-index: 1;
-          pointer-events: none;
-          overflow: hidden;
-          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          -webkit-mask-composite: xor;
-                  mask-composite: exclude;
-          padding: 4px;
-          box-sizing: border-box;
+        /* Legendary — золотий */
+        @keyframes bp-laser-legendary {
+          0%   { stroke-dashoffset: 700; }
+          100% { stroke-dashoffset: 0; }
         }
-        .bp-glow-legendary {
-          filter: drop-shadow(0 0 6px #ffaa00)
-                  drop-shadow(0 0 14px #ffaa00)
-                  drop-shadow(0 0 28px rgba(255,170,0,0.8))
-                  drop-shadow(0 0 45px rgba(255,140,0,0.55));
+        @keyframes bp-laser-legendary-rev {
+          0%   { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: -700; }
         }
-        .bp-glow-mythic {
-          filter: drop-shadow(0 0 6px #ff0055)
-                  drop-shadow(0 0 14px #ff0055)
-                  drop-shadow(0 0 30px #ff0055)
-                  drop-shadow(0 0 50px rgba(255,0,85,0.7));
+        .bp-laser-fast-legendary {
+          animation: bp-laser-legendary 1.8s linear infinite;
+          stroke-dashoffset: 700;
         }
-        .bp-glow-spinner {
-          position: absolute;
-          top: -60%; left: -60%;
-          width: 220%; height: 220%;
-          filter: blur(2px);
-          animation: bp-rotate-border 6s linear infinite;
-        }
-        .bp-glow-legendary .bp-glow-spinner {
-          background: conic-gradient(
-            from 0deg,
-            #ffaa00 0deg, #ffd966 35deg, #ffaa00 70deg,
-            transparent 100deg, transparent 180deg,
-            #ffaa00 180deg, #ffd966 215deg, #ffaa00 250deg,
-            transparent 280deg, transparent 360deg
-          );
-        }
-        .bp-glow-mythic .bp-glow-spinner {
-          background: conic-gradient(
-            from 0deg,
-            #ff0055 0deg, #ff66a3 35deg, #ff0055 70deg,
-            transparent 100deg, transparent 180deg,
-            #ff0055 180deg, #ff66a3 215deg, #ff0055 250deg,
-            transparent 280deg, transparent 360deg
-          );
-          animation-duration: 4.5s;
-        }
-        @keyframes bp-rotate-border {
-          0%   { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+        .bp-laser-fast-rev-legendary {
+          animation: bp-laser-legendary-rev 2.6s linear infinite;
+          stroke-dashoffset: 0;
+          opacity: 0.6;
         }
 
-        /* Card hover */
+        /* Mythic — рожево-червоний */
+        @keyframes bp-laser-mythic {
+          0%   { stroke-dashoffset: 700; }
+          100% { stroke-dashoffset: 0; }
+        }
+        @keyframes bp-laser-mythic-rev {
+          0%   { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: -700; }
+        }
+        .bp-laser-fast-mythic {
+          animation: bp-laser-mythic 1.4s linear infinite;
+          stroke-dashoffset: 700;
+        }
+        .bp-laser-fast-rev-mythic {
+          animation: bp-laser-mythic-rev 2.0s linear infinite;
+          stroke-dashoffset: 0;
+          opacity: 0.5;
+        }
+
         .bp-card { transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1); }
-        .bp-card:hover { transform: translateY(-6px) scale(1.02); }
-        .bp-card:active { transform: translateY(-1px) scale(0.99); }
+        .bp-card:hover { transform: translateY(-6px) scale(1.02) !important; }
+        .bp-card:active { transform: translateY(-1px) scale(0.99) !important; }
 
         .bp-card-premium-legendary {
           background: linear-gradient(145deg, rgba(255,170,0,0.12), rgba(6,5,2,0.92)) !important;
@@ -500,7 +505,6 @@ const BattlePass = () => {
           background: linear-gradient(145deg, rgba(255,0,85,0.15), rgba(4,1,5,0.95)) !important;
         }
 
-        /* Horizontal scroll with snap */
         .bp-card-row {
           display: flex;
           gap: 14px;
@@ -508,13 +512,27 @@ const BattlePass = () => {
           scroll-snap-type: x mandatory;
           -webkit-overflow-scrolling: touch;
           scrollbar-width: none;
-          padding: 8px 4px 24px;
-          scroll-behavior: smooth;
+          padding-bottom: 24px;
+          padding-top: 8px;
         }
         .bp-card-row::-webkit-scrollbar { display: none; }
-        .bp-card-row > * { scroll-snap-align: start; }
+        .bp-card-row > * { scroll-snap-align: start; scroll-snap-stop: normal; }
 
-        /* === FIX 2: custom range slider for PC scrolling === */
+        .bp-glass-luxury {
+          background: rgba(10, 11, 18, 0.55) !important;
+          backdrop-filter: blur(20px) saturate(150%) !important;
+          -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.09) !important;
+          box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .bp-modal-in { animation: bp-modal-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+        @keyframes bp-modal-in {
+          from { opacity: 0; transform: scale(0.9) translateY(30px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* ── PC scroll slider ── */
         .bp-scroll-slider {
           -webkit-appearance: none;
           appearance: none;
@@ -528,127 +546,132 @@ const BattlePass = () => {
         .bp-scroll-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 18px; height: 18px;
+          width: 22px;
+          height: 22px;
           border-radius: 50%;
-          background: ${accent};
-          border: 2px solid #fff;
-          box-shadow: 0 0 12px rgba(${accentRgb},0.7);
+          background: var(--bp-accent, #ffaa00);
+          border: 2px solid #000;
+          box-shadow: 0 0 12px var(--bp-accent-glow, rgba(255,170,0,0.6));
           cursor: grab;
         }
+        .bp-scroll-slider::-webkit-slider-thumb:active { cursor: grabbing; }
         .bp-scroll-slider::-moz-range-thumb {
-          width: 18px; height: 18px;
+          width: 22px;
+          height: 22px;
           border-radius: 50%;
-          background: ${accent};
-          border: 2px solid #fff;
-          box-shadow: 0 0 12px rgba(${accentRgb},0.7);
+          background: var(--bp-accent, #ffaa00);
+          border: 2px solid #000;
+          box-shadow: 0 0 12px var(--bp-accent-glow, rgba(255,170,0,0.6));
           cursor: grab;
-        }
-
-        .bp-glass-luxury {
-          background: rgba(10, 11, 18, 0.55);
-          backdrop-filter: blur(20px) saturate(150%);
-          -webkit-backdrop-filter: blur(20px) saturate(150%);
-          border: 1px solid rgba(255, 255, 255, 0.09);
-          box-shadow: 0 15px 35px -5px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.1);
-        }
-
-        .bp-modal-in { animation: bp-modal-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-        @keyframes bp-modal-in {
-          from { opacity: 0; transform: scale(0.9) translateY(30px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
         }
       `}</style>
 
       {/* Background overlay */}
+      {!cfg.banner_url && !cfg.background_url && (
+        <div className="absolute inset-0 pointer-events-none opacity-30"
+          style={{ background: `radial-gradient(circle at 20% 0%, rgba(${accentRgb},0.18), transparent 50%)` }} />
+      )}
       {(cfg.banner_url || cfg.background_url) && (
-        <div
-          className="absolute inset-0 opacity-25 pointer-events-none"
+        <div className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage: `url(${cfg.background_url || cfg.banner_url})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
-          }}
-        />
+            opacity: 0.18,
+          }} />
       )}
 
-      {/* HEADER */}
-      <div className="relative px-4 pt-14 pb-6">
-        <button
-          onClick={() => navigate(-1)}
+      {/* ── HEADER ── */}
+      <div className="relative pt-6 pb-4 px-4">
+        <button onClick={() => navigate(-1)}
           className="absolute left-4 top-4 w-10 h-10 rounded-xl flex items-center justify-center z-10 transition-all duration-300 hover:bg-white/10 active:scale-90"
           style={{
             background: "rgba(10,11,18,0.6)",
             border: "1px solid rgba(255,255,255,0.12)",
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
-          }}
-        >
+          }}>
           <ChevronLeft size={20} className="text-white" />
         </button>
 
-        <div className="text-center">
-          <div className="text-3xl font-extrabold text-white tracking-wider">
+        <div className="text-center pt-2">
+          {!cfg.banner_url && !cfg.background_url && (
+            <div className="flex justify-center mb-3">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(135deg, ${accent}, #ff7a00)`,
+                  boxShadow: `0 10px 30px -5px rgba(${accentRgb},0.6)`,
+                }}>
+                <Crown size={28} className="text-black" />
+              </div>
+            </div>
+          )}
+          <h1 className="text-3xl font-black uppercase tracking-wide"
+            style={{ color: accent, textShadow: `0 0 24px rgba(${accentRgb},0.5)` }}>
             {cfg.season_name || "БАТЛПАС"}
-          </div>
+          </h1>
           {cfg.description && (
-            <div className="text-sm text-white/60 mt-1">{cfg.description}</div>
+            <p className="text-white/60 text-sm mt-1">{cfg.description}</p>
           )}
         </div>
       </div>
 
-      <div className="px-4 space-y-4">
-        {/* CLAIM */}
+      <div className="px-4">
+        {/* ── CLAIM BUTTON ── */}
         {!loading && slots.length > 0 && (
-          <div>
+          <div className="mb-4">
             {canClaim && nextSlot ? (
-              <button
-                onClick={handleDailyClaim}
-                disabled={claiming}
-                className="w-full py-3 rounded-2xl font-bold text-black flex items-center justify-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-60"
+              <button onClick={handleDailyClaim} disabled={claiming}
+                className="w-full py-3.5 rounded-2xl font-bold text-black uppercase tracking-wider flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
                 style={{
-                  background: accent,
+                  background: `linear-gradient(135deg, ${accent}, #ff7a00)`,
                   boxShadow: `0 10px 30px -5px rgba(${accentRgb},0.5)`,
-                }}
-              >
+                }}>
                 <Gift size={18} />
                 {claiming ? "Отримання..." : "Отримати нагороду"}
               </button>
             ) : (
-              <div className="bp-glass-luxury rounded-2xl p-4 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-white/80">
-                  <ShieldCheck size={18} style={{ color: accent }} />
-                  <span className="text-sm">{!nextSlot ? "Усі нагороди зібрано" : "Нагорода отримана"}</span>
+              <div className="w-full py-3.5 rounded-2xl flex items-center justify-between px-4 bp-glass-luxury">
+                <div className="flex items-center gap-2 text-white/70 text-sm">
+                  <ShieldCheck size={16} />
+                  {!nextSlot ? "Усі нагороди зібрано" : "Нагорода"}
                 </div>
-                {nextSlot && <span className="text-xs text-white/50">Отримати завтра</span>}
+                {nextSlot && (
+                  <span className="text-xs text-white/50">Отримати завтра</span>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {/* PROGRESS */}
+        {/* ── PROGRESS ── */}
         {!loading && (
-          <ProgressTrack slots={sortedSlots} ownedIds={ownedIds} daysPassed={daysPassed} accent={accent} />
+          <div className="mb-5 p-3 rounded-2xl bp-glass-luxury">
+            <ProgressTrack slots={sortedSlots} ownedIds={ownedIds} daysPassed={daysPassed} accent={accent} />
+          </div>
         )}
       </div>
 
-      {/* REWARDS */}
+      {/* ── REWARDS SCROLL ── */}
       {loading ? (
-        <div className="px-4 py-10 text-center text-white/50 text-sm">Завантаження...</div>
-      ) : slots.length === 0 ? (
         <div className="px-4 py-10 text-center">
-          <Crown size={36} className="text-white/30 mx-auto mb-2" />
-          <p className="text-white/60 text-sm">Батлпас поки не налаштований</p>
+          <div className="inline-block w-8 h-8 border-2 border-white/20 border-t-white/70 rounded-full animate-spin" />
+        </div>
+      ) : slots.length === 0 ? (
+        <div className="px-4 py-16 text-center">
+          <Gift size={48} className="mx-auto text-white/30 mb-3" />
+          <p className="text-white/60">Батлпас поки не налаштований</p>
         </div>
       ) : (
-        <div className="mt-6 px-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs uppercase tracking-widest text-white/50">
+        <div className="pl-4 pr-0">
+          {/* Заголовок секції */}
+          <div className="flex items-center justify-between pr-4 mb-2">
+            <span className="text-[11px] uppercase tracking-widest text-white/40 font-semibold">
               Всі нагороди · свайп →
             </span>
-            <span className="text-[10px] text-white/40">{sortedSlots.length} шт.</span>
           </div>
 
-          {/* Scrollable row */}
+          {/* Горизонтальний скрол */}
           <div ref={scrollRef} className="bp-card-row">
             {sortedSlots.map(slot => {
               const resolvedImg =
@@ -673,58 +696,77 @@ const BattlePass = () => {
             })}
           </div>
 
-          {/* === FIX 2: PC slider control === */}
-          <div className="mt-1 mb-6 px-1 flex items-center gap-3">
-            <span className="text-[10px] text-white/40 select-none">←</span>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={0.1}
-              value={sliderPos}
-              onChange={e => handleSliderChange(Number(e.target.value))}
-              className="bp-scroll-slider flex-1"
-              aria-label="Прокрутити батл пас"
-            />
-            <span className="text-[10px] text-white/40 select-none">→</span>
-          </div>
+          {/* ── PC SLIDER for scrolling ── */}
+          {maxScroll > 0 && (
+            <div className="pr-4 mt-1 mb-6">
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={0.1}
+                value={sliderPos}
+                onChange={(e) => handleSliderChange(Number(e.target.value))}
+                className="bp-scroll-slider"
+                style={{
+                  // @ts-ignore custom props
+                  ["--bp-accent" as any]: accent,
+                  ["--bp-accent-glow" as any]: `rgba(${accentRgb},0.6)`,
+                  background: `linear-gradient(90deg, ${accent} 0%, ${accent} ${sliderPos}%, rgba(255,255,255,0.08) ${sliderPos}%, rgba(255,255,255,0.08) 100%)`,
+                }}
+                aria-label="Прокрутити нагороди"
+              />
+              <div className="flex justify-between mt-1.5 text-[10px] text-white/40 uppercase tracking-wider">
+                <span>початок</span>
+                <span>кінець</span>
+              </div>
+            </div>
+          )}
 
-          {/* Legend + analytics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-            <div className="bp-glass-luxury rounded-2xl p-4">
-              <div className="text-xs uppercase tracking-widest text-white/50 mb-3">Рідкості</div>
-              <div className="space-y-2">
+          <div className="px-4 pr-4 mt-2">
+            {/* Rarity Legend */}
+            <div className="p-4 rounded-2xl bp-glass-luxury mb-4">
+              <div className="text-[11px] uppercase tracking-widest text-white/40 font-semibold mb-3">
+                Рідкості
+              </div>
+              <div className="grid grid-cols-2 gap-2">
                 {(["common","rare","legendary","mythic"] as Rarity[]).map(r => {
-                  const rc = RARITY_CONFIG[r];
+                  const rc   = RARITY_CONFIG[r];
                   const Icon = rc.icon;
-                  const count = sortedSlots.filter(s => s.rarity === r).length;
+                  const count = sortedSlots.filter(s=>s.rarity===r).length;
                   return (
-                    <div key={r} className="flex items-center justify-between text-sm">
+                    <div key={r} className="flex items-center justify-between p-2 rounded-lg"
+                      style={{ background: `rgba(${rc.rgb},0.08)`, border: `1px solid rgba(${rc.rgb},0.15)` }}>
                       <div className="flex items-center gap-2">
-                        <Icon size={14} style={{ color: rc.color }} />
-                        <span className="text-white/80">{rc.label}</span>
+                        <Icon size={12} style={{ color: rc.color }} />
+                        <span className="text-[11px] font-semibold" style={{ color: rc.color }}>
+                          {rc.label}
+                        </span>
                       </div>
-                      <span className="text-white/50 text-xs">×{count}</span>
+                      <span className="text-[11px] text-white/60 font-bold">×{count}</span>
                     </div>
                   );
                 })}
               </div>
             </div>
 
+            {/* Progress analytics */}
             {nick && (
-              <div className="bp-glass-luxury rounded-2xl p-4">
+              <div className="p-4 rounded-2xl bp-glass-luxury mb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy size={14} style={{ color: accent }} />
-                  <span className="text-xs uppercase tracking-widest text-white/50">Твій прогрес</span>
+                  <span className="text-[11px] uppercase tracking-widest text-white/40 font-semibold">
+                    Твій прогрес
+                  </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-white">{ownedIds.size}</div>
-                    <div className="text-[10px] text-white/50 uppercase">отримано</div>
+                <div className="flex items-center justify-around">
+                  <div className="text-center">
+                    <div className="text-2xl font-black" style={{ color: accent }}>{ownedIds.size}</div>
+                    <div className="text-[10px] text-white/50 uppercase tracking-wider">отримано</div>
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-white">{sortedSlots.length - ownedIds.size}</div>
-                    <div className="text-[10px] text-white/50 uppercase">залишилось</div>
+                  <div className="w-px h-10" style={{ background: "rgba(255,255,255,0.1)" }} />
+                  <div className="text-center">
+                    <div className="text-2xl font-black text-white/80">{sortedSlots.length - ownedIds.size}</div>
+                    <div className="text-[10px] text-white/50 uppercase tracking-wider">залишилось</div>
                   </div>
                 </div>
               </div>
@@ -741,23 +783,24 @@ export const BattlePassCarCard = ({ reward }: { reward: BattlePassReward }) => {
   const carName = reward.car_name || reward.prize_value || "АВТО";
   const Icon = cfg.icon;
   return (
-    <div
-      className="relative rounded-2xl overflow-hidden p-3"
-      style={{ background: cfg.gradient, border: `1px solid ${cfg.border}` }}
-    >
-      <div className="w-full aspect-square rounded-xl overflow-hidden mb-2"
-           style={{ background: "rgba(0,0,0,0.35)" }}>
+    <div className="relative rounded-2xl overflow-hidden p-3"
+      style={{ background: cfg.gradient, border: `1px solid ${cfg.border}` }}>
+      <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-2"
+        style={{ background: "rgba(0,0,0,0.25)" }}>
         {reward.image_url ? (
-          <img src={reward.image_url} alt={carName} className="w-full h-full object-cover" />
+          <img src={reward.image_url} alt={carName}
+            className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-4xl">🚗</div>
+          <div className="absolute inset-0 flex items-center justify-center text-5xl">🚗</div>
         )}
       </div>
       <div className="flex items-center gap-1 mb-1">
-        <Icon size={12} style={{ color: cfg.color }} />
-        <span className="text-[10px] uppercase tracking-wider" style={{ color: cfg.color }}>{cfg.label}</span>
+        <Icon size={11} style={{ color: cfg.color }} />
+        <span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: cfg.color }}>
+          {cfg.label}
+        </span>
       </div>
-      <div className="text-sm font-semibold text-white truncate">{carName}</div>
+      <div className="text-sm font-bold text-white truncate">{carName}</div>
     </div>
   );
 };
