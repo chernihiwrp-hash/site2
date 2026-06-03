@@ -4,12 +4,8 @@ import { dbSelect, dbInsert } from "../lib/db";
 import { toast } from "sonner";
 import {
   Star, Zap, Trophy, Crown, Flame, ChevronLeft, Lock, CheckCircle2,
-  Calendar, ShieldCheck, Gift, ChevronRight,
+  Calendar, ShieldCheck, Gift,
 } from "lucide-react";
-
-/* ──────────────────────────────────────────────────────────────────
-   Battle Pass v3 — Premium Visual Redesign 2026
-   ────────────────────────────────────────────────────────────────── */
 
 type Rarity    = "common" | "rare" | "legendary" | "mythic";
 type PrizeType = "cr" | "nft" | "car" | "custom";
@@ -51,39 +47,39 @@ const RARITY_CONFIG: Record<Rarity, {
   label: string; color: string; glow: string; rgb: string;
   border: string; icon: any; gradient: string;
 }> = {
-  common: { 
-    label: "Звичайний",   
-    color: "#e2e8f0",   
-    glow: "rgba(226,232,240,0.4)",  
-    rgb: "226,232,240", 
-    border: "rgba(226,232,240,0.2)",  
+  common: {
+    label: "Звичайний",
+    color: "#e2e8f0",
+    glow: "rgba(226,232,240,0.4)",
+    rgb: "226,232,240",
+    border: "rgba(226,232,240,0.2)",
     icon: Star,
     gradient: "linear-gradient(135deg, rgba(226,232,240,0.15), rgba(226,232,240,0.02))"
   },
-  rare: { 
-    label: "Рідкісний",   
-    color: "#3b82f6",   
-    glow: "rgba(59,130,246,0.6)",   
-    rgb: "59,130,246",  
-    border: "rgba(59,130,246,0.35)",  
+  rare: {
+    label: "Рідкісний",
+    color: "#3b82f6",
+    glow: "rgba(59,130,246,0.6)",
+    rgb: "59,130,246",
+    border: "rgba(59,130,246,0.35)",
     icon: Zap,
     gradient: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(59,130,246,0.03))"
   },
-  legendary: { 
-    label: "Легендарний", 
-    color: "#ffaa00",   
-    glow: "rgba(255,170,0,0.85)",   
-    rgb: "255,170,0",   
-    border: "rgba(255,170,0,0.5)",    
+  legendary: {
+    label: "Легендарний",
+    color: "#ffaa00",
+    glow: "rgba(255,170,0,0.85)",
+    rgb: "255,170,0",
+    border: "rgba(255,170,0,0.5)",
     icon: Trophy,
     gradient: "linear-gradient(135deg, rgba(255,170,0,0.25), rgba(255,85,0,0.05))"
   },
-  mythic: { 
-    label: "Міфічний",    
-    color: "#ff0055",   
-    glow: "rgba(255,0,85,0.95)",    
-    rgb: "255,0,85",    
-    border: "rgba(255,0,85,0.6)",     
+  mythic: {
+    label: "Міфічний",
+    color: "#ff0055",
+    glow: "rgba(255,0,85,0.95)",
+    rgb: "255,0,85",
+    border: "rgba(255,0,85,0.6)",
     icon: Flame,
     gradient: "linear-gradient(135deg, rgba(255,0,85,0.3), rgba(155,0,255,0.05))"
   },
@@ -106,7 +102,6 @@ function hexToRgb(hex: string): string {
 }
 
 const todayKey = () => new Date().toISOString().slice(0,10);
-const PAGE_SIZE = 7;
 
 /* ───────────────── WELCOME MODAL ───────────────── */
 const WelcomeModal = ({
@@ -120,8 +115,8 @@ const WelcomeModal = ({
   const accentRgb = hexToRgb(accent);
   return (
     <div
-      className="fixed inset-0 z-[999] flex items-center justify-center p-4 bp-blur-heavy animate-fade-in"
-      style={{ background: "rgba(2,2,5,0.82)" }}
+      className="fixed inset-0 z-[999] flex items-center justify-center p-4"
+      style={{ background: "rgba(2,2,5,0.82)", backdropFilter: "blur(24px)" }}
       onClick={onClose}
     >
       <div
@@ -146,7 +141,7 @@ const WelcomeModal = ({
           <div className="flex flex-col items-center gap-1">
             <p className="text-[10px] uppercase tracking-[0.3em] font-black animate-pulse"
               style={{ color: "#c084fc" }}>новий сезон</p>
-            <h2 className="text-xl font-black uppercase tracking-[0.12em] leading-tight bp-modal-title"
+            <h2 className="text-xl font-black uppercase tracking-[0.12em] leading-tight"
               style={{
                 color: "#ffffff",
                 textShadow: `0 0 20px rgba(${accentRgb},0.6), 0 2px 10px rgba(0,0,0,0.9)`,
@@ -161,7 +156,7 @@ const WelcomeModal = ({
 
           <button
             onClick={onClose}
-            className="relative mt-2 w-full rounded-xl py-3.5 font-black uppercase tracking-[0.2em] text-xs transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] bp-btn-premium"
+            className="relative mt-2 w-full rounded-xl py-3.5 font-black uppercase tracking-[0.2em] text-xs transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
             style={{
               background: `linear-gradient(135deg, rgba(168,85,247,0.4) 0%, rgba(${accentRgb},0.2) 100%)`,
               border: `1px solid rgba(168,85,247,0.5)`,
@@ -169,7 +164,7 @@ const WelcomeModal = ({
               boxShadow: "0 0 20px rgba(168,85,247,0.3), inset 0 1px 1px rgba(255,255,255,0.2)",
             }}
           >
-            <span className="relative z-10 drop-shadow-md">ПОЧАТИ!</span>
+            ПОЧАТИ!
           </button>
         </div>
 
@@ -197,17 +192,25 @@ const SlotCard = ({
   const isAnimated = slot.rarity === "legendary" || slot.rarity === "mythic";
   const isNft = slot.prize_type === "nft";
 
+  /* Периметр SVG прямокутника 142×220 з rx=15 ≈ 700px */
+  const perim = 700;
+
   return (
     <div
-      className={`bp-card relative flex-shrink-0 rounded-2xl transition-all duration-300 group
-        ${isAnimated ? `bp-card-premium-${slot.rarity}` : "bp-card-standard"} 
+      className={`bp-card relative flex-shrink-0 rounded-2xl transition-transform duration-300 group
+        ${isAnimated ? `bp-card-premium-${slot.rarity}` : ""}
         ${owned ? "bp-card-owned" : ""} ${isToday ? "bp-card-today" : ""}`}
       style={{
         width: 142,
         opacity:   locked ? 0.45 : 1,
         transform: isToday ? "scale(1.04)" : "scale(1)",
         border: `1px solid ${locked ? "rgba(255,255,255,0.06)" : cfg.border}`,
-        boxShadow: locked ? "none" : `0 10px 25px -5px rgba(0,0,0,0.5), 0 0 15px -3px ${cfg.glow}, inset 0 1px 1px rgba(255,255,255,0.1)`,
+        /* Сильний glow за межами картки для legendary/mythic */
+        boxShadow: locked
+          ? "none"
+          : isAnimated
+            ? `0 10px 30px -5px rgba(0,0,0,0.6), 0 0 35px 8px ${cfg.glow}, 0 0 70px 12px ${cfg.glow.replace('0.85','0.35').replace('0.95','0.4')}, inset 0 1px 1px rgba(255,255,255,0.1)`
+            : `0 10px 25px -5px rgba(0,0,0,0.5), 0 0 12px -3px ${cfg.glow}, inset 0 1px 1px rgba(255,255,255,0.1)`,
         background: locked ? "rgba(10,10,15,0.5)" : `linear-gradient(145deg, rgba(${cfg.rgb}, 0.08), rgba(6,6,10,0.85))`,
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
@@ -215,17 +218,48 @@ const SlotCard = ({
         "--rarity-glow": cfg.glow,
       } as any}
     >
-      {/* Контурная лазерная анимация (SVG Stroke Dash-array) для хай-энд карт */}
+      {/* Laser border — довгі, гострі, швидкі смуги */}
       {isAnimated && !locked && (
-        <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden rounded-2xl">
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 142 220" preserveAspectRatio="none">
-            <rect x="1" y="1" width="140" height="218" rx="15" fill="none" 
-                  stroke={cfg.color} strokeWidth="1.5" className="bp-laser-path" />
+        <div className="absolute inset-0 pointer-events-none z-20 overflow-visible rounded-2xl">
+          {/* Основна SVG смуга — одна довга швидка */}
+          <svg
+            className="absolute rounded-2xl"
+            style={{ inset: -4, width: "calc(100% + 8px)", height: "calc(100% + 8px)" }}
+            viewBox="0 0 150 228"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <filter id={`glow-${slot.id}`} x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            {/* Рамка — тонка базова */}
+            <rect x="2" y="2" width="146" height="224" rx="15" fill="none"
+              stroke={cfg.color} strokeWidth="0.5" opacity="0.25" />
+            {/* Швидка смуга 1 */}
+            <rect x="2" y="2" width="146" height="224" rx="15" fill="none"
+              stroke={cfg.color} strokeWidth="2.5"
+              strokeDasharray={`${perim * 0.28} ${perim * 0.72}`}
+              strokeLinecap="round"
+              filter={`url(#glow-${slot.id})`}
+              className={`bp-laser-fast-${slot.rarity}`} />
+            {/* Швидка смуга 2 — зміщена */}
+            <rect x="2" y="2" width="146" height="224" rx="15" fill="none"
+              stroke={cfg.color} strokeWidth="1.5"
+              strokeDasharray={`${perim * 0.14} ${perim * 0.86}`}
+              strokeLinecap="round"
+              filter={`url(#glow-${slot.id})`}
+              className={`bp-laser-fast-rev-${slot.rarity}`} />
           </svg>
         </div>
       )}
 
-      {/* Горизонтальная линия редкости с эффектом неонового стекла */}
+      {/* Нижня горизонтальна лінія-акцент рідкості */}
       <div style={{
         position: "absolute",
         top: -2,
@@ -240,13 +274,13 @@ const SlotCard = ({
         boxShadow: `0 0 10px 2px ${cfg.color}, 0 0 25px ${cfg.glow}`,
       }} />
 
-      {/* Верхний глянцевый блик (Liquid Reflection) */}
+      {/* Верхній глянцевий блик */}
       <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.06] to-transparent pointer-events-none z-10 h-1/2" />
 
-      {/* Бейдж статуса */}
+      {/* Статус бейдж */}
       <div className="absolute top-2.5 right-2.5 z-30">
         {owned ? (
-          <div className="rounded-full p-0.5 bp-blur-light"
+          <div className="rounded-full p-0.5"
             style={{ background:"rgba(0,0,0,0.6)", border:`1px solid ${cfg.color}44` }}>
             <CheckCircle2 className="w-3.5 h-3.5 animate-pulse" style={{ color:cfg.color }} />
           </div>
@@ -262,31 +296,33 @@ const SlotCard = ({
         ) : null}
       </div>
 
-      {/* Изображение / Иконка приза */}
-      <div className="relative w-full flex items-center justify-center mt-2 group-hover:scale-105 transition-transform duration-300"
-        style={{ height: 104 }}>
+      {/* Зображення — NFT масштабується під рамку, car/cr теж */}
+      <div
+        className="relative w-full overflow-hidden mt-2 group-hover:scale-105 transition-transform duration-300"
+        style={{ height: 104 }}
+      >
         {slot.image_url ? (
           <img
             src={slot.image_url}
             alt={slot.title}
-            className={`${isNft ? "bp-nft-img" : "w-full h-full"} object-contain`}
             style={{
-              padding: isNft ? 10 : 6,
-              borderRadius: isNft ? 14 : 0,
+              width: "100%",
+              height: "100%",
+              /* NFT — cover щоб заповнити рамку, car — contain */
+              objectFit: isNft ? "cover" : "contain",
+              objectPosition: "center",
+              padding: isNft ? 0 : 6,
               filter: locked
                 ? "grayscale(1) brightness(0.25)"
                 : owned
                   ? `drop-shadow(0 6px 16px ${cfg.glow})`
                   : `drop-shadow(0 4px 10px rgba(${cfg.rgb},0.3))`,
-              animation: (!locked && (owned || isToday)) ? "bp-premium-float 4s ease-in-out infinite" : "none",
-              maxWidth: isNft ? "86%" : "100%",
-              maxHeight: isNft ? "86%" : "100%",
             }}
           />
         ) : (
-          <div className="flex flex-col items-center gap-1.5 relative">
-            <span className="transition-transform duration-300" style={{ 
-              fontSize: 36, 
+          <div className="flex flex-col items-center justify-center h-full gap-1.5">
+            <span style={{
+              fontSize: 36,
               opacity: locked ? 0.2 : 1,
               filter: locked ? "none" : `drop-shadow(0 0 12px ${cfg.color}88)`
             }}>
@@ -299,30 +335,28 @@ const SlotCard = ({
         )}
       </div>
 
-      {/* Информационный блок */}
+      {/* Інфо-блок */}
       <div className="px-2.5 pt-1 pb-2 relative z-20 text-center">
         <p className="text-[10px] font-bold leading-tight line-clamp-2 min-h-[24px] tracking-wide"
           style={{ color: locked ? "rgba(255,255,255,0.25)" : "#ffffff" }}>
           {slot.title || "Приз"}
         </p>
         {slot.prize_type === "cr" && slot.prize_value && (
-          <p className="text-[9px] mt-1 font-black tracking-wider text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.5)]">
+          <p className="text-[9px] mt-1 font-black tracking-wider text-amber-400">
             {slot.prize_value} CR
           </p>
         )}
         {slot.prize_type === "car" && slot.car_name && (
           <p className="text-[9px] mt-1 font-black tracking-wide truncate"
-            style={{ color: cfg.color, textShadow: `0 0 8px ${cfg.glow}` }}>🚗 {slot.car_name}</p>
+            style={{ color: cfg.color }}>🚗 {slot.car_name}</p>
         )}
       </div>
 
-      {/* Нижняя шкала и уровень */}
+      {/* Рівень */}
       <div className="relative pb-3.5 pt-1 flex items-center justify-center">
         <div className="absolute left-4 right-4 h-[1px]"
-          style={{
-            background: `linear-gradient(90deg, transparent, ${cfg.color}55, transparent)`,
-          }} />
-        <div className="relative rounded-xl flex items-center justify-center font-black tabular-nums transition-all duration-300 group-hover:border-white/50"
+          style={{ background: `linear-gradient(90deg, transparent, ${cfg.color}55, transparent)` }} />
+        <div className="relative rounded-xl flex items-center justify-center font-black tabular-nums"
           style={{
             width: 26, height: 26,
             background: `linear-gradient(135deg, #0f1016, #050508)`,
@@ -362,12 +396,12 @@ const ProgressTrack = ({
         </div>
       </div>
       <div className="h-2.5 rounded-full bg-black/50 p-[2px] border border-white/5 shadow-inner overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-1000 relative bp-progress-glow"
-          style={{ 
-            width:`${pct}%`, 
+        <div className="h-full rounded-full transition-all duration-1000 relative"
+          style={{
+            width:`${pct}%`,
             background:`linear-gradient(90deg, ${accent}88, ${accent})`,
+            boxShadow: `0 0 12px ${accent}`,
           }}>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
         </div>
       </div>
     </div>
@@ -385,7 +419,6 @@ const BattlePass = () => {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
   const [nftMap, setNftMap] = useState<Record<string, string>>({});
-  const [page, setPage] = useState(0); 
   const [showModal, setShowModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -435,19 +468,12 @@ const BattlePass = () => {
     })();
   }, [nick]);
 
-  const handleCloseModal = () => {
-    setShowModal(false);
-  };
-
   const ownedIds    = new Set(rewards.map(r => r.slot_id));
   const accent      = cfg.accent_color || "#ffaa00";
   const accentRgb   = hexToRgb(accent);
   const levelColor  = cfg.level_color || "#38bdf8";
   const sortedSlots = [...slots].sort((a,b) => a.slot_number - b.slot_number);
   const glass       = !!cfg.background_url || !!cfg.banner_url;
-
-  const totalPages = Math.ceil(sortedSlots.length / PAGE_SIZE);
-  const pageSlots  = sortedSlots.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const canClaim = !!nick && lastClaim !== todayKey();
   const nextSlot = sortedSlots.find(s => !ownedIds.has(s.id));
@@ -494,24 +520,88 @@ const BattlePass = () => {
     }}>
 
       {showModal && (
-        <div className="fixed inset-0 z-[998] bg-black/60 bp-blur-heavy transition-opacity duration-500" />
-      )}
-
-      {showModal && (
         <WelcomeModal
           bannerUrl={cfg.banner_url || cfg.background_url}
           seasonName={cfg.season_name}
           accent={accent}
-          onClose={handleCloseModal}
+          onClose={() => setShowModal(false)}
         />
       )}
 
-      {/* Advanced Liquid Glass, Shimmers & Keyframes Engine */}
       <style>{`
-        .bp-blur-heavy { backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%); }
-        .bp-blur-light { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-        
-        /* Master Liquid Glass Panel Definition */
+        /* ── Laser border animations — довгі, гострі, швидкі ── */
+
+        /* Legendary — золото */
+        @keyframes bp-laser-legendary {
+          0%   { stroke-dashoffset: 700; }
+          100% { stroke-dashoffset: 0; }
+        }
+        @keyframes bp-laser-legendary-rev {
+          0%   { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: -700; }
+        }
+        .bp-laser-fast-legendary {
+          animation: bp-laser-legendary 1.8s linear infinite;
+          stroke-dashoffset: 700;
+        }
+        .bp-laser-fast-rev-legendary {
+          animation: bp-laser-legendary-rev 2.6s linear infinite;
+          stroke-dashoffset: 0;
+          opacity: 0.6;
+        }
+
+        /* Mythic — рожево-червоний */
+        @keyframes bp-laser-mythic {
+          0%   { stroke-dashoffset: 700; }
+          100% { stroke-dashoffset: 0; }
+        }
+        @keyframes bp-laser-mythic-rev {
+          0%   { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: -700; }
+        }
+        .bp-laser-fast-mythic {
+          animation: bp-laser-mythic 1.4s linear infinite;
+          stroke-dashoffset: 700;
+        }
+        .bp-laser-fast-rev-mythic {
+          animation: bp-laser-mythic-rev 2.0s linear infinite;
+          stroke-dashoffset: 0;
+          opacity: 0.5;
+        }
+
+        /* ── Card hover — тільки translateY, без зайвого ── */
+        .bp-card { transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1); }
+        .bp-card:hover {
+          transform: translateY(-6px) scale(1.02) !important;
+        }
+        .bp-card:active { transform: translateY(-1px) scale(0.99) !important; }
+
+        /* Premium card backgrounds */
+        .bp-card-premium-legendary {
+          background: linear-gradient(145deg, rgba(255,170,0,0.12), rgba(6,5,2,0.92)) !important;
+        }
+        .bp-card-premium-mythic {
+          background: linear-gradient(145deg, rgba(255,0,85,0.15), rgba(4,1,5,0.95)) !important;
+        }
+
+        /* ── Горизонтальний скрол з snap ── */
+        .bp-card-row {
+          display: flex;
+          gap: 14px;
+          overflow-x: auto;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+          padding-bottom: 24px;
+          padding-top: 8px;
+        }
+        .bp-card-row::-webkit-scrollbar { display: none; }
+        .bp-card-row > * {
+          scroll-snap-align: start;
+          scroll-snap-stop: normal;
+        }
+
+        /* ── Glass panel ── */
         .bp-glass-luxury {
           background: rgba(10, 11, 18, 0.55) !important;
           backdrop-filter: blur(20px) saturate(150%) !important;
@@ -520,100 +610,25 @@ const BattlePass = () => {
           box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
         }
 
-        /* Running Laser Border Keyframe Animation for Legendary/Mythic */
-        @keyframes bp-laser-move {
-          0% { stroke-dashoffset: 720; }
-          100% { stroke-dashoffset: 0; }
-        }
-        .bp-laser-path {
-          stroke-dasharray: 120 240;
-          animation: bp-laser-move 6s linear infinite;
-        }
-
-        /* Modern Hover Effects & Premium Transitions */
-        .bp-card-row { scrollbar-width: none; }
-        .bp-card-row::-webkit-scrollbar { display: none; }
-        
-        .bp-card { transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
-        .bp-card:hover { 
-          transform: translateY(-8px) scale(1.02) !important; 
-          box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.7), 0 0 25px -2px var(--rarity-glow) !important;
-          border-color: var(--rarity-color) !important;
-        }
-        .bp-card:active { transform: translateY(-2px) scale(0.99) !important; }
-
-        /* Premium Case Glow Variants */
-        .bp-card-premium-legendary {
-          background: linear-gradient(145deg, rgba(255,170,0,0.12), rgba(6,5,2,0.92)) !important;
-          text-shadow: 0 0 8px rgba(255,170,0,0.4);
-        }
-        .bp-card-premium-mythic {
-          background: linear-gradient(145deg, rgba(255,0,85,0.15), rgba(4,1,5,0.95)) !important;
-          text-shadow: 0 0 8px rgba(255,0,85,0.4);
-        }
-
-        /* Core Premium Micro-Animations */
-        @keyframes bp-premium-float {
-          0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 6px 12px var(--rarity-glow)); }
-          50% { transform: translateY(-6px) scale(1.03); filter: drop-shadow(0 12px 20px var(--rarity-glow)); }
-        }
-        @keyframes bp-shimmer-move {
-          0% { transform: translateX(-150%); }
-          50% { transform: translateX(150%); }
-          100% { transform: translateX(150%); }
-        }
-        @keyframes bp-glow-pulse {
-          0%, 100% { opacity: 0.8; box-shadow: 0 0 15px var(--btn-glow); }
-          50% { opacity: 1; box-shadow: 0 0 30px var(--btn-glow), inset 0 1px 2px rgba(255,255,255,0.4); }
-        }
-
-        /* Premium Glass Button Engine */
-        .bp-btn-premium {
-          position: relative;
-          overflow: hidden;
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
-          transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-        }
-        .bp-btn-premium::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-          transform: translateX(-150%);
-          animation: bp-shimmer-move 3.5s infinite ease-in-out;
-        }
-        .bp-btn-premium:hover:not(:disabled) {
-          filter: brightness(1.15);
-          box-shadow: 0 0 25px var(--btn-glow), inset 0 1px 2px rgba(255,255,255,0.3);
-        }
-
-        .bp-claim-pulse-active {
-          animation: bp-glow-pulse 2s infinite ease-in-out;
-        }
-
-        /* Global Structural Enhancements */
+        /* Modal */
         .bp-modal-in { animation: bp-modal-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-        @keyframes bp-modal-in { from { opacity: 0; transform: scale(0.9) translateY(30px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        .bp-progress-glow { box-shadow: 0 0 12px var(--rarity-color); }
-        .bp-nft-img { border-radius: 14px !important; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.3); }
+        @keyframes bp-modal-in {
+          from { opacity: 0; transform: scale(0.9) translateY(30px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
       `}</style>
 
-      {/* ─── BACKGROUND GRADIENT FALLBACK ─── */}
+      {/* Background overlay */}
       {!cfg.banner_url && !cfg.background_url && (
         <div className="absolute inset-0 -z-10 pointer-events-none"
           style={{ background:`linear-gradient(180deg, ${cfg.gradient_from}, ${cfg.gradient_to})` }} />
       )}
-      {/* High-end cinematic dark overlay layer */}
       {(cfg.banner_url || cfg.background_url) && (
         <div className="absolute inset-0 -z-10 pointer-events-none"
           style={{ background:"linear-gradient(180deg, rgba(2,2,5,0.2) 0%, rgba(3,3,6,0.5) 40%, rgba(4,4,7,0.85) 70%, #040406 100%)" }} />
       )}
 
-      {/* ─── MAIN APP CONTENT CONTAINER ─── */}
-      <div style={{ visibility: showModal ? "hidden" : "visible", opacity: showModal ? 0 : 1, transition: "opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1)" }}>
-
-      {/* ─── HEADER SECTION ─── */}
+      {/* ── HEADER ── */}
       <div className="relative w-full pt-4 max-w-5xl mx-auto">
         <button onClick={() => navigate(-1)}
           className="absolute left-4 top-4 w-10 h-10 rounded-xl flex items-center justify-center z-10 transition-all duration-300 hover:bg-white/10 active:scale-90"
@@ -637,9 +652,9 @@ const BattlePass = () => {
             </div>
           )}
           <h1 className="text-3xl font-black uppercase tracking-[0.22em] font-sans text-transparent bg-clip-text"
-            style={{ 
+            style={{
               backgroundImage: `linear-gradient(135deg, #ffffff 30%, ${accent})`,
-              filter: `drop-shadow(0 2px 15px rgba(${accentRgb}, 0.5))` 
+              filter: `drop-shadow(0 2px 15px rgba(${accentRgb}, 0.5))`
             }}>
             {cfg.season_name || "БАТЛПАС"}
           </h1>
@@ -652,29 +667,30 @@ const BattlePass = () => {
       </div>
 
       <div className="max-w-md mx-auto w-full">
-        {/* ─── CLAIM/REWARD TRIGGER BUTTON PANEL ─── */}
+        {/* ── CLAIM BUTTON ── */}
         {!loading && slots.length > 0 && (
           <div className="px-4 mb-4">
             {canClaim && nextSlot ? (
               <button
                 onClick={handleDailyClaim}
                 disabled={claiming}
-                className="w-full rounded-2xl py-4 flex items-center justify-center gap-2.5 font-black uppercase tracking-[0.18em] text-xs transition-all bp-btn-premium bp-claim-pulse-active"
+                className="w-full rounded-2xl py-4 flex items-center justify-center gap-2.5 font-black uppercase tracking-[0.18em] text-xs transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   background: `linear-gradient(135deg, rgba(${accentRgb},0.4), rgba(${accentRgb},0.15))`,
                   border: `1px solid rgba(${accentRgb},0.6)`,
                   color: "#ffffff",
-                  "--btn-glow": `rgba(${accentRgb},0.45)`,
-                } as any}
+                  boxShadow: `0 0 20px rgba(${accentRgb},0.3)`,
+                }}
               >
-                <Gift className="w-4 h-4 animate-bounce" style={{ color: accent }} />
-                <span className="drop-shadow-md">{claiming ? "Отримання..." : "Отримати нагороду"}</span>
+                <Gift className="w-4 h-4" style={{ color: accent }} />
+                <span>{claiming ? "Отримання..." : "Отримати нагороду"}</span>
               </button>
             ) : (
               <div className="flex flex-col items-center gap-1.5">
                 <button
                   disabled
-                  className="w-full rounded-2xl py-4 flex items-center justify-center gap-2.5 font-black uppercase tracking-[0.18em] text-xs border border-white/5 bg-black/40 text-white/30 backdrop-filter blur-md"
+                  className="w-full rounded-2xl py-4 flex items-center justify-center gap-2.5 font-black uppercase tracking-[0.18em] text-xs border border-white/5 bg-black/40 text-white/30"
+                  style={{ backdropFilter: "blur(8px)" }}
                 >
                   <Gift className="w-4 h-4 opacity-40" />
                   <span>{!nextSlot ? "Усі нагороди зібрано" : "Нагорода"}</span>
@@ -689,7 +705,7 @@ const BattlePass = () => {
           </div>
         )}
 
-        {/* ─── PROGRESS BAR (Liquid Glass Container) ─── */}
+        {/* ── PROGRESS ── */}
         {!loading && (
           <div className="px-4 mb-5">
             <div className="bp-glass-luxury px-4 py-4 rounded-2xl">
@@ -699,69 +715,35 @@ const BattlePass = () => {
         )}
       </div>
 
-      {/* ─── MAIN REWARDS GRID/ROW SLIDER ─── */}
+      {/* ── REWARDS SCROLL ── */}
       {loading ? (
         <div className="flex items-center justify-center py-24">
           <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
             style={{ borderColor:`rgba(${accentRgb},0.15)`, borderTopColor:accent }} />
         </div>
       ) : slots.length === 0 ? (
-        <div className="text-center py-20 bg-black/20 backdrop-blur-md border border-white/5 max-w-sm mx-auto rounded-2xl">
+        <div className="text-center py-20 bg-black/20 border border-white/5 max-w-sm mx-auto rounded-2xl"
+          style={{ backdropFilter: "blur(12px)" }}>
           <Crown className="w-12 h-12 mx-auto mb-3 text-white/10" />
           <p className="text-sm font-medium text-white/30 tracking-wider">Батлпас поки не налаштований</p>
         </div>
       ) : (
         <div className="max-w-5xl mx-auto w-full">
 
-          {/* Navigation & Pagination Controls */}
-          <div className="px-5 mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
-                Нагороди {page * PAGE_SIZE + 1}–{Math.min((page+1)*PAGE_SIZE, sortedSlots.length)}
-              </span>
-              <div className="w-12 h-[1px] bg-gradient-to-r from-white/10 to-transparent" />
-            </div>
-            
-            <div className="flex items-center gap-2 bp-glass-luxury p-1 rounded-xl">
-              <button
-                onClick={() => setPage(p => Math.max(0, p-1))}
-                disabled={page === 0}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 active:scale-90 disabled:opacity-30 bp-btn-premium"
-                style={{
-                  background: page === 0 ? "transparent" : `rgba(${accentRgb},0.12)`,
-                  border: `1px solid ${page === 0 ? "transparent" : `rgba(${accentRgb},0.35)`}`,
-                  color: page === 0 ? "rgba(255,255,255,0.15)" : accent,
-                  "--btn-glow": `rgba(${accentRgb},0.2)`,
-                } as any}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="text-[10px] font-black tabular-nums text-white/60 px-1" style={{ minWidth: 28, textAlign: "center" }}>
-                {page+1}/{totalPages}
-              </span>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages-1, p+1))}
-                disabled={page >= totalPages-1}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 active:scale-90 disabled:opacity-30 bp-btn-premium"
-                style={{
-                  background: page >= totalPages-1 ? "transparent" : `rgba(${accentRgb},0.12)`,
-                  border: `1px solid ${page >= totalPages-1 ? "transparent" : `rgba(${accentRgb},0.35)`}`,
-                  color: page >= totalPages-1 ? "rgba(255,255,255,0.15)" : accent,
-                  "--btn-glow": `rgba(${accentRgb},0.2)`,
-                } as any}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+          {/* Заголовок секції */}
+          <div className="px-5 mb-3">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+              Всі нагороди · свайп →
+            </span>
           </div>
 
-          {/* Cards Active Week Horizon */}
+          {/* Горизонтальний скрол — всі картки без пагінації */}
           <div
             ref={scrollRef}
-            className="bp-card-row flex gap-3.5 overflow-x-auto pb-6 pt-2"
+            className="bp-card-row"
             style={{ paddingLeft: 20, paddingRight: 20 }}
           >
-            {pageSlots.map(slot => {
+            {sortedSlots.map(slot => {
               const resolvedImg =
                 slot.image_url ||
                 (slot.prize_type === "nft"
@@ -786,7 +768,7 @@ const BattlePass = () => {
           </div>
 
           <div className="max-w-md mx-auto w-full px-4">
-            {/* Rarity Legend (Liquid Glass Matrix) */}
+            {/* Rarity Legend */}
             <div className="mb-4">
               <div className="bp-glass-luxury px-4 py-3.5 rounded-2xl">
                 <p className="text-[8px] font-black uppercase tracking-[0.25em] mb-2.5 text-white/30">Рідкості</p>
@@ -796,7 +778,7 @@ const BattlePass = () => {
                     const Icon = rc.icon;
                     const count = sortedSlots.filter(s=>s.rarity===r).length;
                     return (
-                      <div key={r} className="flex items-center justify-between rounded-xl px-2.5 py-2 border border-white/[0.04] bg-white/[0.02] transition-colors duration-300 hover:bg-white/[0.05]">
+                      <div key={r} className="flex items-center justify-between rounded-xl px-2.5 py-2 border border-white/[0.04] bg-white/[0.02]">
                         <div className="flex items-center gap-2">
                           <div style={{ width:12, height:3, borderRadius:999, background:rc.color, boxShadow:`0 0 6px ${rc.color}` }} />
                           <Icon className="w-3.5 h-3.5 opacity-80" style={{ color:rc.color }} />
@@ -810,7 +792,7 @@ const BattlePass = () => {
               </div>
             </div>
 
-            {/* Total Account Analytics Box (Liquid Glass Panel) */}
+            {/* Progress analytics */}
             {nick && (
               <div className="mb-4">
                 <div className="bp-glass-luxury px-4 py-3.5 flex items-center justify-between rounded-2xl">
@@ -824,7 +806,7 @@ const BattlePass = () => {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-center">
-                      <p className="text-sm font-black tabular-nums drop-shadow-[0_0_6px_rgba(255,255,255,0.3)]" style={{ color:accent }}>{ownedIds.size}</p>
+                      <p className="text-sm font-black tabular-nums" style={{ color:accent }}>{ownedIds.size}</p>
                       <p className="text-[7px] uppercase tracking-widest font-black text-white/30 mt-0.5">отримано</p>
                     </div>
                     <div className="w-[1px] h-6 bg-white/10" />
@@ -840,9 +822,7 @@ const BattlePass = () => {
         </div>
       )}
 
-      </div>
-
-      {/* Global Embedded High-End Filter Definitions */}
+      {/* SVG filter definitions */}
       <svg width="0" height="0" style={{ position:"absolute" }}>
         <defs>
           <filter id="bp-glow-filter">
@@ -860,8 +840,9 @@ export const BattlePassCarCard = ({ reward }: { reward: BattlePassReward }) => {
   const carName = reward.car_name || reward.prize_value || "АВТО";
   const Icon = cfg.icon;
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden bp-blur-heavy"
+    <div className="relative w-full rounded-2xl overflow-hidden"
       style={{
+        backdropFilter: "blur(20px)",
         border: `1px solid ${cfg.border}`,
         boxShadow: `0 15px 35px rgba(0,0,0,0.6), 0 0 25px ${cfg.glow}, inset 0 1px 1px rgba(255,255,255,0.15)`,
         background: `radial-gradient(circle at 10% 10%, rgba(${cfg.rgb},0.15) 0%, rgba(6,6,10,0.92) 80%)`,
@@ -872,12 +853,12 @@ export const BattlePassCarCard = ({ reward }: { reward: BattlePassReward }) => {
           <div className="overflow-hidden rounded-xl bg-black/40 border border-white/5 mb-3.5">
             <img src={reward.image_url} alt={carName}
               className="w-full object-cover transition-transform duration-500 hover:scale-105"
-              style={{ height:140, animation: "bp-premium-float 4s ease-in-out infinite", "--rarity-glow": cfg.glow } as any} />
+              style={{ height:140 }} />
           </div>
         ) : (
           <div className="flex items-center justify-center mb-3.5 rounded-xl bg-black/30 border border-dashed border-white/10"
             style={{ height:120 }}>
-            <span className="text-4xl drop-shadow-md">🚗</span>
+            <span className="text-4xl">🚗</span>
           </div>
         )}
         <div className="text-center">
