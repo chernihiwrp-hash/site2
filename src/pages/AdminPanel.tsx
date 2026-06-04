@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import DbLogsTab from "./admin/DbLogsTab";
 import TechWorkTab from "./admin/TechWorkTab";
 import AdminBattlePassTab from "./admin/AdminBattlePassTab";
+import AdminCookTab from "./admin/AdminCookTab";
 import { store, getBalance, addBalance, subtractBalance } from "../lib/store";
 import type {
   NewsItem, HouseItem, WantedPerson, FactionApplication, AdminApplication,
@@ -71,7 +72,7 @@ type TabId =
   "sos" | "applications" | "factions" | "licenses" | "plates" | "house_requests" |
   "news" | "houses" | "wanted" | "election" | "documents" |
   "add_faction" | "voice" | "tokens" | "nft" | "manage_factions" | "recruitment" |
-  "confiscation" | "mayor_apps" | "debug" | "bans" | "db_logs" | "tech_work" | "battlepass";
+  "confiscation" | "mayor_apps" | "debug" | "bans" | "db_logs" | "tech_work" | "battlepass" | "cook";
 
 const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boolean; category: string }[] = [
   { id: "sos",             label: "SOS Сигнали",           icon: AlertTriangle, sub: "Realtime",    danger: true,  category: "Виклики" },
@@ -95,6 +96,7 @@ const TAB_LIST: { id: TabId; label: string; icon: any; sub: string; danger?: boo
   { id: "recruitment",     label: "Набір у фракції",       icon: Lock,          sub: "Фракції",                   category: "Фракції" },
   { id: "manage_factions", label: "Управління фракціями",  icon: ShieldAlert,   sub: "Фракції",                   category: "Фракції" },
   { id: "add_faction",     label: "Додати фракцію",        icon: Plus,          sub: "Фракції",                   category: "Фракції" },
+  { id: "cook",            label: "Кухня (Повар)",         icon: Flame,         sub: "Фракції",                   category: "Фракції" },
   { id: "debug",           label: "Діагностика",           icon: Settings,      sub: "Система",                   category: "Система" },
   { id: "db_logs",         label: "Журнал запитів",        icon: ScrollText,    sub: "Система",                   category: "Система" },
   { id: "tech_work",       label: "Технічні роботи",       icon: Settings,      sub: "Система",    danger: true,  category: "Система" },
@@ -107,7 +109,7 @@ const DEFAULT_NO_PERMS: Record<TabId, boolean> = {
   election: false, documents: false, add_faction: false, voice: false, 
   tokens: false, nft: false, manage_factions: false, recruitment: false,
   confiscation: false, mayor_apps: false, debug: false, bans: false, db_logs: false, tech_work: false,
-  battlepass: false,
+  battlepass: false, cook: false,
 };
 
 const DEFAULT_PERMS: Record<TabId, boolean> = {
@@ -117,7 +119,7 @@ const DEFAULT_PERMS: Record<TabId, boolean> = {
   election: true, documents: true, add_faction: true, voice: true, 
   tokens: true, nft: true, manage_factions: true, recruitment: true,
   confiscation: true, mayor_apps: true, debug: true, bans: true, db_logs: true, tech_work: true,
-  battlepass: true,
+  battlepass: true, cook: true,
 };
 
 // SECURITY: getAdminPerms from localStorage is NOT used for access control.
@@ -311,6 +313,7 @@ const AdminPanel = () => {
           {tab === "debug"           && <DebugTab />}
           {tab === "db_logs"         && <DbLogsTab />}
           {tab === "tech_work"       && <TechWorkTab />}
+          {tab === "cook"            && <AdminCookTab />}
           {tab === "nft" && (
             <NftGiftsTab nftGifts={nftGifts} setNftGifts={setNftGifts} />
           )}
