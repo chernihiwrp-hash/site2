@@ -1,8 +1,20 @@
 import { useEffect, useState } from "react";
 
+// Проверка: ссылка это на картинку или просто эмодзи
+function isImageSrc(v?: string | null): boolean {
+  if (!v) return false;
+  const s = v.trim();
+  if (!s) return false;
+  if (/^(https?:)?\/\//i.test(s)) return true;
+  if (s.startsWith("/")) return true;
+  if (s.startsWith("data:image")) return true;
+  if (/\.(png|jpe?g|webp|gif|svg|avif)(\?.*)?$/i.test(s)) return true;
+  return false;
+}
+
 type Props = {
   dishName: string;
-  dishIcon?: string; // Ожидается эмодзи или SVG-строка
+  dishIcon?: string; 
   durationMs: number;
   reward: number;
   successRate?: number;
@@ -29,126 +41,145 @@ export default function CookingModal({
         setDone(true);
         onResult(ok);
       }
-    }, 16); // 60fps для плавности
+    }, 16); 
     return () => clearInterval(t);
   }, [durationMs, successRate, onResult]);
 
+  const isImg = isImageSrc(dishIcon);
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 overflow-hidden">
-      {/* Фон с сильным размытием */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[12px]" onClick={done ? onClose : undefined} />
+      {/* Фон */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-[15px]" onClick={done ? onClose : undefined} />
 
       <style>{`
         @keyframes shimmerMove {
           0% { background-position: -200% 0; }
           100% { background-position: 200% 0; }
         }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(2deg); }
-        }
         @keyframes modalShow {
-          from { opacity: 0; transform: scale(0.9) translateY(30px); }
+          from { opacity: 0; transform: scale(0.9) translateY(20px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        @keyframes iconPop {
-          0% { transform: scale(0.5); opacity: 0; }
-          70% { transform: scale(1.1); }
-          100% { transform: scale(1); opacity: 1; }
         }
 
         .glass-card {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-          backdrop-filter: blur(20px);
-          animation: modalShow 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(25px);
+          animation: modalShow 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        /* Эффект скрытого блюда (градиент внутри иконки) */
-        .mystery-shape {
-          font-size: 100px;
-          line-height: 1;
-          background: linear-gradient(90deg, #1a1a1a 0%, #808080 25%, #ffffff 50%, #808080 75%, #1a1a1a 100%);
+        /* Общий градиент для силуэта */
+        .mystery-gradient {
+          background: linear-gradient(90deg, #1a1a1a 0%, #666666 25%, #ffffff 50%, #666666 75%, #1a1a1a 100%);
           background-size: 200% auto;
+          animation: shimmerMove 2.5s linear infinite;
+        }
+
+        /* Если dishIcon — это картинка, используем её как маску */
+        .silhouette-img {
+          width: 120px;
+          height: 120px;
+          -webkit-mask-image: url(${dishIcon});
+          mask-image: url(${dishIcon});
+          -webkit-mask-size: contain;
+          mask-size: contain;
+          -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+          -webkit-mask-position: center;
+          mask-position: center;
+        }
+
+        /* Если dishIcon — это эмодзи */
+        .silhouette-emoji {
+          font-size: 100px;
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
-          animation: shimmerMove 3s linear infinite, float 4s ease-in-out infinite;
-          filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .progress-glow {
-          box-shadow: 0 0 15px hsl(84, 81%, 55%, 0.5);
+          box-shadow: 0 0 15px hsl(84, 81%, 55%, 0.6);
         }
       `}</style>
 
-      <div className="glass-card w-full max-w-[360px] rounded-[40px] p-8 relative z-10 flex flex-col items-center">
+      <div className="glass-card w-full max-w-[360px] rounded-[45px] p-10 relative z-10 flex flex-col items-center">
         {!done ? (
           <>
-            <div className="text-white/40 text-[10px] uppercase tracking-[0.3em] font-medium mb-8">
-              Магія на кухні...
+            <div className="text-white/40 text-[11px] uppercase tracking-[0.4em] font-bold mb-10">
+              Приготування...
             </div>
 
-            {/* Контейнер для иконки */}
-            <div className="relative mb-10 h-32 flex items-center justify-center">
-              <div className="absolute inset-0 bg-lime-500/10 blur-[40px] rounded-full" />
-              <div className="mystery-shape">
-                {dishIcon || "🍳"}
-              </div>
+            {/* Контейнер для иконки (Статичный) */}
+            <div className="relative mb-12 h-32 flex items-center justify-center w-full">
+              <div className="absolute inset-0 bg-white/5 blur-[40px] rounded-full" />
+              
+              {isImg ? (
+                /* Силуэт для КАРТИНКИ */
+                <div className="mystery-gradient silhouette-img" />
+              ) : (
+                /* Силуэт для ЭМОДЗИ */
+                <div className="mystery-gradient silhouette-emoji">
+                  {dishIcon || "🍳"}
+                </div>
+              )}
             </div>
 
-            <h3 className="text-white text-xl font-semibold tracking-wide mb-2">
+            <h3 className="text-white text-2xl font-bold tracking-tight mb-8">
               {dishName}
             </h3>
             
-            <div className="w-full mt-6 mb-2">
-              <div className="h-[6px] w-full bg-white/10 rounded-full overflow-hidden border border-white/5">
+            {/* Жирный прогресс-бар */}
+            <div className="w-full">
+              <div className="h-4 w-full bg-black/30 rounded-full overflow-hidden border border-white/10 p-[3px]">
                 <div 
-                  className="h-full bg-gradient-to-r from-lime-400 to-emerald-300 progress-glow transition-all duration-150 ease-out"
+                  className="h-full bg-gradient-to-r from-lime-400 via-lime-300 to-emerald-400 rounded-full progress-glow transition-all duration-150 ease-out"
                   style={{ width: `${progress * 100}%` }}
                 />
               </div>
-              <div className="flex justify-between mt-2">
-                <span className="text-white/30 text-[10px] font-bold tracking-tighter">PROGRESS</span>
-                <span className="text-white/60 text-[10px] font-bold">{Math.round(progress * 100)}%</span>
+              <div className="flex justify-between mt-3 px-1">
+                <span className="text-white/20 text-[10px] font-black tracking-widest uppercase">Progress</span>
+                <span className="text-white/70 text-xs font-bold">{Math.round(progress * 100)}%</span>
               </div>
             </div>
           </>
         ) : (
-          <div className="text-center py-4">
-            <div className={`text-7xl mb-6 scale-110 flex justify-center drop-shadow-lg ${success ? 'animate-bounce' : ''}`} 
-                 style={{ animation: 'iconPop 0.5s forwards' }}>
+          <div className="text-center w-full">
+            <div className={`text-7xl mb-6 flex justify-center drop-shadow-2xl ${success ? 'animate-bounce' : ''}`}>
               {success ? "✨" : "💨"}
             </div>
             
-            <h3 className="text-white text-2xl font-bold mb-2 uppercase tracking-tight">
-              {success ? "Шедеврально!" : "От халепа!"}
+            <h3 className="text-white text-3xl font-black mb-2 uppercase tracking-tighter">
+              {success ? "Успішно!" : "Не вдалося"}
             </h3>
             
-            <p className="text-white/50 text-sm mb-8 px-4 leading-relaxed">
+            <p className="text-white/40 text-sm mb-10 px-4">
               {success 
-                ? `Ви приготували "${dishName}" і отримали винагороду.` 
-                : `Блюдо зіпсовано, але досвід залишається з вами.`}
+                ? `Ви майстерно приготували "${dishName}"` 
+                : `Щось пішло не так, спробуйте ще раз.`}
             </p>
 
-            <div className="flex flex-col gap-3 w-full">
+            <div className="flex flex-col gap-4 w-full">
               {success && (
-                <div className="bg-white/5 border border-white/10 rounded-2xl py-3 px-4 flex items-center justify-between mb-2">
-                  <span className="text-white/40 text-xs">Винагорода:</span>
-                  <span className="text-lime-400 font-bold">+{reward} ₴</span>
+                <div className="bg-white/5 border border-white/10 rounded-3xl py-4 px-6 flex items-center justify-between mb-2">
+                  <span className="text-white/30 text-xs font-bold uppercase tracking-widest">Винагорода:</span>
+                  <span className="text-lime-400 text-xl font-black">+{reward} ₴</span>
                 </div>
               )}
 
               <button
                 onClick={onClose}
-                className="w-full py-4 rounded-2xl font-bold text-black transform transition-all active:scale-95 hover:brightness-110 shadow-lg"
+                className="w-full py-5 rounded-[24px] font-black text-black uppercase tracking-widest transform transition-all active:scale-95 shadow-xl"
                 style={{
                   background: success 
-                    ? "linear-gradient(135deg, #bef264, #65a30d)" 
-                    : "linear-gradient(135deg, #f43f5e, #9f1239)",
+                    ? "linear-gradient(135deg, #bef264, #84cc16)" 
+                    : "linear-gradient(135deg, #f43f5e, #e11d48)",
                   boxShadow: success 
-                    ? "0 10px 25px -5px rgba(132, 204, 22, 0.4)" 
-                    : "0 10px 25px -5px rgba(225, 29, 72, 0.4)",
+                    ? "0 15px 30px -5px rgba(132, 204, 22, 0.4)" 
+                    : "0 15px 30px -5px rgba(225, 29, 72, 0.4)",
                   color: success ? "#064e3b" : "#fff"
                 }}
               >
