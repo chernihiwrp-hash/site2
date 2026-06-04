@@ -1,6 +1,5 @@
 import React from "react";
 
-// Додано export, щоб інші файли (як AdminCookTab) могли бачити цю функцію
 export function isImageSrc(v?: string | null): boolean {
   if (!v) return false;
   const s = v.trim();
@@ -14,9 +13,9 @@ export function isImageSrc(v?: string | null): boolean {
 
 type Props = {
   value?: string | null;
-  size?: number;          // px, для зображення
-  className?: string;     // для emoji-span
-  imgClassName?: string;  // для img
+  size?: number;
+  className?: string;
+  imgClassName?: string;
   fallback?: React.ReactNode;
   alt?: string;
 };
@@ -33,12 +32,8 @@ export default function CookIcon({
         loading="lazy"
         draggable={false}
         style={{ width: size, height: size, objectFit: "contain" }}
-        className={
-          "inline-block rounded-md select-none " + (imgClassName || "")
-        }
-        onError={(e) => {
-          (e.currentTarget as HTMLImageElement).style.display = "none";
-        }}
+        className={"inline-block rounded-md select-none " + (imgClassName || "")}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
       />
     );
   }
