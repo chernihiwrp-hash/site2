@@ -862,7 +862,7 @@ export const BattlePassCarCard = ({ reward }: { reward: BattlePassReward }) => {
           </div>
         ) : (
           <div className="flex items-center justify-center mb-3.5 rounded-xl bg-black/30 border border-dashed border-white/10" style={{ height:120 }}>
-            <span className="text-4xl">🚗</span>
+            <span className="text-4xl"></span>
           </div>
         )}
         <div className="text-center">
