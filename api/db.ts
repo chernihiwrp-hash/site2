@@ -16,6 +16,7 @@ const ALLOWED_TABLES = new Set<string>([
   "bans","house_families","recruitment_settings","house_confiscations",
   "mayor_candidate_applications","notifications","db_logs","maintenance_mode",
   "battlepass_slots","battlepass_rewards","battlepass_config",
+  "cook_products","cook_recipes",
 ]);
 
 const ALLOWED_OPS     = new Set(["insert", "update", "delete", "upsert"]);
@@ -47,6 +48,8 @@ const TABLE_PERM: Record<string, string> = {
   maintenance_mode:            "maintenance",
   battlepass_slots:            "battlepass",
   battlepass_config:           "battlepass",
+  cook_products:               "cook",
+  cook_recipes:                "cook",
 };
 
 // Таблиці де потрібен id/slug у match для delete/update
