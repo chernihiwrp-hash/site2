@@ -15,7 +15,7 @@ const HOUSE_CR_MULT = 3;
 const MAX_HOUSE_PRICE_CR = 999_000_000_000;
 const ALLOWED_RENTAL_DAYS = new Set([3, 7, 14, 15, 24, 30, 60, 90]);
 
-type Op = "daily_claim" | "buy_theme" | "buy_nft" | "game_result" | "buy_house";
+type Op = "daily_claim" | "buy_theme" | "buy_nft" | "game_result" | "buy_house" | "cook_spend" | "cook_earn";
 
 interface Body {
   nick:     string;
@@ -30,6 +30,10 @@ interface Body {
   streak?: number;
   house_id?: number;
   rental_days?: number;
+  // cook ops
+  product_id?: string;
+  qty?: number;
+  recipe_id?: string;
 }
 
 export default async function handler(req: any, res: any) {
@@ -48,7 +52,7 @@ export default async function handler(req: any, res: any) {
 
   const { nick, password, op } = body || {} as Body;
 
-  const ALLOWED_OPS: Op[] = ["daily_claim", "buy_theme", "buy_nft", "game_result", "buy_house"];
+  const ALLOWED_OPS: Op[] = ["daily_claim", "buy_theme", "buy_nft", "game_result", "buy_house", "cook_spend", "cook_earn"];
   if (!op || !ALLOWED_OPS.includes(op))
     return res.status(400).json({ error: "Op not allowed" });
 
@@ -312,5 +316,57 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ data: { balance: newBalance, delta } });
   }
 
+  // ── Кухня: купити продукт ──────────────────────────────────────────────
+  if (op === "cook_spend") {
+    const productId = String(body.product_id || "").trim();
+    const qty = Math.floor(Number(body.qty) || 0);
+    if (!productId) return res.status(400).json({ error: "product_id required" });
+    if (qty <= 0 || qty > 999) return res.status(400).json({ error: "Invalid qty" });
+
+    const { data: prod, error: pErr } = await supabase
+      .from("cook_products")
+      .select("id, price")
+      .eq("id", productId)
+      .maybeSingle();
+    if (pErr || !prod) return res.status(404).json({ error: "Product not found" });
+
+    const cost = ((prod.price as number) || 0) * qty;
+    if (currentBalance < cost) return res.status(400).json({ error: "Insufficient balance" });
+
+    const newBalance = currentBalance - cost;
+    const { error } = await supabase
+      .from("users")
+      .update({ balance: newBalance })
+      .ilike("username", normalizedNick);
+    if (error) return res.status(500).json({ error: "Update failed" });
+
+    return res.status(200).json({ data: { balance: newBalance, spent: cost } });
+  }
+
+  // ── Кухня: отримати винагороду за рецепт ───────────────────────────────
+  if (op === "cook_earn") {
+    const recipeId = String(body.recipe_id || "").trim();
+    if (!recipeId) return res.status(400).json({ error: "recipe_id required" });
+
+    const { data: rec, error: rErr } = await supabase
+      .from("cook_recipes")
+      .select("id, reward")
+      .eq("id", recipeId)
+      .maybeSingle();
+    if (rErr || !rec) return res.status(404).json({ error: "Recipe not found" });
+
+    const reward = Math.min(Math.max(0, (rec.reward as number) || 0), MAX_WIN);
+    const newBalance = currentBalance + reward;
+
+    const { error } = await supabase
+      .from("users")
+      .update({ balance: newBalance })
+      .ilike("username", normalizedNick);
+    if (error) return res.status(500).json({ error: "Update failed" });
+
+    return res.status(200).json({ data: { balance: newBalance, delta: reward } });
+  }
+
   return res.status(400).json({ error: "Unknown op" });
 }
+
