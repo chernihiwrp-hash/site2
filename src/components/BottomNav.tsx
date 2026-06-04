@@ -15,6 +15,7 @@ const BottomNav = memo(() => {
 
   useEffect(() => {
     if (!nick) return;
+
     const load = async () => {
       const { count } = await supabase
         .from("notifications")
@@ -28,6 +29,7 @@ const BottomNav = memo(() => {
 
       setCook(await isCook());
     };
+
     load();
     const interval = setInterval(load, 60_000);
     return () => clearInterval(interval);
@@ -36,8 +38,8 @@ const BottomNav = memo(() => {
   const tabs = [
     { path: "/",           icon: Home,         label: "Головна",  badge: null as string | number | null },
     { path: "/factions",   icon: Shield,        label: "Фракції",  badge: null as string | number | null },
-    ...(cook ? [{ path: "/cook-work", icon: ChefHat, label: "Робота", badge: null as string | number | null }] : []),
     { path: "/casino",     icon: ShoppingCart,  label: "Магазин",  badge: null as string | number | null },
+    ...(cook ? [{ path: "/cook-work", icon: ChefHat, label: "Робота", badge: null as string | number | null }] : []),
     { path: "/shop",       icon: Gift,          label: "Нагороди", badge: canClaim ? "•" : null as string | number | null },
     { path: "/battlepass", icon: Crown,         label: "Батлпас",  badge: null as string | number | null },
     { path: "/profile",    icon: User,          label: "Профіль",  badge: unreadCount > 0 ? (unreadCount > 9 ? "9+" : unreadCount) : null as string | number | null },
