@@ -1,6 +1,6 @@
 // =====================================================================
 // CookWork.tsx — сторінка «Робота» для фракції Кухар (/cook-work)
-// Анімації появи, плавне підсвічування активної клітинки, парилка над сіткою.
+// Дизайн: тёмна мармурова столешниця + Liquid Glass панелі/кнопки з блюром.
 // Валюта — CR з users.balance.
 // =====================================================================
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,6 +15,27 @@ import {
 } from "../lib/cookStore";
 import CookingModal from "../components/CookingModal";
 import CookIcon from "../components/CookIcon";
+
+// Фотореалістична тёмна мармурова столешниця (Unsplash, безкоштовно)
+const MARBLE_URL =
+  "https://images.unsplash.com/photo-1615874959474-d609969a20ed?auto=format&fit=crop&w=1600&q=80";
+
+// Базовий liquid-glass стиль для будь-якого блоку
+const glass: React.CSSProperties = {
+  background:
+    "linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 60%, rgba(255,255,255,0.08) 100%)",
+  border: "1px solid rgba(255,255,255,0.18)",
+  boxShadow:
+    "inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -1px 0 rgba(0,0,0,0.25), 0 10px 30px rgba(0,0,0,0.45)",
+  backdropFilter: "blur(22px) saturate(160%)",
+  WebkitBackdropFilter: "blur(22px) saturate(160%)" as unknown as string,
+};
+
+const glassStrong: React.CSSProperties = {
+  ...glass,
+  background:
+    "linear-gradient(135deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.05) 55%, rgba(255,255,255,0.10) 100%)",
+};
 
 export default function CookWork() {
   const nav = useNavigate();
@@ -101,22 +122,43 @@ export default function CookWork() {
   };
 
   if (allowed === null) {
-    return <div className="min-h-screen flex items-center justify-center text-white/60">Завантаження…</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white/70"
+        style={{ background: "#0a0a0a" }}>Завантаження…</div>
+    );
   }
   if (!allowed) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-center px-6">
-        <div className="text-white/80 text-lg mb-3">Доступ лише для фракції «Кухар»</div>
-        <button className="px-4 py-2 rounded-xl bg-white/10 text-white" onClick={() => nav("/")}>На головну</button>
+      <div
+        className="min-h-screen flex flex-col items-center justify-center text-center px-6"
+        style={{
+          backgroundImage: `linear-gradient(rgba(0,0,0,.6), rgba(0,0,0,.75)), url(${MARBLE_URL})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        <div className="text-white/90 text-lg mb-3">Доступ лише для фракції «Кухар»</div>
+        <button className="px-5 py-2 rounded-2xl text-white" style={glass} onClick={() => nav("/")}>
+          На головну
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-24 relative overflow-hidden" style={{
-      background: "radial-gradient(ellipse at 50% 0%, hsl(84 81% 44% / 0.08) 0%, #0a0a0a 60%)",
-    }}>
-      {/* Локальні стилі/анімації, щоб не чіпати глобальний index.css */}
+    <div
+      className="min-h-screen pb-24 relative"
+      style={{
+        backgroundImage: `
+          linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.35) 40%, rgba(0,0,0,0.65) 100%),
+          url(${MARBLE_URL})
+        `,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      }}
+    >
+      {/* Анімації */}
       <style>{`
         @keyframes cook-fade-in { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: translateY(0) } }
         @keyframes cook-pop     { 0% { transform: scale(.6); opacity: 0 } 60% { transform: scale(1.18); opacity: 1 } 100% { transform: scale(1) } }
@@ -124,23 +166,19 @@ export default function CookWork() {
         @keyframes cook-steam   { 0% { transform: translate(-50%, 10px) scale(.6); opacity: 0 }
                                   20% { opacity: .6 }
                                   100% { transform: translate(calc(-50% + 12px), -60px) scale(1.4); opacity: 0 } }
-        @keyframes cook-spark   { 0% { transform: scale(0) rotate(0deg); opacity: 0 } 50% { opacity: 1 } 100% { transform: scale(1.6) rotate(180deg); opacity: 0 } }
         @keyframes cook-glow    { 0%,100% { box-shadow: 0 0 0 0 hsl(84 81% 44% / 0) } 50% { box-shadow: 0 0 28px 4px hsl(84 81% 44% / .55) } }
         @keyframes cook-float   { 0% { transform: translateY(0); opacity: 0 } 20% { opacity: 1 } 100% { transform: translateY(-46px); opacity: 0 } }
 
         .cook-fade-in   { animation: cook-fade-in .45s ease forwards; }
         .cook-cell-pop  { animation: cook-pop .35s cubic-bezier(.2,1.2,.4,1) both; }
-        .cook-active    { animation: cook-glow 1.5s ease-in-out infinite; border-color: hsl(84 81% 44% / .65) !important; }
-        .cook-cta-ready { background: linear-gradient(90deg, hsl(84 81% 44%), hsl(84 81% 65%), hsl(84 81% 44%));
-                          background-size: 200% 100%;
+        .cook-active    { animation: cook-glow 1.5s ease-in-out infinite; border-color: hsl(84 81% 65% / .8) !important; }
+        .cook-cta-ready { background: linear-gradient(90deg, hsl(84 81% 50%), hsl(84 81% 70%), hsl(84 81% 50%)) !important;
+                          background-size: 200% 100% !important;
                           animation: cook-shimmer 2.2s linear infinite, cook-glow 2.2s ease-in-out infinite; }
         .cook-steam     { position: absolute; left: 50%; bottom: 100%;
                           width: 16px; height: 16px; border-radius: 50%;
-                          background: radial-gradient(circle, rgba(255,255,255,.45), rgba(255,255,255,0));
+                          background: radial-gradient(circle, rgba(255,255,255,.55), rgba(255,255,255,0));
                           filter: blur(3px); animation: cook-steam 2.4s ease-out infinite; }
-        .cook-spark     { position: absolute; width: 6px; height: 6px; border-radius: 50%;
-                          background: hsl(84 81% 65%); box-shadow: 0 0 12px hsl(84 81% 55%);
-                          animation: cook-spark 1.2s ease-out forwards; }
         .cook-float     { position: absolute; top: 0; left: 50%; transform: translateX(-50%);
                           font-weight: 700; font-size: 14px; pointer-events: none;
                           animation: cook-float 1.2s ease-out forwards; }
@@ -151,60 +189,70 @@ export default function CookWork() {
         .cook-stagger > *:nth-child(n+4) { animation-delay: .28s }
       `}</style>
 
-      {/* Шапка */}
+      {/* Шапка (liquid glass) */}
       <div className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between cook-fade-in"
-        style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(14px)", borderBottom: "1px solid hsl(0 0% 100% / 0.06)" }}>
-        <button onClick={() => nav(-1)} className="p-2 rounded-lg hover:bg-white/5 transition active:scale-90">
+        style={{ ...glass, borderRadius: 0, borderLeft: "none", borderRight: "none", borderTop: "none" }}>
+        <button onClick={() => nav(-1)}
+          className="p-2 rounded-xl transition active:scale-90"
+          style={glass}>
           <ArrowLeft className="w-5 h-5 text-white" />
         </button>
-        <div className="text-white font-bold tracking-[0.25em] text-sm">КУХНЯ</div>
-        <div className="relative flex items-center gap-1 text-[hsl(84_81%_65%)] text-sm font-semibold px-2.5 py-1 rounded-lg"
-             style={{ background: "hsl(84 81% 44% / 0.08)", border: "1px solid hsl(84 81% 44% / 0.25)" }}>
-          <Sparkles className="w-4 h-4" /> {money.toLocaleString()} <span className="text-white/40 text-[10px] ml-0.5">CR</span>
+        <div className="text-white font-bold tracking-[0.3em] text-sm drop-shadow">КУХНЯ</div>
+        <div className="relative flex items-center gap-1 text-[hsl(84_81%_75%)] text-sm font-semibold px-3 py-1.5 rounded-xl"
+             style={glass}>
+          <Sparkles className="w-4 h-4" /> {money.toLocaleString()}
+          <span className="text-white/50 text-[10px] ml-0.5">CR</span>
           {floaters.map(f => (
             <span key={f.id} className="cook-float"
-              style={{ color: f.type === "earn" ? "hsl(84 81% 65%)" : "hsl(0 80% 65%)" }}>
+              style={{ color: f.type === "earn" ? "hsl(84 81% 75%)" : "hsl(0 80% 75%)" }}>
               {f.text}
             </span>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-[64px_1fr_64px] gap-2 px-3 mt-3 cook-stagger">
+      <div className="grid grid-cols-[72px_1fr_72px] gap-3 px-3 mt-4 cook-stagger">
         {/* Ліва панель: Рецепти */}
         <button onClick={() => setRecipesOpen(true)}
-          className="h-24 rounded-2xl flex flex-col items-center justify-center gap-1 text-white/80 hover:text-white transition active:scale-95"
-          style={{ background: "linear-gradient(160deg, #1a1a1a, #0e0e0e)", border: "1px solid hsl(0 0% 100% / 0.06)" }}>
+          className="h-24 rounded-2xl flex flex-col items-center justify-center gap-1 text-white/90 hover:text-white transition active:scale-95"
+          style={glass}>
           <BookOpen className="w-5 h-5" />
-          <span className="text-[10px] leading-none">Рецепти</span>
+          <span className="text-[10px] leading-none tracking-wide">Рецепти</span>
         </button>
 
-        {/* Центр: панель блюда + сітка 3x3 */}
+        {/* Центр */}
         <div>
-          {/* Назва блюда */}
+          {/* Назва блюда (glass panel) */}
           <div className="rounded-2xl px-4 py-3 mb-3 relative overflow-hidden transition-all"
             style={{
-              background: matched
-                ? "linear-gradient(160deg, hsl(84 81% 16% / .6), #111)"
-                : "linear-gradient(160deg, #1d1d1d, #111)",
-              border: matched ? "1px solid hsl(84 81% 44% / .45)" : "1px solid hsl(0 0% 100% / 0.08)",
-              boxShadow: matched ? "0 8px 28px hsl(84 81% 44% / .25)" : "0 8px 24px rgba(0,0,0,0.4)",
+              ...glassStrong,
+              boxShadow: matched
+                ? `${glassStrong.boxShadow}, 0 0 30px hsl(84 81% 50% / 0.35)`
+                : glassStrong.boxShadow,
             }}>
-            <div className="text-center text-white font-bold tracking-[0.2em] text-sm">
-              {matched ? matched.name.toUpperCase() : "ОБЕРІТЬ КОМБІНАЦІЮ"}
+            <div className="text-[10px] uppercase tracking-[0.25em] text-white/60">Блюдо</div>
+            <div className="text-white font-bold text-lg mt-0.5 flex items-center gap-2">
+              {matched ? (
+                <>
+                  <CookIcon value={matched.icon} size={24} className="text-2xl" />
+                  <span>{matched.name}</span>
+                </>
+              ) : (
+                <span className="text-white/45 font-normal italic">Заповніть сітку…</span>
+              )}
             </div>
-            {matched && (
-              <div className="flex flex-wrap justify-center gap-2 mt-2 cook-fade-in">
+            {!matched && grid.some(Boolean) && (
+              <div className="mt-2 flex flex-wrap gap-1">
                 {Object.entries(
-                  matched.grid.reduce<Record<string, number>>((a, pid) => {
+                  grid.reduce<Record<string, number>>((a, pid) => {
                     if (pid) a[pid] = (a[pid] || 0) + 1;
                     return a;
                   }, {})
                 ).map(([pid, q]) => {
                   const p = productMap.get(pid);
                   return (
-                    <div key={pid} className="flex items-center gap-1 text-xs text-white/80 px-2 py-1 rounded-lg"
-                      style={{ background: "hsl(0 0% 100% / 0.05)" }}>
+                    <div key={pid} className="flex items-center gap-1 text-xs text-white/85 px-2 py-1 rounded-lg"
+                      style={glass}>
                       <CookIcon value={p?.icon} size={16} fallback={<span>•</span>} className="text-base" />
                       <span>x{q}</span>
                     </div>
@@ -214,13 +262,8 @@ export default function CookWork() {
             )}
           </div>
 
-          {/* Сітка 3x3 з парою над нею */}
-          <div className="mx-auto rounded-3xl p-3 relative"
-            style={{
-              background: "linear-gradient(160deg, #1c1c1c, #0d0d0d)",
-              border: "1px solid hsl(0 0% 100% / 0.08)",
-              boxShadow: "inset 0 1px 0 hsl(0 0% 100% / 0.04), 0 20px 50px rgba(0,0,0,0.5)",
-            }}>
+          {/* Сітка 3x3 (glass) */}
+          <div className="mx-auto rounded-3xl p-3 relative" style={glassStrong}>
             {matched && (
               <>
                 <span className="cook-steam" style={{ left: "30%", animationDelay: "0s" }} />
@@ -237,9 +280,7 @@ export default function CookWork() {
                     onClick={() => pid ? clearCell(i) : setActiveCell(i)}
                     className={`relative aspect-square rounded-xl flex items-center justify-center text-3xl transition-all duration-200 active:scale-90 ${isActive ? "cook-active" : ""}`}
                     style={{
-                      background: "linear-gradient(160deg, #2a2a2a, #1a1a1a)",
-                      border: "1px solid hsl(0 0% 100% / 0.06)",
-                      boxShadow: "inset 0 1px 0 hsl(0 0% 100% / 0.04)",
+                      ...glass,
                       transform: isActive ? "translateY(-2px)" : undefined,
                     }}>
                     {p ? (
@@ -247,7 +288,7 @@ export default function CookWork() {
                         <CookIcon value={p.icon} size={40} className="text-3xl" />
                       </span>
                     ) : (
-                      <span className="text-white/15 text-xl">+</span>
+                      <span className="text-white/30 text-xl">+</span>
                     )}
                   </button>
                 );
@@ -258,36 +299,39 @@ export default function CookWork() {
           {/* Кнопки */}
           <div className="flex gap-2 mt-3">
             <button onClick={clearAll}
-              className="flex-1 py-3 rounded-xl text-white/70 text-sm font-medium hover:bg-white/10 transition active:scale-95"
-              style={{ background: "hsl(0 0% 100% / 0.05)", border: "1px solid hsl(0 0% 100% / 0.06)" }}>
+              className="flex-1 py-3 rounded-2xl text-white/85 text-sm font-medium transition active:scale-95"
+              style={glass}>
               Очистити
             </button>
             <button onClick={onCookClick} disabled={!matched}
-              className={`flex-[2] py-3 rounded-xl font-bold text-black disabled:opacity-40 disabled:cursor-not-allowed transition active:scale-95 ${matched ? "cook-cta-ready" : ""}`}
-              style={!matched ? { background: "linear-gradient(90deg, hsl(84 81% 44%), hsl(84 81% 65%))" } : undefined}>
+              className={`flex-[2] py-3 rounded-2xl font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed transition active:scale-95 ${matched ? "cook-cta-ready" : ""}`}
+              style={!matched
+                ? { ...glass, color: "rgba(255,255,255,0.9)" }
+                : undefined
+              }>
               Приготувати
             </button>
           </div>
 
-          <div className="text-center text-[11px] text-white/40 mt-3">
+          <div className="text-center text-[11px] text-white/55 mt-3">
             Підберіть правильну комбінацію інгредієнтів!
           </div>
         </div>
 
         {/* Права панель: Магазин */}
         <button onClick={() => setShopOpen(true)}
-          className="h-24 rounded-2xl flex flex-col items-center justify-center gap-1 text-white/80 hover:text-white transition active:scale-95"
-          style={{ background: "linear-gradient(160deg, #1a1a1a, #0e0e0e)", border: "1px solid hsl(0 0% 100% / 0.06)" }}>
+          className="h-24 rounded-2xl flex flex-col items-center justify-center gap-1 text-white/90 hover:text-white transition active:scale-95"
+          style={glass}>
           <ShoppingBag className="w-5 h-5" />
-          <span className="text-[10px] leading-none">Магазин</span>
+          <span className="text-[10px] leading-none tracking-wide">Магазин</span>
         </button>
       </div>
 
-      {/* Інвентар знизу */}
+      {/* Інвентар */}
       <div className="px-3 mt-4 cook-fade-in" style={{ animationDelay: ".35s" }}>
-        <div className="text-white/50 text-xs mb-2 px-1">Інвентар</div>
+        <div className="text-white/65 text-xs mb-2 px-1 tracking-wide">Інвентар</div>
         <div className="flex gap-2 overflow-x-auto pb-2">
-          {inv.length === 0 && <div className="text-white/30 text-sm px-1">Порожньо — купіть продукти</div>}
+          {inv.length === 0 && <div className="text-white/40 text-sm px-1">Порожньо — купіть продукти</div>}
           {inv.map(it => {
             const p = productMap.get(it.productId);
             if (!p) return null;
@@ -299,24 +343,23 @@ export default function CookWork() {
                 onClick={() => activeCell !== null && placeInCell(activeCell, it.productId)}
                 className={`shrink-0 w-16 h-20 rounded-xl flex flex-col items-center justify-center disabled:opacity-40 transition-all duration-200 active:scale-90 ${ready ? "cook-active" : ""}`}
                 style={{
-                  background: "linear-gradient(160deg, #1f1f1f, #121212)",
-                  border: ready ? "1px solid hsl(84 81% 44% / 0.5)" : "1px solid hsl(0 0% 100% / 0.06)",
+                  ...glass,
                   transform: ready ? "translateY(-2px)" : undefined,
                 }}>
                 <div className="flex items-center justify-center h-7"><CookIcon value={p.icon} size={28} className="text-2xl" /></div>
-                <div className="text-[10px] text-white/60 mt-1">x{avail}</div>
+                <div className="text-[10px] text-white/80 mt-1">x{avail}</div>
               </button>
             );
           })}
         </div>
         {activeCell !== null && (
-          <div className="text-center text-[11px] text-white/50 mt-1 cook-fade-in">
+          <div className="text-center text-[11px] text-white/65 mt-1 cook-fade-in">
             Тапніть інгредієнт, щоб помістити у клітинку #{activeCell + 1}
           </div>
         )}
       </div>
 
-      {/* ───── Модалка магазину ───── */}
+      {/* Модалки */}
       {shopOpen && (
         <ShopModal
           products={products}
@@ -334,7 +377,6 @@ export default function CookWork() {
         />
       )}
 
-      {/* ───── Модалка рецептів ───── */}
       {recipesOpen && (
         <RecipesModal
           recipes={recipes}
@@ -343,7 +385,6 @@ export default function CookWork() {
         />
       )}
 
-      {/* ───── Модалка приготування ───── */}
       {cooking && (
         <CookingModal
           dishName={cooking.name}
@@ -366,7 +407,7 @@ export default function CookWork() {
   );
 }
 
-// ===================== Модалки =====================
+// ===================== Модалки (liquid glass) =====================
 
 function ShopModal({
   products, money, onClose, onBuy,
@@ -384,69 +425,79 @@ function ShopModal({
 
   return (
     <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center cook-fade-in"
-      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" as any }}
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
         className="w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 max-h-[85vh] overflow-y-auto cook-cell-pop"
-        style={{
-          background: "linear-gradient(160deg, #181818, #0c0c0c)",
-          border: "1px solid hsl(0 0% 100% / 0.08)",
-        }}>
+        style={glassStrong}>
         <div className="flex items-center justify-between mb-4">
           <div className="text-white font-bold tracking-wide">МАГАЗИН ПРОДУКТІВ</div>
-          <button onClick={onClose}><X className="w-5 h-5 text-white/60" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg" style={glass}>
+            <X className="w-4 h-4 text-white/80" />
+          </button>
         </div>
 
         <div className="grid grid-cols-3 gap-2 mb-4">
-          {products.length === 0 && <div className="col-span-3 text-center text-white/40 py-8 text-sm">Адміни ще не додали продукти</div>}
+          {products.length === 0 && (
+            <div className="col-span-3 text-center text-white/55 py-8 text-sm">
+              Адміни ще не додали продукти
+            </div>
+          )}
           {products.map(p => (
             <button key={p.id} onClick={() => { setSelected(p); setQty(1); setErr(""); }}
               className="rounded-xl p-2 flex flex-col items-center transition-all active:scale-95 hover:-translate-y-0.5"
-              style={{
-                background: selected?.id === p.id ? "hsl(84 81% 44% / 0.12)" : "hsl(0 0% 100% / 0.04)",
-                border: selected?.id === p.id ? "1px solid hsl(84 81% 44% / 0.5)" : "1px solid hsl(0 0% 100% / 0.06)",
-              }}>
-              <div className="flex items-center justify-center h-9"><CookIcon value={p.icon} size={36} className="text-3xl" /></div>
+              style={selected?.id === p.id
+                ? { ...glassStrong, borderColor: "hsl(84 81% 60% / 0.7)" }
+                : glass}>
+              <div className="flex items-center justify-center h-9">
+                <CookIcon value={p.icon} size={36} className="text-3xl" />
+              </div>
               <div className="text-[11px] text-white mt-1 truncate w-full text-center">{p.name}</div>
-              <div className="text-[10px] text-[hsl(84_81%_65%)] mt-0.5">{p.price} CR</div>
+              <div className="text-[10px] text-[hsl(84_81%_75%)]">{p.price} CR</div>
             </button>
           ))}
         </div>
 
         {selected && (
-          <div className="rounded-2xl p-3 cook-fade-in"
-            style={{ background: "hsl(0 0% 100% / 0.04)", border: "1px solid hsl(0 0% 100% / 0.06)" }}>
-            <div className="text-white text-sm mb-2 flex items-center gap-2">
-              <CookIcon value={selected.icon} size={28} className="text-2xl" />
-              <span className="font-semibold">{selected.name}</span>
+          <div className="rounded-2xl p-3" style={glass}>
+            <div className="flex items-center gap-3">
+              <CookIcon value={selected.icon} size={40} className="text-4xl" />
+              <div className="flex-1">
+                <div className="text-white font-semibold">{selected.name}</div>
+                <div className="text-[hsl(84_81%_75%)] text-xs">{selected.price} CR / шт</div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setQty(q => Math.max(1, q - 1))}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center" style={glass}>
+                  <Minus className="w-4 h-4 text-white" />
+                </button>
+                <div className="w-10 text-center text-white font-semibold">{qty}</div>
+                <button onClick={() => setQty(q => q + 1)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center" style={glass}>
+                  <Plus className="w-4 h-4 text-white" />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center justify-center gap-3 mb-3">
-              <button onClick={() => setQty(Math.max(1, qty - 1))}
-                className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90 transition">
-                <Minus className="w-4 h-4" />
-              </button>
-              <div className="text-white text-xl font-bold w-10 text-center">{qty}</div>
-              <button onClick={() => setQty(qty + 1)}
-                className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90 transition">
-                <Plus className="w-4 h-4" />
-              </button>
+            <div className="flex items-center justify-between mt-3 text-sm">
+              <div className="text-white/70">Сума</div>
+              <div className={total > money ? "text-red-400 font-bold" : "text-white font-bold"}>
+                {total.toLocaleString()} CR
+              </div>
             </div>
-            <div className="text-center text-white/70 text-xs mb-3">
-              Разом: <b className="text-[hsl(84_81%_65%)]">{total.toLocaleString()} CR</b> · Баланс: {money.toLocaleString()} CR
-            </div>
-            {err && <div className="text-red-400 text-xs text-center mb-2">{err}</div>}
+            {err && <div className="text-red-400 text-xs mt-2">{err}</div>}
             <button
-              disabled={busy}
+              disabled={busy || total > money}
               onClick={async () => {
-                if (money < total) { setErr("Недостатньо коштів"); return; }
                 setBusy(true); setErr("");
                 const ok = await onBuy(selected, qty);
                 setBusy(false);
-                if (!ok) { setErr("Не вдалось купити"); return; }
-                setSelected(null); setQty(1);
+                if (!ok) setErr("Не вдалося купити");
+                else { setSelected(null); setQty(1); }
               }}
-              className="w-full py-3 rounded-xl font-bold text-black transition active:scale-95 disabled:opacity-60"
-              style={{ background: "linear-gradient(90deg, hsl(84 81% 44%), hsl(84 81% 65%))" }}>
+              className="w-full mt-3 py-2.5 rounded-xl font-bold text-black disabled:opacity-50 transition active:scale-95"
+              style={{
+                background: "linear-gradient(90deg, hsl(84 81% 50%), hsl(84 81% 70%))",
+              }}>
               {busy ? "Купуємо…" : "Купити"}
             </button>
           </div>
@@ -459,54 +510,56 @@ function ShopModal({
 function RecipesModal({
   recipes, productMap, onClose,
 }: {
-  recipes: Recipe[]; productMap: Map<string, Product>;
+  recipes: Recipe[];
+  productMap: Map<string, Product>;
   onClose: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center cook-fade-in"
-      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" as any }}
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
         className="w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 max-h-[85vh] overflow-y-auto cook-cell-pop"
-        style={{
-          background: "linear-gradient(160deg, #181818, #0c0c0c)",
-          border: "1px solid hsl(0 0% 100% / 0.08)",
-        }}>
+        style={glassStrong}>
         <div className="flex items-center justify-between mb-4">
           <div className="text-white font-bold tracking-wide">РЕЦЕПТИ</div>
-          <button onClick={onClose}><X className="w-5 h-5 text-white/60" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg" style={glass}>
+            <X className="w-4 h-4 text-white/80" />
+          </button>
         </div>
+
+        {recipes.length === 0 && (
+          <div className="text-center text-white/55 py-8 text-sm">
+            Адміни ще не додали рецепти
+          </div>
+        )}
+
         <div className="space-y-3">
-          {recipes.length === 0 && <div className="text-center text-white/40 py-8 text-sm">Поки немає рецептів</div>}
-          {recipes.map(r => {
-            const counts: Record<string, number> = {};
-            r.grid.forEach(g => { if (g) counts[g] = (counts[g] || 0) + 1; });
-            return (
-              <div key={r.id} className="rounded-2xl p-3 transition-all hover:-translate-y-0.5"
-                style={{ background: "hsl(0 0% 100% / 0.04)", border: "1px solid hsl(0 0% 100% / 0.06)" }}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-white font-bold flex items-center gap-2">
-                    <CookIcon value={r.icon || "🍽"} size={24} className="text-xl" />
-                    <span>{r.name}</span>
+          {recipes.map(r => (
+            <div key={r.id} className="rounded-2xl p-3" style={glass}>
+              <div className="flex items-center gap-3 mb-2">
+                <CookIcon value={r.icon} size={36} className="text-3xl" />
+                <div className="flex-1">
+                  <div className="text-white font-semibold">{r.name}</div>
+                  <div className="text-[11px] text-white/60">
+                    +{r.reward} CR • {(r.cookTimeMs / 1000).toFixed(0)} сек
                   </div>
-                  <div className="text-[hsl(84_81%_65%)] text-xs font-semibold">+{r.reward.toLocaleString()} CR</div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(counts).map(([pid, q]) => {
-                    const p = productMap.get(pid);
-                    return (
-                      <div key={pid} className="flex items-center gap-1 text-[11px] text-white/70 px-2 py-1 rounded-lg"
-                        style={{ background: "hsl(0 0% 100% / 0.05)" }}>
-                        <CookIcon value={p?.icon} size={14} fallback={<span>•</span>} className="text-sm" />
-                        <span>{p?.name || "?"} ×{q}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="text-[10px] text-white/40 mt-2">⏱ {Math.round(r.cookTimeMs / 1000)}с приготування</div>
               </div>
-            );
-          })}
+              <div className="grid grid-cols-3 gap-1 w-32">
+                {r.grid.map((pid, i) => {
+                  const p = pid ? productMap.get(pid) : null;
+                  return (
+                    <div key={i}
+                      className="aspect-square rounded-md flex items-center justify-center text-lg"
+                      style={glass}>
+                      {p ? <CookIcon value={p.icon} size={22} className="text-xl" /> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
