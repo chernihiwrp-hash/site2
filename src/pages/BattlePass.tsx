@@ -169,12 +169,12 @@ const GLOBAL_CSS = `
   /* ── Scroll row ── */
   .bp-card-row {
     display: flex; gap: 14px;
-    overflow-x: auto; scroll-snap-type: x mandatory;
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch; scrollbar-width: none;
     padding-bottom: 16px; padding-top: 8px;
+    scroll-behavior: auto;
   }
   .bp-card-row::-webkit-scrollbar { display: none; }
-  .bp-card-row > * { scroll-snap-align: start; }
 
   /* ── Scrollbar ── */
   .bp-track {
@@ -239,6 +239,8 @@ const SlotCard = ({
       style={{
         width: 142,
         /* НЕТ overflow:hidden — лазерный слой должен выходить за края */
+        /* Чёрная подложка — как в тест.html */
+        background: "#000",
         opacity:   visible ? (locked ? 0.45 : 1) : 0,
         transform: visible
           ? (isToday ? "scale(1.04) translateY(0)" : "scale(1) translateY(0)")
@@ -250,11 +252,6 @@ const SlotCard = ({
           : isLaser
             ? "0 10px 30px -5px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.1)"
             : `0 10px 25px -5px rgba(0,0,0,0.5), 0 0 14px -3px ${cfg.glow}, inset 0 1px 1px rgba(255,255,255,0.1)`,
-        background: locked
-          ? "rgba(10,10,15,0.5)"
-          : `linear-gradient(145deg, rgba(${cfg.rgb},0.08), rgba(6,6,10,0.88))`,
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
       }}
     >
       {/* ── ЛАЗЕРНАЯ РАМКА — точь-в-точь механика тест.html ── */}
@@ -262,16 +259,35 @@ const SlotCard = ({
         <div className={`bp-laser bp-laser-${slot.rarity}`} />
       )}
 
-      {/* Акцент-полоска сверху */}
+      {/* Внутренняя подложка с градиентом (как card-content в тест.html) */}
       <div style={{
-        position: "absolute", top: -2, left: "50%", transform: "translateX(-50%)",
-        zIndex: 40, width: 50, height: 4, borderRadius: 999,
-        background: cfg.color, opacity: locked ? 0.3 : 1,
-        boxShadow: `0 0 10px 2px ${cfg.color}, 0 0 22px ${cfg.glow}`,
+        position: "absolute", top: 3, left: 3, right: 3, bottom: 3,
+        borderRadius: 13,
+        background: locked
+          ? "rgba(10,10,15,0.95)"
+          : `linear-gradient(145deg, rgba(${cfg.rgb},0.10), rgba(6,6,10,0.96))`,
+        zIndex: 1,
       }} />
 
       {/* Верхний глянцевый блик */}
       <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.06] to-transparent pointer-events-none z-10 h-1/2" />
+
+      {/* ── ПОЛОСКА РАРНОСТИ — верхний левый угол, горизонтальные пилюли ── */}
+      <div style={{
+        position: "absolute", top: 10, left: 10, zIndex: 30,
+        display: "flex", flexDirection: "column", gap: 4,
+      }}>
+        <div style={{
+          width: 28, height: 4, borderRadius: 999,
+          background: cfg.color, opacity: locked ? 0.25 : 1,
+          boxShadow: locked ? "none" : `0 0 8px 1px ${cfg.color}, 0 0 16px ${cfg.glow}`,
+        }} />
+        <div style={{
+          width: 18, height: 4, borderRadius: 999,
+          background: cfg.color, opacity: locked ? 0.15 : 0.6,
+          boxShadow: locked ? "none" : `0 0 6px ${cfg.color}`,
+        }} />
+      </div>
 
       {/* Статус-бейдж */}
       <div className="absolute top-2.5 right-2.5 z-30">
@@ -524,8 +540,9 @@ const BattlePass = () => {
     return () => obs.disconnect();
   }, [loading, slots]);
 
-  /* ── Ползунок: обновляем thumb НАПРЯМУЮ через DOM ref.
-     Никакого setState → никаких ре-рендеров → 0 дёрганий. ── */
+  const thumbPctRef = useRef(20);
+
+  /* ── Ползунок: thumb напрямую в DOM, без setState ── */
   const updateThumb = useCallback(() => {
     const el    = scrollRef.current;
     const thumb = thumbRef.current;
@@ -534,6 +551,7 @@ const BattlePass = () => {
     if (max <= 0) return;
     const pct  = el.scrollLeft / max;
     const tpct = Math.max(10, (el.clientWidth / el.scrollWidth) * 100);
+    thumbPctRef.current = tpct;
     thumb.style.width = `${tpct}%`;
     thumb.style.left  = `${pct * (100 - tpct)}%`;
   }, []);
@@ -541,22 +559,28 @@ const BattlePass = () => {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    el.addEventListener("scroll", updateThumb, { passive:true });
+    el.addEventListener("scroll", updateThumb, { passive: true });
     window.addEventListener("resize", updateThumb);
-    updateThumb();
-    return () => { el.removeEventListener("scroll", updateThumb); window.removeEventListener("resize", updateThumb); };
+    // задержка чтобы DOM успел посчитать scrollWidth после рендера карточек
+    const t = setTimeout(updateThumb, 60);
+    return () => {
+      el.removeEventListener("scroll", updateThumb);
+      window.removeEventListener("resize", updateThumb);
+      clearTimeout(t);
+    };
   }, [loading, updateThumb]);
 
-  /* Drag по треку */
+  /* Drag по треку — прямой расчёт без RAF, thumb обновится сам через scroll event */
   const applyDrag = useCallback((clientX: number) => {
     const track   = trackRef.current;
-    const scroller= scrollRef.current;
-    const thumb   = thumbRef.current;
-    if (!track || !scroller || !thumb) return;
-    const rect  = track.getBoundingClientRect();
-    const tpct  = parseFloat(thumb.style.width) || 20;
-    const usable= rect.width * (1 - tpct / 100);
-    const raw   = (clientX - rect.left - (rect.width * tpct / 100) / 2) / usable;
+    const scroller = scrollRef.current;
+    if (!track || !scroller) return;
+    const rect   = track.getBoundingClientRect();
+    const tpct   = thumbPctRef.current;
+    const thumbW = rect.width * tpct / 100;
+    const usable = rect.width - thumbW;
+    if (usable <= 0) return;
+    const raw = (clientX - rect.left - thumbW / 2) / usable;
     scroller.scrollLeft = Math.max(0, Math.min(1, raw)) * (scroller.scrollWidth - scroller.clientWidth);
   }, []);
 
