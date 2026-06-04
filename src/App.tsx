@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import BalanceTop from "./pages/BalanceTop";
 import Vip from "./pages/Vip";
 import BattlePass from "./pages/BattlePass";
+import CookWork from "./pages/CookWork";
 
 import { User, CheckCircle, Eye, EyeOff, Shield, AlertTriangle, ArrowLeft, LogOut } from "lucide-react";
 import GradientButton from "./components/GradientButton";
@@ -878,6 +879,7 @@ const App = () => {
               <Route path="/top" element={<BalanceTop />} />
               <Route path="/vip" element={<Vip />} />
               <Route path="/battlepass" element={<BattlePass />} />
+              <Route path="/cook-work" element={<CookWork />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <BottomNav />
