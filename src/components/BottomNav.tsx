@@ -1,47 +1,20 @@
-// ─── ПАТЧ для src/components/BottomNav.tsx ────────────────────────
-// Замінити рядок з імпортом:
-//   import { Home, Shield, ShoppingCart, Gift, User } from "lucide-react";
-// На:
-//   import { Home, Shield, ShoppingCart, Gift, User, Crown } from "lucide-react";
-//
-// Замінити масив tabs:
-//
-// БУЛО:
-//   const tabs = [
-//     { path: "/",         icon: Home,         label: "Головна",  badge: null as string | number | null },
-//     { path: "/factions", icon: Shield,        label: "Фракції",  badge: null as string | number | null },
-//     { path: "/casino",   icon: ShoppingCart,  label: "Магазин",  badge: null as string | number | null },
-//     { path: "/shop",     icon: Gift,          label: "Нагороди", badge: canClaim ? "•" : null as string | number | null },
-//     { path: "/profile",  icon: User,          label: "Профіль",  badge: unreadCount > 0 ? (unreadCount > 9 ? "9+" : unreadCount) : null as string | number | null },
-//   ];
-//
-// СТАЛО (додано /battlepass між /shop та /profile):
-//   const tabs = [
-//     { path: "/",           icon: Home,         label: "Головна",  badge: null as string | number | null },
-//     { path: "/factions",   icon: Shield,        label: "Фракції",  badge: null as string | number | null },
-//     { path: "/casino",     icon: ShoppingCart,  label: "Магазин",  badge: null as string | number | null },
-//     { path: "/shop",       icon: Gift,          label: "Нагороди", badge: canClaim ? "•" : null as string | number | null },
-//     { path: "/battlepass", icon: Crown,         label: "Батлпас",  badge: null as string | number | null },
-//     { path: "/profile",    icon: User,          label: "Профіль",  badge: unreadCount > 0 ? (unreadCount > 9 ? "9+" : unreadCount) : null as string | number | null },
-//   ];
-
-// ГОТОВИЙ ФАЙЛ (повна заміна):
-import { Home, Shield, ShoppingCart, Gift, User, Crown } from "lucide-react";
+import { Home, Shield, ShoppingCart, Gift, User, Crown, ChefHat } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef, memo } from "react";
 import { supabase } from "../lib/store";
+import { isCook } from "../lib/cookStore";
 
 const BottomNav = memo(() => {
   const location = useLocation();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [canClaim, setCanClaim] = useState(false);
+  const [cook, setCook] = useState(false);
   const nick = localStorage.getItem("crp_nick") || "";
   const lastNavTime = useRef<number>(0);
 
   useEffect(() => {
     if (!nick) return;
-
     const load = async () => {
       const { count } = await supabase
         .from("notifications")
@@ -52,8 +25,9 @@ const BottomNav = memo(() => {
 
       const lastReward = parseInt(localStorage.getItem("crp_last_reward") || "0");
       setCanClaim(Date.now() - lastReward > 24 * 60 * 60 * 1000);
-    };
 
+      setCook(await isCook());
+    };
     load();
     const interval = setInterval(load, 60_000);
     return () => clearInterval(interval);
@@ -62,6 +36,7 @@ const BottomNav = memo(() => {
   const tabs = [
     { path: "/",           icon: Home,         label: "Головна",  badge: null as string | number | null },
     { path: "/factions",   icon: Shield,        label: "Фракції",  badge: null as string | number | null },
+    ...(cook ? [{ path: "/cook-work", icon: ChefHat, label: "Робота", badge: null as string | number | null }] : []),
     { path: "/casino",     icon: ShoppingCart,  label: "Магазин",  badge: null as string | number | null },
     { path: "/shop",       icon: Gift,          label: "Нагороди", badge: canClaim ? "•" : null as string | number | null },
     { path: "/battlepass", icon: Crown,         label: "Батлпас",  badge: null as string | number | null },
