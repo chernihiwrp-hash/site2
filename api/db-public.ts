@@ -22,6 +22,8 @@ const PUBLIC_TABLES = new Set<string>([
   "nft_gifts",
   "wanted",
   "admin_applications",    // тільки для тесту з'єднання в адмінці
+  "cook_products",         // публічно: каталог продуктів кухні
+  "cook_recipes",          // публічно: каталог рецептів
 ]);
 
 // Поля які НЕ повертаємо навіть в публічних запитах
