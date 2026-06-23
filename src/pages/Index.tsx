@@ -20,8 +20,8 @@ const SERVERS = [
   {
     id: 1,
     label: "Сервер 1",
-    code: "5319vick",
-    url: "https://www.roblox.com/games/start?placeId=7711635737&launchData=joinCode%3D5319vick",
+    code: "3vs3sqqq",
+    url: "https://www.roblox.com/games/start?placeId=7711635737&launchData=joinCode%3D3vs3sqqq",
   },
   {
     id: 2,
